@@ -3,93 +3,118 @@ import yfinance as yf
 import pandas as pd
 import plotly.express as px
 
-st.set_page_config(page_title="Kral Portföy Pro", layout="wide", initial_sidebar_state="expanded")
+# 1. SAYFA AYARLARI
+st.set_page_config(page_title="Kral Portföy", layout="wide")
 
-# --- STİL DOKUNUŞU ---
-st.markdown("""
-    <style>
-    .main { background-color: #f5f7f9; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    </style>
-    """, unsafe_allow_html=True)
+# 2. HİSSE LİSTESİ (Arama kutusunda çıkacak olanlar)
+# Buraya istediğin kadar hisse ekleyebilirsin.
+BIST_LISTESI = [
+    "THYAO.IS", "ASELS.IS", "EREGL.IS", "SASA.IS", "KCHOL.IS", 
+    "SISE.IS", "AKBNK.IS", "GARAN.IS", "TUPRS.IS", "BIMAS.IS", 
+    "ISCTR.IS", "YKBNK.IS", "HEKTS.IS", "PGSUS.IS", "EKGYO.IS",
+    "FROTO.IS", "TOASO.IS", "ARCLK.IS", "PETKM.IS", "KOZAL.IS"
+]
+YABANCI_LISTE = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "AMZN", "META"]
+TUM_HISSELER = sorted(BIST_LISTESI + YABANCI_LISTE)
 
-st.title("🚀 Kral Portföy Yönetimi v3.0")
+# 3. UYGULAMA BAŞLIĞI
+st.title("📈 Kral Portföy Yönetim Paneli")
+st.markdown("---")
 
+# 4. VERİ DEPOLAMA (Tarayıcı hafızası)
 if 'portfoy' not in st.session_state:
     st.session_state.portfoy = []
 
-# --- YAN PANEL ---
+# 5. YAN PANEL (Giriş Alanı)
 with st.sidebar:
-    st.header("💎 Varlık Ekle")
-    kod = st.text_input("Hisse Sembolü (Örn: THYAO.IS):").upper()
-    adet = st.number_input("Adet:", min_value=0.0, step=0.1)
-    maliyet = st.number_input("Birim Maliyet:", min_value=0.0, step=0.01)
+    st.header("➕ Yeni Hisse Ekle")
     
-    if st.button("Portföye İşle"):
-        if kod and adet > 0:
-            st.session_state.portfoy.append({"Hisse": kod, "Adet": adet, "Maliyet": maliyet})
-            st.success(f"{kod} Portföye eklendi!")
-        else:
-            st.error("Lütfen bilgileri tam girin.")
+    # Arama Kutusu (Otomatik tamamlamalı)
+    secilen = st.selectbox("Listeden Seçin veya Yazın:", TUM_HISSELER)
+    
+    # Manuel Giriş (Listede yoksa buraya yazılır)
+    manuel = st.text_input("Listede yoksa manuel kod gir (Örn: BTC-USD):").upper()
+    
+    # Hangi kodun kullanılacağına karar ver
+    final_kod = manuel if manuel else secilen
+    
+    adet = st.number_input("Adet:", min_value=0.0, step=1.0, value=10.0)
+    maliyet = st.number_input("Alış Fiyatı (Birim):", min_value=0.0, step=0.1, value=100.0)
+    
+    if st.button("Portföye Ekle"):
+        st.session_state.portfoy.append({
+            "Hisse": final_kod, 
+            "Adet": adet, 
+            "Maliyet": maliyet
+        })
+        st.success(f"{final_kod} Eklendi!")
 
-# --- ANALİZ BÖLÜMÜ ---
+# 6. HESAPLAMALAR VE GÖRSELLEŞTİRME
 if st.session_state.portfoy:
-    data = []
-    
-    with st.spinner('Veriler güncelleniyor...'):
+    ekran_verisi = []
+    toplam_maliyet_genel = 0
+    toplam_deger_genel = 0
+
+    with st.spinner('Fiyatlar çekiliyor...'):
         for kalem in st.session_state.portfoy:
-            hisse = yf.Ticker(kalem['Hisse'])
-            info = hisse.history(period="1d")
-            guncel_fiyat = info['Close'].iloc[-1]
-            
-            toplam_maliyet = kalem['Adet'] * kalem['Maliyet']
-            guncel_deger = kalem['Adet'] * guncel_fiyat
-            kar_zarar = guncel_deger - toplam_maliyet
-            yuzde = (kar_zarar / toplam_maliyet * 100) if toplam_maliyet > 0 else 0
-            
-            data.append({
-                "Hisse": kalem['Hisse'],
-                "Adet": kalem['Adet'],
-                "Maliyet": kalem['Maliyet'],
-                "Güncel": round(guncel_fiyat, 2),
-                "Kâr/Zarar": round(kar_zarar, 2),
-                "Değişim %": round(yuzde, 2),
-                "Toplam Değer": round(guncel_deger, 2)
-            })
+            try:
+                # Yahoo Finance'ten veri çek
+                hisse_obj = yf.Ticker(kalem['Hisse'])
+                # En hızlı güncel fiyatı 'fast_info' ile alıyoruz
+                guncel_f = hisse_obj.fast_info['lastPrice']
+                
+                maliyet_toplam = kalem['Adet'] * kalem['Maliyet']
+                deger_toplam = kalem['Adet'] * guncel_f
+                kar_zarar = deger_toplam - maliyet_toplam
+                yuzde = (kar_zarar / maliyet_toplam) * 100 if maliyet_toplam > 0 else 0
+                
+                toplam_maliyet_genel += maliyet_toplam
+                toplam_deger_genel += deger_toplam
 
-    df = pd.DataFrame(data)
+                ekran_verisi.append({
+                    "Hisse": kalem['Hisse'],
+                    "Adet": kalem['Adet'],
+                    "Maliyet": round(kalem['Maliyet'], 2),
+                    "Güncel": round(guncel_f, 2),
+                    "Kâr/Zarar": round(kar_zarar, 2),
+                    "Değişim (%)": f"%{yuzde:.2f}",
+                    "Toplam Değer": round(deger_toplam, 2)
+                })
+            except:
+                st.error(f"{kalem['Hisse']} verisi alınamadı!")
 
-    # Üst Özet Kartları
-    total_val = df["Toplam Değer"].sum()
-    total_prof = df["Kâr/Zarar"].sum()
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Toplam Varlık", f"{total_val:,.2f} TL")
-    col2.metric("Toplam Kâr/Zarar", f"{total_prof:,.2f} TL", f"{ (total_prof/(total_val-total_prof)*100):.2f}%")
-    col3.metric("Hisse Sayısı", len(df))
+    if ekran_verisi:
+        df = pd.DataFrame(ekran_verisi)
+        genel_kar = toplam_deger_genel - toplam_maliyet_genel
+        genel_yuzde = (genel_kar / toplam_maliyet_genel) * 100 if toplam_maliyet_genel > 0 else 0
 
-    st.divider()
+        # Özet Metrikler
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Toplam Varlık", f"{toplam_deger_genel:,.2f} TL/$")
+        c2.metric("Toplam Kâr/Zarar", f"{genel_kar:,.2f} TL/$", f"%{genel_yuzde:.2f}")
+        c3.metric("Hisse Adedi", len(df))
 
-    # Grafikler
-    c1, c2 = st.columns([1, 1])
-    
-    with c1:
-        st.subheader("🎯 Portföy Dağılımı")
-        fig = px.pie(df, values='Toplam Değer', names='Hisse', hole=0.4, color_discrete_sequence=px.colors.sequential.RdBu)
-        st.plotly_chart(fig, use_container_width=True)
+        st.markdown("---")
+
+        # Grafik Alanı
+        col_graf1, col_graf2 = st.columns(2)
         
-    with c2:
-        st.subheader("📈 Hisse Bazlı Performans")
-        # Kârda olanları yeşil, zararda olanları kırmızı gösteren bar chart
-        df['Renk'] = df['Kâr/Zarar'].apply(lambda x: 'Kâr' if x >= 0 else 'Zarar')
-        fig2 = px.bar(df, x='Hisse', y='Kâr/Zarar', color='Renk', color_discrete_map={'Kâr': '#2ecc71', 'Zarar': '#e74c3c'})
-        st.plotly_chart(fig2, use_container_width=True)
+        with col_graf1:
+            st.subheader("🎯 Portföy Dağılımı")
+            fig_pie = px.pie(df, values='Toplam Değer', names='Hisse', hole=0.4)
+            st.plotly_chart(fig_pie, use_container_width=True)
+            
+        with col_graf2:
+            st.subheader("📊 Hisse Bazlı Performans")
+            fig_bar = px.bar(df, x='Hisse', y='Kâr/Zarar', color='Hisse')
+            st.plotly_chart(fig_bar, use_container_width=True)
 
-    st.subheader("📋 Detaylı Takip Tablosu")
-    st.dataframe(df.style.map(lambda x: 'color: red' if isinstance(x, (int, float)) and x < 0 else ('color: green' if isinstance(x, (int, float)) and x > 10 else None), subset=['Kâr/Zarar', 'Değişim %']), use_container_width=True)
+        # Tablo
+        st.subheader("📋 Detaylı Liste")
+        st.dataframe(df, use_container_width=True)
 
-    if st.button("🗑️ Tüm Verileri Sıfırla"):
+    if st.button("🗑️ Portföyü Sıfırla"):
         st.session_state.portfoy = []
         st.rerun()
 else:
-    st.info("Henüz veri girilmedi. Sol taraftaki menüyü kullanarak portföyünü oluşturabilirsin.")
+    st.info("Henüz hisse eklemedin. Sol taraftaki menüyü kullanarak ilk hisseni ekle!")
