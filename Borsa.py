@@ -2,36 +2,53 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import json
 from streamlit_javascript import st_javascript
 
 # ==========================================
-# 1. AYARLAR & LOGO
+# 1. AYARLAR & TASARIM
 # ==========================================
-st.set_page_config(page_title="Borsa Portföy v5.5", page_icon="👑", layout="wide")
+st.set_page_config(page_title="İmparator Portföy v6.0", page_icon="👑", layout="wide")
 
-# --- KALICI HAFIZA MEKANİZMASI ---
-def save_data(data):
-    js_code = f"localStorage.setItem('borsa_portfoy', '{json.dumps(data)}');"
-    st_javascript(js_code)
+st.markdown("""
+    <style>
+    .stMetric { border-radius: 15px; background-color: rgba(240, 242, 246, 0.1); padding: 20px; border: 1px solid rgba(28, 131, 225, 0.1); }
+    </style>
+    """, unsafe_allow_html=True)
 
-def load_data():
-    js_code = "localStorage.getItem('borsa_portfoy');"
-    stored_data = st_javascript(js_code)
-    if stored_data:
-        try:
-            return json.loads(stored_data)
-        except:
-            return []
-    return []
+# --- KALICI HAFIZA FONKSİYONLARI ---
+def load_permanent_data():
+    js_get = "localStorage.getItem('kral_v6_data');"
+    res = st_javascript(js_get)
+    if res and res != "null":
+        return json.loads(res)
+    return None
+
+def save_permanent_data(data):
+    js_set = f"localStorage.setItem('kral_v6_data', '{json.dumps(data)}');"
+    st_javascript(js_set)
 
 if 'portfoy' not in st.session_state:
-    loaded = load_data()
-    st.session_state.portfoy = loaded if loaded else []
+    stored = load_permanent_data()
+    st.session_state.portfoy = stored if stored else []
 
 # ==========================================
-# 2. DEV HİSSE LİSTESİ (BIST 100 + EKSTRALAR)
+# 2. CANLI PİYASA BANDI
+# ==========================================
+st.subheader("🌐 Canlı Piyasa Takibi")
+ticker_list = ["XU100.IS", "USDTRY=X", "GAU-TRY.IS", "BTC-USD", "GC=F"]
+cols = st.columns(len(ticker_list))
+for i, t in enumerate(ticker_list):
+    try:
+        t_obj = yf.Ticker(t)
+        price = t_obj.fast_info['lastPrice']
+        cols[i].metric(t.replace(".IS", "").replace("=X", ""), f"{price:.2f}")
+    except: continue
+
+st.markdown("---")
+
+# ==========================================
+# 3. DEV HİSSE LİSTESİ (BIST TAM LİSTE)
 # ==========================================
 BIST_FULL = sorted([
     "A1CAP.IS", "ACSEL.IS", "ADEL.IS", "ADESE.IS", "AEFES.IS", "AFYON.IS", "AGESA.IS", "AGHOL.IS", "AGROT.IS", "AHGAZ.IS",
@@ -83,106 +100,85 @@ BIST_FULL = sorted([
     "YEOTK.IS", "YESIL.IS", "YGGYO.IS", "YGYO.IS", "YKBNK.IS", "YONGA.IS", "YOTAS.IS", "YUNSA.IS", "YYLGD.IS", "ZEDUR.IS",
     "ZOREN.IS", "ZRGYO.IS"
 ])
-
-YABANCI_LIST = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "BTC-USD", "ETH-USD"]
-TUM_LISTE = sorted(BIST_FULL + YABANCI_LIST)
+GLOBAL_LIST = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "BTC-USD", "ETH-USD"]
+TUM_LISTE = sorted(BIST_FULL + GLOBAL_LIST)
 
 # ==========================================
-# 3. YAN PANEL (GİRİŞ)
+# 4. YAN PANEL & GİRİŞ
 # ==========================================
 with st.sidebar:
-    st.header("👑 Borsa Menü")
-    secilen = st.selectbox("Hisse Ara/Seç:", TUM_LISTE, index=TUM_LISTE.index("THYAO.IS"))
+    st.header("👑 İmparator Menü")
+    secilen = st.selectbox("Varlık Ara/Seç:", TUM_LISTE)
     adet = st.number_input("Adet:", min_value=0.0, step=1.0, value=1.0)
-    maliyet = st.number_input("Birim Maliyet:", min_value=0.0, step=0.1, value=100.0)
+    maliyet = st.number_input("Birim Maliyet:", min_value=0.0, step=0.001, format="%.3f")
+    temettu_verimi = st.slider("Yıllık Temettü Verimi (%)", 0.0, 20.0, 2.0)
     
-    if st.button("📦 Portföye Ekle"):
-        st.session_state.portfoy.append({"Hisse": secilen, "Adet": adet, "Maliyet": maliyet})
-        save_data(st.session_state.portfoy)
-        st.success(f"{secilen} Eklendi!")
+    if st.button("🚀 Portföye Kaydet"):
+        st.session_state.portfoy.append({
+            "Hisse": secilen, "Adet": adet, "Maliyet": maliyet, "Temettu": temettu_verimi
+        })
+        save_permanent_data(st.session_state.portfoy)
+        st.success("Başarıyla eklendi!")
         st.rerun()
 
-    if st.button("🗑️ Tümünü Temizle"):
+    if st.button("🗑️ Tümünü Sıfırla"):
         st.session_state.portfoy = []
-        save_data([])
+        save_permanent_data([])
         st.rerun()
 
 # ==========================================
-# 4. ANA PANEL
+# 5. ANA EKRAN & TABLO
 # ==========================================
-st.title("📈 Borsa Portföy Yönetimi")
+st.title("📊 İmparator Portföy Analizi")
 
 if st.session_state.portfoy:
-    display_list = []
-    t_maliyet = 0
-    t_deger = 0
+    data = []
+    t_maliyet, t_deger, t_temettu = 0, 0, 0
 
     with st.spinner('Piyasa verileri okunuyor...'):
         for item in st.session_state.portfoy:
             try:
                 h = yf.Ticker(item['Hisse'])
                 fiyat = h.fast_info['lastPrice']
+                m_top = item['Adet'] * item['Maliyet']
+                d_top = item['Adet'] * fiyat
+                kz = d_top - m_top
+                verim = (kz / m_top * 100) if m_top > 0 else 0
+                yillik_t = d_top * (item['Temettu'] / 100)
                 
-                m_toplam = item['Adet'] * item['Maliyet']
-                d_toplam = item['Adet'] * fiyat
-                kz = d_toplam - m_toplam
-                yuzde = (kz / m_toplam * 100) if m_toplam > 0 else 0
+                t_maliyet += m_top; t_deger += d_top; t_temettu += yillik_t
                 
-                t_maliyet += m_toplam
-                t_deger += d_toplam
-                
-                display_list.append({
-                    "Varlık": item['Hisse'],
-                    "Adet": item['Adet'],
-                    "Maliyet": item['Maliyet'],
-                    "Güncel": round(fiyat, 2),
-                    "Kâr/Zarar": round(kz, 2),
-                    "Verim %": round(yuzde, 2),
-                    "Toplam Değer": round(d_toplam, 2)
+                data.append({
+                    "Varlık": item['Hisse'], "Adet": f"{item['Adet']:.3f}",
+                    "Maliyet": round(item['Maliyet'], 3), "Güncel": round(fiyat, 3),
+                    "Kâr/Zarar": round(kz, 3), "Verim %": round(verim, 3),
+                    "Temettü": round(yillik_t, 3), "Toplam Değer": round(d_top, 3)
                 })
-            except:
-                st.error(f"{item['Hisse']} verisi çekilemedi.")
+            except: continue
 
-    df = pd.DataFrame(display_list)
+    df = pd.DataFrame(data)
 
-    # Özet Kartları
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Toplam Varlık", f"{t_deger:,.2f} TL")
-    kz_genel = t_deger - t_maliyet
-    c2.metric("Toplam Kâr/Zarar", f"{kz_genel:,.2f} TL", f"%{(kz_genel/t_maliyet*100 if t_maliyet>0 else 0):.2f}")
-    c3.metric("Varlık Sayısı", len(df))
+    # Üst Kartlar
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Toplam Varlık", f"{t_deger:,.3f} TL")
+    m2.metric("Toplam K/Z", f"{t_deger - t_maliyet:,.3f} TL", f"%{((t_deger-t_maliyet)/t_maliyet*100 if t_maliyet>0 else 0):.2f}")
+    m3.metric("Yıllık Temettü", f"{t_temettu:,.3f} TL")
 
     st.markdown("---")
-
-    # --- GRAFİK ALANI ---
-    st.subheader("📊 Analiz Grafikleri")
-    g_col1, g_col2 = st.columns(2)
     
-    with g_col1:
-        fig_pie = px.pie(df, values='Toplam Değer', names='Varlık', hole=0.4, title="Varlık Dağılımı")
-        st.plotly_chart(fig_pie, use_container_width=True)
-        
-    with g_col2:
-        fig_bar = px.bar(df, x='Varlık', y='Kâr/Zarar', color='Varlık', title="Kâr/Zarar Dağılımı")
-        st.plotly_chart(fig_bar, use_container_width=True)
+    # Grafik Alanı
+    g1, g2 = st.columns(2)
+    with g1:
+        st.plotly_chart(px.pie(df, values='Toplam Değer', names='Varlık', hole=0.5, title="Dağılım"), use_container_width=True)
+    with g2:
+        st.plotly_chart(px.bar(df, x='Varlık', y='Kâr/Zarar', color='Varlık', title="Performans"), use_container_width=True)
 
-    st.markdown("---")
-
-    # --- TABLO ALANI ---
+    # Detaylı Tablo
     st.subheader("📋 Detaylı Portföy Tablosu")
-    
-    def color_df(val):
-        if isinstance(val, (int, float)):
-            color = 'red' if val < 0 else 'green'
-            return f'color: {color}'
+    def color_val(v):
+        if isinstance(v, (int, float)): return 'color: #00ff00' if v > 0 else 'color: #ff4b4b'
         return ''
-
-    st.dataframe(
-        df.style.applymap(color_df, subset=['Kâr/Zarar', 'Verim %']),
-        use_container_width=True
-    )
+    st.dataframe(df.style.applymap(color_val, subset=['Kâr/Zarar', 'Verim %', 'Temettü']), use_container_width=True)
 
 else:
-    st.info("Henüz varlık eklemediniz. Sol menüden ilk hisseni ekleyerek başla!")
-
-st.caption("Verileriniz tarayıcınızın hafızasında saklanır. Sayfa yenilense de kaybolmaz.")
+    st.info("Henüz varlık eklemediniz. Sol menüden başlayın!")
