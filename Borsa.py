@@ -8,7 +8,7 @@ import json
 # ==========================================
 # 1. AYARLAR & LOGO
 # ==========================================
-st.set_page_config(page_title="İmparator Portföy v5", page_icon="👑", layout="wide")
+st.set_page_config(page_title="Borsa Portföy v5", page_icon="👑", layout="wide")
 
 # --- KRİTİK: KALICI HAFIZA MEKANİZMASI (Local Storage) ---
 # Bu bileşen, verileri tarayıcıda saklamanı sağlar.
