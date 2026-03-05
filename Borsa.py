@@ -9,15 +9,15 @@ from streamlit_javascript import st_javascript
 # ==========================================
 # 1. AYARLAR & LOGO
 # ==========================================
-st.set_page_config(page_title="İmparator Portföy v5.5", page_icon="👑", layout="wide")
+st.set_page_config(page_title="Borsa Portföy v5.5", page_icon="👑", layout="wide")
 
 # --- KALICI HAFIZA MEKANİZMASI ---
 def save_data(data):
-    js_code = f"localStorage.setItem('kral_portfoy', '{json.dumps(data)}');"
+    js_code = f"localStorage.setItem('borsa_portfoy', '{json.dumps(data)}');"
     st_javascript(js_code)
 
 def load_data():
-    js_code = "localStorage.getItem('kral_portfoy');"
+    js_code = "localStorage.getItem('borsa_portfoy');"
     stored_data = st_javascript(js_code)
     if stored_data:
         try:
