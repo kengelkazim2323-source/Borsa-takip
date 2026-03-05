@@ -2,6 +2,4 @@ streamlit
 yfinance
 pandas
 plotly
-json
 streamlit-javascript
-datetime
