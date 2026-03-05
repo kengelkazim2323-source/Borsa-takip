@@ -91,7 +91,7 @@ TUM_LISTE = sorted(BIST_FULL + YABANCI_LIST)
 # 3. YAN PANEL (GİRİŞ)
 # ==========================================
 with st.sidebar:
-    st.header("👑 İmparator Menü")
+    st.header("👑 Borsa Menü")
     secilen = st.selectbox("Hisse Ara/Seç:", TUM_LISTE, index=TUM_LISTE.index("THYAO.IS"))
     adet = st.number_input("Adet:", min_value=0.0, step=1.0, value=1.0)
     maliyet = st.number_input("Birim Maliyet:", min_value=0.0, step=0.1, value=100.0)
@@ -110,7 +110,7 @@ with st.sidebar:
 # ==========================================
 # 4. ANA PANEL
 # ==========================================
-st.title("📈 İmparator Portföy Yönetimi")
+st.title("📈 Borsa Portföy Yönetimi")
 
 if st.session_state.portfoy:
     display_list = []
