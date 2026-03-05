@@ -33,7 +33,112 @@ if 'portfoy' not in st.session_state:
 # ==========================================
 # 2. HİSSE LİSTELERİ
 # ==========================================
-BIST_LIST = sorted(["THYAO.IS", "ASELS.IS", "EREGL.IS", "TUPRS.IS", "SASA.IS", "SISE.IS", "GARAN.IS", "AKBNK.IS", "FROTO.IS", "KCHOL.IS", "PGSUS.IS", "BIMAS.IS"])
+BIST100_LISTESI = sorted(
+"AEEFES. IS", "AGHOL. IS", "AKBNK. IS",
+"AKCNS.IS"
+"AKFGY.IS"
+"AKSA. IS"
+"AKSEN. IS"
+"AKGRT. IS"
+"ALARK. IS"
+"ALBRK. IS"
+"ALFAS. IS"
+"ALGYO. IS"
+"ALKIM. IS"
+"ANACM. IS"
+"ANELE. IS"
+"ARCLK. IS"
+"ASELS. IS"
+"ASTOR. IS"
+"AYDEM. IS"
+"AYGAZ. IS"
+"BAGFS. IS"
+"BERA. IS"
+"BEYAZ. IS"
+"BIMAS. IS"
+"BRYAT. IS"
+"BIZIM. IS"
+"BRISA. IS"
+"BUCIM. IS"
+"CANTE. IS"
+"CCOLA. IS"
+"CEMTS. IS"
+"CIMSA. IS"
+"CONSE. IS"
+"CWENE. IS"
+"DOAS. IS"
+"DOKTA. IS"
+"DYOBY. IS"
+"DOHOL. IS"
+"ECEEN. IS"
+"EGGUB. IS"
+"EKGYO. IS"
+"ENJSA. IS"
+"ENKAI. IS"
+"EREGL. IS"
+"EUPWR. IS"
+"FROTO. IS"
+"GARAN. IS"
+"GESAN. IS"
+"GLYHO. IS"
+"GSDHO. IS"
+"GUBRF. IS"
+"GWIND. IS"
+"HALKB. IS"
+"HEKTS. IS"
+"IPEKE. IS"
+"ISCTR. IS"
+"ISDMR. IS"
+"ISGYO. IS"
+"ISMEN. IS"
+"IZMDC. IS"
+"KARD. IS"
+"KAYSE. IS"
+"KCHOL. IS"
+"KMPUR. IS"
+"KONTR. IS"
+"KORDS. IS"
+"KOZAL. IS"
+"MAVI. IS"
+"KOZAA. IS"
+"KRDD. IS"
+"MGROŚ. IS"
+"MIATK. IS"
+"NETAS. IS"
+"ODAS. IS"
+"PENTA. IS"
+"OTKAR. IS"
+"PEIKM. IS"
+"OYAKC. IS"
+"QUAGR. IS"
+"PGSUS. IS"
+"SAHOL. IS"
+"SASA. IS"
+"SELEC. IS"
+"SISE. IS"
+"SKBNK. IS"
+"SNGYO. IS"
+"SMRTG. IS"
+"TAVHL. IS"
+"SOKM. IS"
+"TARKM. IS"
+"TCELL. IS"
+"THYAO. IS"
+"TKFEN. IS"
+"TKNSA. IS"
+"TSKB. IS"
+"TRGYO. IS"
+"TUPRS. IS"
+"TOASO. IS"
+"TURSG. IS"
+"ULKER. IS"
+"VAKBN. IS"
+"VESBE. IS"
+"VESTL. IS"
+"YEOTK. IS"
+"YKBNK. IS"
+"ZOREN. IS"
+)
 YABANCI_LIST = ["AAPL", "TSLA", "NVDA", "BTC-USD", "ETH-USD"]
 TUM_LISTE = sorted(BIST_LIST + YABANCI_LIST)
 
@@ -41,7 +146,7 @@ TUM_LISTE = sorted(BIST_LIST + YABANCI_LIST)
 # 3. YAN PANEL (GİRİŞ)
 # ==========================================
 with st.sidebar:
-    st.header("👑 İmparator Menü")
+    st.header("👑 Borsa Menü")
     secilen = st.selectbox("Varlık Seç:", TUM_LISTE)
     adet = st.number_input("Adet:", min_value=0.0, step=1.0, value=1.0)
     maliyet = st.number_input("Birim Maliyet:", min_value=0.0, step=0.1, value=100.0)
@@ -60,7 +165,7 @@ with st.sidebar:
 # ==========================================
 # 4. ANA PANEL (TABLO VE GRAFİK ALANLARI)
 # ==========================================
-st.title("📈 İmparator Portföy Yönetimi")
+st.title("📈 Borsa Portföy Yönetimi")
 
 if st.session_state.portfoy:
     # --- VERİ İŞLEME ---
