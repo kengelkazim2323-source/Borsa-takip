@@ -8,7 +8,7 @@ from streamlit_javascript import st_javascript
 # ==========================================
 # 1. AYARLAR & TASARIM
 # ==========================================
-st.set_page_config(page_title="İmparator Portföy v6.0", page_icon="👑", layout="wide")
+st.set_page_config(page_title="Borsa Portföy v6.0", page_icon="👑", layout="wide")
 
 st.markdown("""
     <style>
@@ -18,14 +18,14 @@ st.markdown("""
 
 # --- KALICI HAFIZA FONKSİYONLARI ---
 def load_permanent_data():
-    js_get = "localStorage.getItem('kral_v6_data');"
+    js_get = "localStorage.getItem('borsa_v6_data');"
     res = st_javascript(js_get)
     if res and res != "null":
         return json.loads(res)
     return None
 
 def save_permanent_data(data):
-    js_set = f"localStorage.setItem('kral_v6_data', '{json.dumps(data)}');"
+    js_set = f"localStorage.setItem('borsa_v6_data', '{json.dumps(data)}');"
     st_javascript(js_set)
 
 if 'portfoy' not in st.session_state:
@@ -107,7 +107,7 @@ TUM_LISTE = sorted(BIST_FULL + GLOBAL_LIST)
 # 4. YAN PANEL & GİRİŞ
 # ==========================================
 with st.sidebar:
-    st.header("👑 İmparator Menü")
+    st.header("👑 Borsa Menü")
     secilen = st.selectbox("Varlık Ara/Seç:", TUM_LISTE)
     adet = st.number_input("Adet:", min_value=0.0, step=1.0, value=1.0)
     maliyet = st.number_input("Birim Maliyet:", min_value=0.0, step=0.001, format="%.3f")
@@ -129,7 +129,7 @@ with st.sidebar:
 # ==========================================
 # 5. ANA EKRAN & TABLO
 # ==========================================
-st.title("📊 İmparator Portföy Analizi")
+st.title("📊 Borsa Portföy Analizi")
 
 if st.session_state.portfoy:
     data = []
