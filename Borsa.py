@@ -34,9 +34,9 @@ if 'portfoy' not in st.session_state:
 # 2. HİSSE LİSTELERİ
 # ==========================================
 BIST100_LISTESI = sorted(
-"AEEFES. IS", "AGHOL. IS", "AKBNK. IS",
-"AKCNS.IS"
-"AKFGY.IS"
+"AKBNK. IS"
+"AKCNS. IS"
+"AKFGY. IS"
 "AKSA. IS"
 "AKSEN. IS"
 "AKGRT. IS"
@@ -138,7 +138,7 @@ BIST100_LISTESI = sorted(
 "YEOTK. IS"
 "YKBNK. IS"
 "ZOREN. IS"
-)
+]
 YABANCI_LIST = ["AAPL", "TSLA", "NVDA", "BTC-USD", "ETH-USD"]
 TUM_LISTE = sorted(BIST_LIST + YABANCI_LIST)
 
