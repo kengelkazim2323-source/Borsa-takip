@@ -2,5 +2,5 @@ streamlit
 yfinance
 pandas
 plotly
-streamlit_javascript
-streamlit_components_dot_com
+streamlit-javascript
+streamlit-components-dot-com
