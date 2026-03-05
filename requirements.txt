@@ -5,4 +5,3 @@ plotly
 json
 streamlit-javascript
 datetime
-numpy
