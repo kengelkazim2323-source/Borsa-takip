@@ -99,7 +99,7 @@ st.markdown(f"<h3 style='text-align: center; color:{main_color};'>🦁 BORSA ASL
 
 with st.container():
     c1, c2, c3 = st.columns([2, 1, 1])
-    with c1: s_varlik = st.selectbox("Hisse/Emtia Seçin", VARLIK_LISTESI)
+    with c1: s_varlik = st.selectbox("Hisse Seçin", VARLIK_LISTESI)
     with c2: s_adet = st.number_input("Adet", min_value=0, step=1, value=0)
     with c3: s_maliyet = st.number_input("Maliyet", min_value=0.0, step=0.1, value=0.0)
     
