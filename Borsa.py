@@ -60,7 +60,7 @@ if 'portfoy' not in st.session_state:
 # ==========================================
 piyasa_izleme = {
     "BIST 100": "XU100.IS", "USD/TRY": "USDTRY=X", "ONS ALTIN": "GC=F", 
-    "BITCOIN": "BTC-USD", "EREĞLİ": "EREGL.IS", "THY": "THYAO.IS", "NASDAQ": "^IXIC"
+    "BITCOIN": "BTC-USD", "EREĞLİ": "EREGL.IS", "GÜMÜŞ": "SI=F", "THY": "THYAO.IS", "NASDAQ": "^IXIC"
 }
 
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-container">'
