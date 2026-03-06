@@ -9,8 +9,6 @@ from datetime import datetime
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
-"ONS ALTIN": "GC=F" "GÜMÜŞ": "SI=F"
-
 
 # ==========================================
 # 1. VERİ YÖNETİMİ
