@@ -39,7 +39,7 @@ except: pass
 # 2. TEMA VE CSS
 # ==========================================
 st.set_page_config(page_title="BORSA ASLANI", page_icon="🦁", layout="wide")
-main_color = "00ff41" # Matrix Yeşili
+main_color = "#00ff41" # Matrix Yeşili
 bg_color = "#05070a"
 
 st.markdown(f"""
