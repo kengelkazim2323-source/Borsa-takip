@@ -5,6 +5,7 @@ import json
 import os
 import time
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh
 
 # ==========================================
 # 1. VERİ YÖNETİMİ & OTOMATİK YENİLEME
