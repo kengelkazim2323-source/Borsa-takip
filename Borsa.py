@@ -155,7 +155,7 @@ if st.session_state.portfoy:
         df_display['Güncel (₺)'] = df['Güncel'].apply(tr_format)
         df_display['Değer (₺)'] = df['Değer'].apply(tr_format)
         df_display['K/Z (₺)'] = df['K/Z'].apply(tr_format)
-
+        df_display['Temettü (₺)'] = df['Temettü'].apply(tr_format)
         edited_df = st.data_editor(
             df_display,
             column_config={
