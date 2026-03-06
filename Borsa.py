@@ -59,7 +59,7 @@ st.markdown(f"""
 # ==========================================
 # 3. PİYASA AKIŞI
 # ==========================================
-piyasa_izleme = {"BIST 100": "XU100.IS", "ONS GÜMÜŞ": "SI=F", "GÜMÜŞ/TRY": "GÜMÜŞTRY=Y", "USD/TRY": "USDTRY=X", "ONS ALTIN": "GC=F", "BITCOIN": "BTC-USD"}
+piyasa_izleme = {"BIST 100": "XU100.IS", "ONS GÜMÜŞ": "SI=F", "GÜMÜŞ TRY": "GAG-TRY", "GRAM ALTIN": "GAU-TRY", "ONS ALTIN": "GC=F", "USD/TRY": "USDTRY=X", "EUR/TRY": "EURTRY=X", "BITCOIN": "BTC-USD"}
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-container">'
 for isim, sembol in piyasa_izleme.items():
     try:
