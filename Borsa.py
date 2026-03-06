@@ -80,7 +80,7 @@ st.markdown(f"""
 # ==========================================
 # 3. CANLI PİYASA AKIŞI
 # ==========================================
-piyasa_izleme = {{"BIST 100": "XU100.IS", "GÜMÜŞ": "SI=F", "USD/TRY": "USDTRY=X", "ONS ALTIN": "GC=F", "BITCOIN": "BTC-USD", "NASDAQ": "IXIC"}}
+piyasa_izleme = {"BIST 100": "XU100.IS", "GÜMÜŞ": "SI=F", "USD/TRY": "USDTRY=X", "ONS ALTIN": "GC=F", "BITCOIN": "BTC-USD", "NASDAQ": "^IXIC"}
 
 ticker_content = f'<div class="ticker-wrapper"><div class="ticker-container">'
 for isim, sembol in piyasa_izleme.items():
