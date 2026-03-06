@@ -187,5 +187,3 @@ try:
     st_autorefresh(interval=15000, key="auto")
 except: pass
     
-tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
-st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Yüklendi.")
