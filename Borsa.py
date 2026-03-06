@@ -151,11 +151,12 @@ if st.session_state.portfoy:
         m3.metric("YILLIK NET TEMETTÜ", f"{tr_format(df['Net Temettü'].sum())} ₺")
         
         # Düzenlenebilir Tablo
-        df_display = df[['Varlık', 'Adet', 'Maliyet']].copy()
+        df_display = df[['Varlık', 'Adet', 'Maliyet','Temettü']].copy()
         df_display['Güncel (₺)'] = df['Güncel'].apply(tr_format)
         df_display['Değer (₺)'] = df['Değer'].apply(tr_format)
         df_display['K/Z (₺)'] = df['K/Z'].apply(tr_format)
         df_display['Temettü (₺)'] = df['Temettü'].apply(tr_format)
+        
         edited_df = st.data_editor(
             df_display,
             column_config={
