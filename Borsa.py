@@ -39,7 +39,7 @@ except: pass
 # 2. TEMA VE CSS
 # ==========================================
 st.set_page_config(page_title="BORSA ASLANI", page_icon="🦁", layout="wide")
-main_color = "#00ff41" # Matrix Yeşili
+main_color = "#97ffff" # Matrix Yeşili
 bg_color = "#05070a"
 
 st.markdown(f"""
@@ -59,7 +59,7 @@ st.markdown(f"""
 # ==========================================
 # 3. PİYASA AKIŞI
 # ==========================================
-piyasa_izleme = {"BIST 100": "XU100.IS", "GÜMÜŞ": "SI=F", "USD/TRY": "USDTRY=X", "ONS ALTIN": "GC=F", "BITCOIN": "BTC-USD"}
+piyasa_izleme = {"BIST 100": "XU100.IS", "ONS GÜMÜŞ": "SI=F", "GÜMÜŞ/TRY": "GÜMÜŞTRY=X", "USD/TRY": "USDTRY=X", "ONS ALTIN": "GC=F", "BITCOIN": "BTC-USD"}
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-container">'
 for isim, sembol in piyasa_izleme.items():
     try:
