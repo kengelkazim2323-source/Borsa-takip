@@ -4,6 +4,7 @@ import pandas as pd
 import json
 import os
 import time
+import pytz
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
@@ -145,4 +146,6 @@ if st.session_state.portfoy:
 else:
     st.info("Portföyünüz boş.")
 
-st.caption(f"Veriler yfinance üzerinden 15sn periyotla güncellenir. Son: {datetime.now().strftime('%H:%M:%S')}")
+# Türkiye saatini al
+tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
+st.caption(f"Veriler yfinance üzerinden 15sn periyotla güncellenir. Son Güncelleme: {tr_saati}")
