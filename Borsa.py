@@ -163,14 +163,15 @@ if st.session_state.portfoy:
                 "Varlık": st.column_config.TextColumn("Varlık", disabled=True),
                 "Adet": st.column_config.NumberColumn("Adet", min_value=0, step=1),
                 "Maliyet": st.column_config.NumberColumn("Maliyet", min_value=0.0, format="%.2f"),
-            },
+                "Temettü": st.column_config.NumberColumn("Temettü", min_value=0.0, format="%.2f"),
+            }
             hide_index=True, use_container_width=True
         )
 
         if not edited_df[['Adet', 'Maliyet']].equals(df_display[['Adet', 'Maliyet']]):
             yeni_p = []
             for _, r in edited_df.iterrows():
-                yeni_p.append({"Hisse": r['Varlık'], "Adet": int(r['Adet']), "Maliyet": float(r['Maliyet'])})
+                yeni_p.append({"Hisse": r['Varlık'], "Adet": int(r['Adet']), "Maliyet": float(r['Maliyet'], "Temettü": float(r['Temettü'])})
             st.session_state.portfoy = yeni_p
             save_data(yeni_p)
             st.rerun()
