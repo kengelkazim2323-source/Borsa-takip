@@ -56,7 +56,7 @@ st.markdown(f"""
     .ticker-wrapper {{ width: 100%; overflow-x: auto; background: rgba(13, 17, 23, 0.98); border-bottom: 2px solid {main_color}; position: sticky; top: 0; z-index: 999; backdrop-filter: blur(10px); margin-bottom: 20px; }}
     .ticker-container {{ display: flex; padding: 10px 15px; gap: 30px; width: max-content; }}
     .up {{ color: {main_color}; }} .down {{ color: #ff3131; }}
-    .stMetric {{ background: #0d1117; border: 5px solid #30363d; padding: 10px; border-radius: 8px; }}
+    .stMetric {{ background: #0d1117; border: 1px solid #30363d; padding: 10px; border-radius: 8px; }}
     </style>
     <div class="top-right-clock">🕒 {tr_saati}</div>
     """, unsafe_allow_html=True)
