@@ -171,7 +171,7 @@ if st.session_state.portfoy:
         if not edited_df[['Adet', 'Maliyet']].equals(df_display[['Adet', 'Maliyet']]):
             yeni_p = []
             for _, r in edited_df.iterrows():
-                yeni_p.append({"Hisse": r['Varlık'], "Adet": int(r['Adet']), "Maliyet": float(r['Maliyet'], "Temettü": float(r['Temettü'])})
+                yeni_p.append({"Hisse": r['Varlık'], "Adet": int(r['Adet']), "Maliyet": float(r['Maliyet'])})
             st.session_state.portfoy = yeni_p
             save_data(yeni_p)
             st.rerun()
