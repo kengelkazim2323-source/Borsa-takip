@@ -50,7 +50,7 @@ st.markdown(f"""
     <style>
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}} header {{visibility: hidden;}}
     .stApp {{ background-color: {bg_color}; }} 
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@900;1200&display=swap');
     html, body, [class*="st-"] {{ font-family: 'JetBrains Mono', monospace; color: #e6edf3; }}
     .top-right-clock {{ position: absolute; top: 10px; right: 20px; color: {main_color}; font-weight: bold; font-size: 18px; z-index: 1000; border: 1px solid {main_color}; padding: 5px 15px; border-radius: 5px; background: rgba(0,0,0,0.5); }}
     .ticker-wrapper {{ width: 100%; overflow-x: auto; background: rgba(13, 17, 23, 0.98); border-bottom: 2px solid {main_color}; position: sticky; top: 0; z-index: 999; backdrop-filter: blur(10px); margin-bottom: 20px; }}
