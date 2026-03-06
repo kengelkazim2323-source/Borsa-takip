@@ -9,6 +9,9 @@ from datetime import datetime
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
+"ONS ALTIN": "GC=F" "GÜMÜŞ": "SI=F"
+
+
 # ==========================================
 # 1. VERİ YÖNETİMİ
 # ==========================================
@@ -57,12 +60,14 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. PİYASA AKIŞI (CANLI BANT)
+# 3. PİYASA AKIŞI (EMTİALAR BURADA)
 # ==========================================
 piyasa_izleme = {
-    "BIST 100": "XU100.IS", 
+    "ONS ALTIN": "GC=F",
     "GRAM ALTIN": "GAU-TRY", 
+    "ONS GÜMÜŞ": "SI=F",
     "GÜMÜŞ TRY": "GAG-TRY", 
+    "BIST 100": "XU100.IS", 
     "USD/TRY": "USDTRY=X", 
     "EUR/TRY": "EURTRY=X", 
     "BITCOIN": "BTC-USD"
@@ -90,20 +95,18 @@ BIST_HİSSELERİ = sorted([
 VARLIK_LISTESI = EMTIAR_VE_DOVIZ + BIST_HİSSELERİ
 
 # ==========================================
-# 5. GİRİŞ PANELİ (ONDALIK KALDIRILDI)
+# 5. GİRİŞ PANELİ
 # ==========================================
 st.markdown(f"<h3 style='text-align: center; color:{main_color};'>🦁 BORSA ASLANI</h3>", unsafe_allow_html=True)
 
 with st.container():
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: s_varlik = st.selectbox("Varlık Seçin", VARLIK_LISTESI)
-    # Ondalık kısmı kaldırmak için step=1 ve value=0 tam sayı yapıldı
     with c2: s_adet = st.number_input("Adet (Tam Sayı)", min_value=0, step=1, value=0)
     with c3: s_maliyet = st.number_input("Maliyet (Tam Sayı)", min_value=0, step=1, value=0)
     
     if st.button("🚀 PORTFÖYE EKLE", use_container_width=True):
         if s_varlik and s_adet > 0:
-            # Kaydederken int (tam sayı) olarak zorluyoruz
             st.session_state.portfoy.append({"Hisse": s_varlik, "Adet": int(s_adet), "Maliyet": int(s_maliyet)})
             save_data(st.session_state.portfoy)
             st.rerun()
@@ -122,8 +125,6 @@ if st.session_state.portfoy:
             info = tk.info
             div_yield = info.get('dividendYield', 0) if info.get('dividendYield') else 0
             net_temettu = (curr * div_yield) * item['Adet'] * 0.85
-            
-            # Hesaplama netleşti: (Güncel Fiyat - Tam Sayı Maliyet) * Tam Sayı Adet
             kz = (curr - float(item['Maliyet'])) * int(item['Adet'])
             
             hist = tk.history(period="1mo")
@@ -133,14 +134,9 @@ if st.session_state.portfoy:
             else: rsi = 50
             
             p_data.append({
-                "Varlık": item['Hisse'], 
-                "Adet": int(item['Adet']), 
-                "Maliyet": int(item['Maliyet']),
-                "Güncel": round(curr, 2), 
-                "Değer": round(item['Adet'] * curr, 2), 
-                "K/Z": round(kz, 2), 
-                "Net Temettü": round(net_temettu, 2), 
-                "RSI": rsi
+                "Varlık": item['Hisse'], "Adet": int(item['Adet']), "Maliyet": int(item['Maliyet']),
+                "Güncel": round(curr, 2), "Değer": round(item['Adet'] * curr, 2), 
+                "K/Z": round(kz, 2), "Net Temettü": round(net_temettu, 2), "RSI": rsi
             })
         except: continue
     
@@ -152,14 +148,9 @@ if st.session_state.portfoy:
         m2.metric("TOPLAM K/Z", f"{df['K/Z'].sum():,.2f} ₺")
         m3.metric("YILLIK NET TEMETTÜ", f"{df['Net Temettü'].sum():,.2f} ₺")
         
-        # Tablo formatında Adet ve Maliyet tam sayı gösterilecek şekilde ayarlandı
         st.dataframe(df[['Varlık', 'Adet', 'Maliyet', 'Güncel', 'Değer', 'K/Z']], 
-                     use_container_width=True, 
-                     hide_index=True,
-                     column_config={
-                         "Adet": st.column_config.NumberColumn(format="%d"),
-                         "Maliyet": st.column_config.NumberColumn(format="%d")
-                     })
+                     use_container_width=True, hide_index=True,
+                     column_config={"Adet": st.column_config.NumberColumn(format="%d"), "Maliyet": st.column_config.NumberColumn(format="%d")})
         
         if st.button("🗑️ Portföyü Sıfırla"):
             st.session_state.portfoy = []; save_data([]); st.rerun()
@@ -177,4 +168,4 @@ else:
     st.info("Portföy boş.")
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
-st.caption(f"🕒 Son Güncelleme: {tr_saati} | Adet ve Maliyet tam sayıya sabitlendi.")
+st.caption(f"🕒 Son Güncelleme: {tr_saati} | Canlı Bant: Emtialar en başa alındı.")
