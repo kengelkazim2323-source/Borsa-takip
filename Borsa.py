@@ -8,16 +8,7 @@ from datetime import datetime
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
-import streamlit as st
-import yfinance as yf
-import pandas as pd
-import json
-import os
-import pytz
-import plotly.express as px
-import numpy as np
-from datetime import datetime, timedelta
-from streamlit_autorefresh import st_autorefresh
+
 
 # ==========================================
 # 0. SAYI FORMATLAMA VE GELİŞMİŞ TEKNİK ANALİZ
