@@ -146,7 +146,7 @@ if st.session_state.portfoy:
     tab1, tab2, tab3 = st.tabs(["📊 PORTFÖYÜM", "📈 DAĞILIM", "💰 TEMETTÜ"])
     with tab1:
         m1, m2, m3 = st.columns(3)
-        m1.metric("TOPLAM DEĞER", f"{tr_format(df['DEĞER'].sum())} ₺")
+        m1.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} ₺")
         m2.metric("TOPLAM K/Z", f"{tr_format(df['K/Z'].sum())} ₺")
         m3.metric("GÜNLÜK K/Z", f"{tr_format(total_daily_gain)} ₺", delta=f"{total_daily_gain:,.2f}")
         df_disp = df.copy()
