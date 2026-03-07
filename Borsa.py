@@ -119,48 +119,91 @@ with st.container():
             save_data(st.session_state.portfoy)
             st.rerun()
 
+
 # ==========================================
-# 5. VERİ İŞLEME VE ANALİZ
+# 5. VERİ İŞLEME VE ANALİZ (HATA KORUMALI)
 # ==========================================
 if st.session_state.portfoy:
     p_data = []
     total_daily_gain = 0
+    
+    # Veri çekme işlemi
     for item in st.session_state.portfoy:
         try:
             tk = yf.Ticker(item['Hisse'])
             hist = tk.history(period="30d")
-            if len(hist) >= 2:
-                curr = hist['Close'].iloc[-1]
-                daily_tl = (curr - hist['Close'].iloc[-2]) * float(item['Adet'])
-                total_daily_gain += daily_tl
-                p_data.append({
-                    "Varlık": item['Hisse'], "Sinyal": get_signal(hist), "Adet": item['Adet'],
-                    "Güncel": curr, "Günlük (%)": ((curr - hist['Close'].iloc[-2]) / hist['Close'].iloc[-2]) * 100,
-                    "Günlük Fark (₺)": daily_tl, "Değer": float(item['Adet']) * curr,
-                    "K/Z": (curr - float(item['Maliyet'])) * float(item['Adet']),
-                    "Temettü": (tk.info.get('dividendRate', 0) or (curr * tk.info.get('dividendYield', 0))) * float(item['Adet'])
-                })
-        except: continue
+            
+            # Eğer veri gelmediyse bu hisseyi atla, uygulamayı çökertme
+            if hist.empty or len(hist) < 2:
+                continue
+                
+            curr = hist['Close'].iloc[-1]
+            prev_close = hist['Close'].iloc[-2]
+            
+            # Hesaplamalar
+            adet = float(item['Adet'])
+            maliyet = float(item['Maliyet'])
+            
+            daily_tl = (curr - prev_close) * adet
+            total_daily_gain += daily_tl
+            
+            p_data.append({
+                "Varlık": item['Hisse'], 
+                "Sinyal": get_signal(hist), 
+                "Adet": adet,
+                "Güncel": curr, 
+                "Günlük (%)": ((curr - prev_close) / prev_close) * 100,
+                "Günlük Fark (₺)": daily_tl, 
+                "Değer": adet * curr,
+                "K/Z": (curr - maliyet) * adet,
+                "Temettü": (tk.info.get('dividendRate', 0) or 0) * adet
+            })
+        except Exception as e:
+            st.error(f"{item['Hisse']} verisi alınamadı: {e}")
+            continue
 
-    df = pd.DataFrame(p_data)
-    tab1, tab2, tab3 = st.tabs(["📊 PORTFÖYÜM", "📈 DAĞILIM", "💰 TEMETTÜ"])
-    with tab1:
-        m1, m2, m3 = st.columns(3)
-        m1.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} ₺")
-        m2.metric("TOPLAM K/Z", f"{tr_format(df['K/Z'].sum())} ₺")
-        m3.metric("GÜNLÜK K/Z", f"{tr_format(total_daily_gain)} ₺", delta=f"{total_daily_gain:,.2f}")
-        df_disp = df.copy()
-        df_disp["Günlük (%)"] = df_disp["Günlük (%)"].apply(lambda x: f"%{x:+.2f}")
-        for c in ["Güncel", "Değer", "K/Z", "Günlük Fark (₺)"]: df_disp[c] = df_disp[c].apply(tr_format)
-        st.dataframe(df_disp[["Varlık", "Sinyal", "Adet", "Güncel", "Günlük (%)", "Günlük Fark (₺)", "Değer", "K/Z"]], use_container_width=True, hide_index=True)
-    with tab2: st.plotly_chart(px.pie(df, values='Değer', names='Varlık', hole=0.5), use_container_width=True)
-    with tab3:
-        st.success(f"### Yıllık Tahmini Temettü: {tr_format(df['Temettü'].sum())} ₺")
-        st.table(df[df['Temettü'] > 0][["Varlık", "Temettü"]].style.format({"Temettü": "{:,.2f} ₺"}))
+    # EĞER HİÇBİR VERİ ÇEKİLEMEDİYSE (df boşsa) HATAYI ENGELLE
+    if len(p_data) > 0:
+        df = pd.DataFrame(p_data)
+        
+        tab1, tab2, tab3 = st.tabs(["📊 PORTFÖYÜM", "📈 DAĞILIM", "💰 TEMETTÜ"])
+        
+        with tab1:
+            m1, m2, m3 = st.columns(3)
+            # Sütun varlığı kontrol edilerek işlem yapılıyor
+            t_deger = df['Değer'].sum() if 'Değer' in df.columns else 0
+            t_kz = df['K/Z'].sum() if 'K/Z' in df.columns else 0
+            
+            m1.metric("TOPLAM DEĞER", f"{tr_format(t_deger)} ₺")
+            m2.metric("TOPLAM K/Z", f"{tr_format(t_kz)} ₺")
+            m3.metric("GÜNLÜK K/Z", f"{tr_format(total_daily_gain)} ₺", delta=f"{total_daily_gain:,.2f}")
+            
+            df_disp = df.copy()
+            df_disp["Günlük (%)"] = df_disp["Günlük (%)"].apply(lambda x: f"%{x:+.2f}")
+            for c in ["Güncel", "Değer", "K/Z", "Günlük Fark (₺)"]: 
+                if c in df_disp.columns:
+                    df_disp[c] = df_disp[c].apply(tr_format)
+            
+            st.dataframe(df_disp[["Varlık", "Sinyal", "Adet", "Güncel", "Günlük (%)", "Günlük Fark (₺)", "Değer", "K/Z"]], 
+                         use_container_width=True, hide_index=True)
+        
+        with tab2:
+            st.plotly_chart(px.pie(df, values='Değer', names='Varlık', hole=0.5), use_container_width=True)
+            
+        with tab3:
+            t_temettu = df['Temettü'].sum() if 'Temettü' in df.columns else 0
+            st.success(f"### Yıllık Tahmini Temettü: {tr_format(t_temettu)} ₺")
+            if 'Temettü' in df.columns:
+                st.table(df[df['Temettü'] > 0][["Varlık", "Temettü"]].style.format({"Temettü": "{:,.2f} ₺"}))
+    else:
+        st.warning("Hisseler için veri çekilemiyor. Lütfen internet bağlantınızı veya sembolleri kontrol edin.")
+
     if st.button("🗑️ TÜMÜNÜ TEMİZLE"):
-        st.session_state.portfoy = []; save_data([]); st.rerun()
-else: st.info("Takip listesi boş.")
-
+        st.session_state.portfoy = []
+        save_data([])
+        st.rerun()
+else:
+    st.info("Takip listesi boş.")
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Yüklendi.")
