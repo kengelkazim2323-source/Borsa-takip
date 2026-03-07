@@ -8,6 +8,16 @@ from datetime import datetime
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
+import streamlit as st
+import yfinance as yf
+import pandas as pd
+import json
+import os
+import pytz
+import plotly.express as px
+import numpy as np
+from datetime import datetime, timedelta
+from streamlit_autorefresh import st_autorefresh
 
 # ==========================================
 # 0. SAYI FORMATLAMA VE GELİŞMİŞ TEKNİK ANALİZ
@@ -131,7 +141,7 @@ if st.session_state.portfoy:
     p_data = []
     total_daily_gain = 0
     for item in st.session_state.portfoy:
-        curr, d_pct, d_tl, val, kz, signal, n_temettu = 0.0, 0.0, 0.0, 0.0, 0.0, "🔴 VERİ YOK", 0.0
+        curr, d_pct, d_tl, val, kz, signal, n_temettu, t_verimi = 0.0, 0.0, 0.0, 0.0, 0.0, "🔴 VERİ YOK", 0.0, 0.0
         try:
             tk = yf.Ticker(item['Hisse'])
             hist = tk.history(period="60d")
@@ -144,14 +154,31 @@ if st.session_state.portfoy:
                 val = adet * curr
                 kz = (curr - float(item['Maliyet'])) * adet
                 signal = get_signal(hist)
+                
                 # Temettü hesaplama (son 1 yıl toplamı)
                 divs = tk.dividends
                 if not divs.empty:
                     divs.index = divs.index.tz_localize(None)
-                    n_temettu = divs[divs.index > (datetime.now() - timedelta(days=365))].sum() * adet
+                    hisse_basi_toplam = divs[divs.index > (datetime.now() - timedelta(days=365))].sum()
+                    n_temettu = hisse_basi_toplam * adet
+                    # Temettü Verimi Getirisi (Hisse Başı Temettü / Güncel Fiyat)
+                    if curr > 0:
+                        t_verimi = (hisse_basi_toplam / curr) * 100
+                
                 total_daily_gain += d_tl
         except: pass
-        p_data.append({"Varlık": item['Hisse'], "Sinyal": signal, "Adet": item['Adet'], "Güncel": curr, "Günlük (%)": d_pct, "Günlük Fark (₺)": d_tl, "Değer": val, "K/Z": kz, "Net Temettü": n_temettu})
+        p_data.append({
+            "Varlık": item['Hisse'], 
+            "Sinyal": signal, 
+            "Adet": item['Adet'], 
+            "Güncel": curr, 
+            "Günlük (%)": d_pct, 
+            "Günlük Fark (₺)": d_tl, 
+            "Değer": val, 
+            "K/Z": kz, 
+            "Net Temettü": n_temettu,
+            "Temettü Verimi (%)": t_verimi
+        })
 
     df = pd.DataFrame(p_data)
     if not df.empty:
@@ -161,20 +188,27 @@ if st.session_state.portfoy:
             m1.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} ₺")
             m2.metric("TOPLAM K/Z", f"{tr_format(df['K/Z'].sum())} ₺")
             m3.metric("GÜNLÜK K/Z", f"{tr_format(total_daily_gain)} ₺", delta=f"{total_daily_gain:,.2f}")
-            df_disp = df.drop(columns=['Net Temettü']).copy()
+            df_disp = df.drop(columns=['Net Temettü', 'Temettü Verimi (%)']).copy()
             df_disp["Günlük (%)"] = df_disp["Günlük (%)"].apply(lambda x: f"%{x:+.2f}")
             for c in ["Güncel", "Değer", "K/Z", "Günlük Fark (₺)"]: df_disp[c] = df_disp[c].apply(tr_format)
             st.dataframe(df_disp, use_container_width=True, hide_index=True)
         with t2:
             st.plotly_chart(px.pie(df, values='Değer', names='Varlık', hole=0.5), use_container_width=True)
         with t3:
-            # KRALIN İSTEDİĞİ KISIM:
+            # KRALIN İSTEDİĞİ KISIM + GETİRİ HESABI:
             st.markdown(f"### 💰 Yıllık Tahmini Net Temettü: **{tr_format(df['Net Temettü'].sum())} ₺**")
-            st.dataframe(df[df['Net Temettü'] > 0][['Varlık', 'Adet', 'Net Temettü']], use_container_width=True, hide_index=True)
+            
+            # Sadece temettü verenleri göster ve verim oranını ekle
+            div_df = df[df['Net Temettü'] > 0][['Varlık', 'Adet', 'Net Temettü', 'Temettü Verimi (%)']].copy()
+            if not div_df.empty:
+                div_df['Net Temettü'] = div_df['Net Temettü'].apply(tr_format)
+                div_df['Temettü Verimi (%)'] = div_df['Temettü Verimi (%)'].apply(lambda x: f"%{x:.2f}")
+                st.dataframe(div_df, use_container_width=True, hide_index=True)
+            else:
+                st.warning("Portföyündeki hisselerin son 1 yıllık temettü verisi bulunamadı.")
 
     if st.button("🗑️ TEMİZLE"): st.session_state.portfoy = []; save_data([]); st.rerun()
-else:
-    st.info("Portföy boş.")
+
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Yüklendi.")
