@@ -9,7 +9,6 @@ import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
 
-
 # ==========================================
 # 0. SAYI FORMATLAMA VE TEKNİK ANALİZ
 # ==========================================
@@ -201,6 +200,7 @@ if st.session_state.portfoy:
         st.session_state.portfoy = []; save_data([]); st.rerun()
 else:
     st.info("Portföy boş, ekleme yapmanı bekliyorum.")
+
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Yüklendi.")
