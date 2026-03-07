@@ -41,8 +41,8 @@ if 'portfoy' not in st.session_state:
 # 2. TEMA VE SAAT AYARI
 # ==========================================
 st.set_page_config(page_title="BORSA ASLANI", page_icon="🦁", layout="wide")
-main_color = "#00ff41" 
-bg_color = "#05070a"
+main_color = "#00802b" # Beyaz temada okunabilmesi için koyu yeşil yapıldı
+bg_color = "#ffffff"   # Arka plan BEYAZ yapıldı
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 
@@ -51,12 +51,12 @@ st.markdown(f"""
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}} header {{visibility: hidden;}}
     .stApp {{ background-color: {bg_color}; }} 
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-    html, body, [class*="st-"] {{ font-family: 'JetBrains Mono', monospace; color: #e6edf3; }}
-    .top-right-clock {{ position: absolute; top: 10px; right: 20px; color: {main_color}; font-weight: bold; font-size: 18px; z-index: 1000; border: 1px solid {main_color}; padding: 5px 15px; border-radius: 5px; background: rgba(0,0,0,0.5); }}
-    .ticker-wrapper {{ width: 100%; overflow-x: auto; background: rgba(13, 17, 23, 0.98); border-bottom: 2px solid {main_color}; position: sticky; top: 0; z-index: 999; backdrop-filter: blur(10px); margin-bottom: 20px; }}
+    html, body, [class*="st-"] {{ font-family: 'JetBrains Mono', monospace; color: #111111; }} /* Yazılar siyaha çevrildi */
+    .top-right-clock {{ position: absolute; top: 0px; right: 20px; color: #ffffff; font-weight: bold; font-size: 18px; z-index: 1000; border: 1px solid #333; padding: 5px 15px; border-radius: 5px; background: rgba(30,30,30,0.9); }} /* Saat rengi değiştirildi ve daha yukarı alındı */
+    .ticker-wrapper {{ width: 100%; overflow-x: auto; background: rgba(245, 245, 245, 0.98); border-bottom: 2px solid {main_color}; position: sticky; top: 0; z-index: 999; backdrop-filter: blur(10px); margin-bottom: 20px; }}
     .ticker-container {{ display: flex; padding: 10px 15px; gap: 30px; width: max-content; }}
     .up {{ color: {main_color}; }} .down {{ color: #ff3131; }}
-    .stMetric {{ background: #0d1117; border: 1px solid #30363d; padding: 10px; border-radius: 8px; }}
+    .stMetric {{ background: #f8f9fa; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; }} /* Kutu arka planları beyaz temaya uyarlandı */
     </style>
     <div class="top-right-clock">🕒 {tr_saati}</div>
     """, unsafe_allow_html=True)
@@ -83,7 +83,7 @@ for isim, sembol in piyasa_izleme.items():
             prev = hist['Close'].iloc[-2]
             degisim = ((last - prev) / prev) * 100
             color = "up" if degisim >= 0 else "down"
-            ticker_content += f'<div style="text-align:center; border-right:1px solid #30363d; padding-right:20px;"><div style="font-size:10px; color:#8b949e">{isim}</div><div style="font-weight:bold;">{tr_format(last)}</div><div class="{color}" style="font-size:11px;">{degisim:+.2f}%</div></div>'
+            ticker_content += f'<div style="text-align:center; border-right:1px solid #e2e8f0; padding-right:20px;"><div style="font-size:10px; color:#64748b">{isim}</div><div style="font-weight:bold;">{tr_format(last)}</div><div class="{color}" style="font-size:11px;">{degisim:+.2f}%</div></div>'
     except: continue
 st.markdown(ticker_content + '</div></div>', unsafe_allow_html=True)
 
@@ -188,4 +188,9 @@ if st.session_state.portfoy:
 else:
     st.info("Portföy boş. Yukarıdan hisse ekle, anında satır açılsın kral.")
 
-st_autorefresh(interval=15000, key="auto")
+# Otomatik güncelleme süresi 1 saniyeye (1000 ms) düşürüldü
+st_autorefresh(interval=1000, key="auto")
+
+   
+          
+       
