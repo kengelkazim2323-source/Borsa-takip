@@ -67,7 +67,7 @@ if 'portfoy' not in st.session_state:
 # 2. GÖRSEL AYARLAR VE SAAT
 # ==========================================
 st.set_page_config(page_title="BORSA TAKİP", page_icon="📈", layout="wide")
-st_autorefresh(interval=5000, key="datarefresh")
+st_autorefresh(interval=500, key="datarefresh")
 main_color = "#1a73e8"
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 
