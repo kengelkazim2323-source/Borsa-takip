@@ -10,6 +10,7 @@ from streamlit_autorefresh import st_autorefresh
 
 
 
+
 # ==========================================
 # 0. VERİ YÖNETİMİ
 # ==========================================
@@ -67,20 +68,31 @@ def get_signal(hist_data):
     except: return "---"
 
 # ==========================================
-# 1. TEMA VE GÖRSEL AYARLAR
+# 1. YENİ NESİL RENK TEMALARI
 # ==========================================
-st.set_page_config(page_title="KRAL BORSA", page_icon="📈", layout="wide")
-st_autorefresh(interval=60000, key="datarefresh")
+st.set_page_config(page_title="Borsa Takip", page_icon="📈", layout="wide")
+st_autorefresh(interval=1000, key="datarefresh")
 
 with st.sidebar:
-    st.header("🎨 GÖRÜNÜM")
-    tema = st.selectbox("Tema Seçimi", ["Premium Koyu", "Galaksi (VIP)", "Matrix", "Derin Okyanus"])
+    st.header("🎨 Borsa Takip")
+    tema = st.selectbox("Tema Seçimi", [
+        "Galaksi (VIP)", 
+        "Premium Koyu", 
+        "Altın Vuruş", 
+        "Zümrüt Yeşili", 
+        "Siber Punk", 
+        "Retro Kehribar",
+        "Matrix"
+    ])
 
 tema_renkleri = {
     "Premium Koyu": {"bg": "#121212", "text": "#ffffff", "box": "#4c4c4c", "accent": "#BB86FC"},
     "Galaksi (VIP)": {"bg": "#0B0E14", "text": "#E0E0E0", "box": "#161B22", "accent": "#00D4FF"},
-    "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"},
-    "Derin Okyanus": {"bg": "#0f2027", "text": "#e0eaf5", "box": "#203a43", "accent": "#2bc0e4"}
+    "Altın Vuruş": {"bg": "#0F0F0F", "text": "#F5F5F5", "box": "#1A1A1A", "accent": "#D4AF37"},
+    "Zümrüt Yeşili": {"bg": "#06120B", "text": "#E8F5E9", "box": "#0D2114", "accent": "#00E676"},
+    "Siber Punk": {"bg": "#0D0221", "text": "#FFFFFF", "box": "#190033", "accent": "#FF00FF"},
+    "Retro Kehribar": {"bg": "#0A0A0A", "text": "#FFB300", "box": "#1A1A1A", "accent": "#FF8F00"},
+    "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"}
 }
 t_sec = tema_renkleri[tema]
 
@@ -101,10 +113,10 @@ st.markdown(f"""
         align-items: center;
         text-align: center;
     }}
-    [data-testid="stMetricLabel"] {{ font-size: 14px !important; color: {t_sec['text']} !important; opacity: 0.8; }}
+    [data-testid="stMetricLabel"] {{ font-size: 14px !important; color: {t_sec['text']} !important; opacity: 0.9; font-weight: 600; }}
     [data-testid="stMetricValue"] {{ font-size: 24px !important; font-weight: 700 !important; color: {t_sec['accent']} !important; }}
     
-    .ticker-wrapper {{ width: 100%; overflow: hidden; background: {t_sec['box']}; border-radius: 8px; margin-bottom: 30px; padding: 15px 0; border: 1px solid {t_sec['accent']}22; }}
+    .ticker-wrapper {{ width: 100%; overflow: hidden; background: {t_sec['box']}; border-radius: 8px; margin-bottom: 30px; padding: 15px 0; border: 1px solid {t_sec['accent']}44; }}
     .ticker-content {{ display: flex; animation: ticker 25s linear infinite; white-space: nowrap; gap: 60px; }}
     @keyframes ticker {{ 0% {{ transform: translateX(100%); }} 100% {{ transform: translateX(-100%); }} }}
     .up {{ color: #00e676; font-weight: bold; }} .down {{ color: #ff1744; font-weight: bold; }}
@@ -133,7 +145,7 @@ st.components.v1.html(clock_html, height=80)
 # ==========================================
 # 3. CANLI PİYASA
 # ==========================================
-st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:-20px;'>🚀 KRAL TERMİNAL</h2>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:-20px;'>🚀 Borsa Takip</h2>", unsafe_allow_html=True)
 piyasa_izleme = { "BIST 100": "XU100.IS", "ONS ALTIN": "GC=F", "ONS GÜMÜŞ": "SI=F", "GRAM ALTIN": "GAU-TRY", "USD/TRY": "USDTRY=X", "BITCOIN": "BTC-USD"}
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
 for isim, sembol in piyasa_izleme.items():
@@ -167,13 +179,11 @@ with st.expander("➕ PORTFÖYE VARLIK EKLE", expanded=False):
 if st.session_state.portfoy:
     tab_tr, tab_us, tab_div = st.tabs(["🇹🇷 TÜRK BORSASI", "🇺🇸 AMERİKAN BORSASI", "💰 TEMETTÜ GELİRİ"])
     
-    # ORTAK VERİ HAZIRLAMA
     full_data = []
     for i, item in enumerate(st.session_state.portfoy):
         d = fetch_stock_data(item['Hisse'])
         if d:
-            c = d['hist']['Close'].iloc[-1]
-            pc = d['hist']['Close'].iloc[-2]
+            c = d['hist']['Close'].iloc[-1]; pc = d['hist']['Close'].iloc[-2]
             full_data.append({
                 "id": i, "Piyasa": item.get("Piyasa", "Türk Borsası"), "Hisse": item['Hisse'], 
                 "Sinyal": get_signal(d['hist']), "Adet": item['Adet'], "Maliyet": item['Maliyet'], 
@@ -215,25 +225,20 @@ if st.session_state.portfoy:
     portfoy_goster("Türk Borsası", tab_tr, full_data)
     portfoy_goster("Amerikan Borsası", tab_us, full_data)
 
-    # TEMETTÜ SEKMESİ
     with tab_div:
         df_div = pd.DataFrame(full_data)
         if not df_div.empty:
             st.markdown("<br>", unsafe_allow_html=True)
             st.subheader("💰 Yıllık Beklenen Nakit Akışı")
-            
             tr_total = df_div[df_div['Piyasa'] == "Türk Borsası"]['NetTemettu'].sum()
             us_total = df_div[df_div['Piyasa'] == "Amerikan Borsası"]['NetTemettu'].sum()
-            
             c1, c2 = st.columns(2)
             c1.metric("TOPLAM (BIST)", f"{tr_format(tr_total)} ₺")
             c2.metric("TOPLAM (ABD)", f"{tr_format(us_total)} $")
-            
             st.markdown("---")
             h_cols = st.columns([2, 1, 1, 1.5])
             for col, txt in zip(h_cols, ["VARLIK", "ADET", "HİSSE BAŞI", "YILLIK NET GELİR"]): col.markdown(f"**{txt}**")
             st.divider()
-            
             for _, r in df_div.sort_values(by="NetTemettu", ascending=False).iterrows():
                 if r['Temettu'] > 0:
                     birim = "₺" if r['Piyasa'] == "Türk Borsası" else "$"
@@ -243,14 +248,12 @@ if st.session_state.portfoy:
                     cc3.write(f"{tr_format(r['Temettu'])} {birim}")
                     cc4.write(f"**{tr_format(r['NetTemettu'])} {birim}**")
                     st.divider()
-        else:
-            st.info("Temettü veren hisse bulunamadı.")
+        else: st.info("Temettü veren hisse bulunamadı.")
 
     if st.button("🗑️ TÜMÜNÜ SİL"):
         st.session_state.portfoy = []; save_data([]); st.rerun()
 else:
     st.info("Portföy boş kral, ekleme yap.")
-
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Yüklendi.")
