@@ -159,7 +159,7 @@ if st.session_state.portfoy:
     
     with tabs[0]:
         for kategori in ["Türk Borsası", "Amerikan Borsası", "Kripto"]:
-            kat_df = df[df['Tip'] == kategori]
+            kat_df = df[df['Tip'] == kategori
             if not kat_df.empty:
                 st.markdown(f"### 📌 {kategori}")
                 # Başlık Satırı
