@@ -134,19 +134,35 @@ st.markdown(f"""
 # ==========================================
 # 2. SAAT VE TARİH
 # ==========================================
+
 clock_html = f"""
-<div style="position: fixed; top: 10px; right: 10px; background: {t_sec['box']}; padding: 10px 25px; border-radius: 15px; z-index: 99999; border: 1px solid {t_sec['accent']};">
-    <div id="digital-clock" style="font-size: 20px; font-weight: bold; font-family: 'JetBrains Mono', monospace; color: {t_sec['accent']};"></div>
+<div style="position: fixed; top: 0px; right: 0px; background: {t_sec['box']}; padding: 10px 20px; border-radius: 0 0 0 30px; box-shadow: -4px 4px 15px rgba(0,0,0,0.5); z-index: 99999; display: flex; align-items: center; gap: 15px; border-left: 2px solid {t_sec['accent']}; border-bottom: 2px solid {t_sec['accent']};">
+    <div style="position: relative; width: 35px; height: 35px; border: 2px solid {t_sec['accent']}; border-radius: 50%;">
+        <div id="hour-hand" style="position: absolute; bottom: 50%; left: 50%; width: 2px; height: 10px; background: {t_sec['text']}; transform-origin: bottom; transform: translateX(-50%);"></div>
+        <div id="minute-hand" style="position: absolute; bottom: 50%; left: 50%; width: 2px; height: 14px; background: {t_sec['text']}; transform-origin: bottom; transform: translateX(-50%);"></div>
+        <div id="second-hand" style="position: absolute; bottom: 50%; left: 50%; width: 1px; height: 16px; background: #ff1744; transform-origin: bottom; transform: translateX(-50%);"></div>
+    </div>
+    <div style="text-align: right;">
+        <div id="digital-clock" style="font-size: 15px; font-weight: bold; font-family: 'JetBrains Mono', monospace; color: {t_sec['text']};"></div>
+        <div id="date-display" style="font-size: 10px; color: {t_sec['text']}; opacity: 0.8;"></div>
+    </div>
 </div>
 <script>
 function updateClock() {{
-    const trTime = new Date(new Date().toLocaleString("en-US", {{timeZone: "Europe/Istanbul"}}));
+    const now = new Date();
+    const trTime = new Date(now.toLocaleString("en-US", {{timeZone: "Europe/Istanbul"}}));
     document.getElementById('digital-clock').innerText = trTime.toLocaleTimeString('tr-TR', {{hour12: false}});
+    document.getElementById('date-display').innerText = trTime.toLocaleDateString('tr-TR', {{weekday:'short', day:'numeric', month:'short'}});
+    const h = trTime.getHours() % 12; const m = trTime.getMinutes(); const s = trTime.getSeconds();
+    document.getElementById('hour-hand').style.transform = `translateX(-50%) rotate(${{(h*30)+(m*0.5)}}deg)`;
+    document.getElementById('minute-hand').style.transform = `translateX(-50%) rotate(${{(m*6)+(s*0.1)}}deg)`;
+    document.getElementById('second-hand').style.transform = `translateX(-50%) rotate(${{s*6}}deg)`;
 }}
 setInterval(updateClock, 1000); updateClock();
 </script>
 """
-st.components.v1.html(clock_html, height=80)
+st.components.v1.html(clock_html, height=70)
+
 
 # ==========================================
 # 3. CANLI PİYASA
@@ -178,6 +194,49 @@ with st.expander("➕ PORTFÖYE VARLIK EKLE"):
         if st.form_submit_button("🚀 EKLE"):
             st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": adet_sec, "Maliyet": maliyet_sec})
             save_data(st.session_state.portfoy); st.rerun()
+
+#==========================================
+# 5. LİSTELEME VE ANALİZ (AYNI KALDI)
+# ==========================================
+if st.session_state.portfoy:
+    p_data = []; total_daily = 0
+    for i, item in enumerate(st.session_state.portfoy):
+        d = fetch_stock_data(item['Hisse'])
+        if d:
+            c = d['hist']['Close'].iloc[-1]; pc = d['hist']['Close'].iloc[-2]
+            daily_tl = (c - pc) * item['Adet']; total_daily += daily_tl
+            p_data.append({
+                "id": i, "Hisse": item['Hisse'], "Sinyal": get_signal(d['hist']),
+                "Adet": item['Adet'], "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'],
+                "Değer": c * item['Adet'], "Temettu": d['temettu'] * item['Adet']
+            })
+    
+    df = pd.DataFrame(p_data)
+    t1, t2, t3 = st.tabs(["📊 LİSTE", "📈 GRAFİK", "💰 TEMETTÜ"])
+    
+    with t1:
+        m1, m2, m3 = st.columns(3)
+        m1.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} ₺")
+        m2.metric("TOPLAM K/Z", f"{tr_format(df['K/Z'].sum())} ₺")
+        m3.metric("GÜNLÜK FARK", f"{tr_format(total_daily)} ₺", delta=f"{total_daily:,.2f}")
+        
+        for idx, r in df.iterrows():
+            c1, c2, c3, c4 = st.columns([2, 2, 2, 0.5])
+            c1.write(f"**{r['Hisse']}** | {r['Sinyal']}")
+            c2.write(f"Değer: {tr_format(r['Değer'])} ₺")
+            c3.write(f"K/Z: {tr_format(r['K/Z'])} ₺")
+            if c4.button("❌", key=f"del_{idx}"):
+                st.session_state.portfoy.pop(idx); save_data(st.session_state.portfoy); st.rerun()
+            st.divider()
+
+    with t2:
+        st.plotly_chart(px.pie(df, values='Değer', names='Hisse', hole=0.4), use_container_width=True)
+    
+    with t3:
+        st.success(f"### Yıllık Net Temettü: {tr_format(df['Temettu'].sum())} ₺")
+if st.button("🗑️ TÜMÜNÜ SİL"):
+    
+st.session_state.portfoy = []; save_data([]); st.rerun()
 
 # ==========================================
 # 5. SATIR VE SÜTUNLU TABLO
