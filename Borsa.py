@@ -77,7 +77,7 @@ with st.sidebar:
     tema = st.selectbox("Tema Seçimi", ["Premium Koyu", "Galaksi", "Matrix", "Derin Okyanus"])
 
 tema_renkleri = {
-    "Premium Koyu": {"bg": "#ffffff", "text": "#666666", "box": "#1e1e1e", "accent": "#BB86FC"},
+    "Premium Koyu": {"bg": "#ffffff", "text": "#4c4c4c", "box": "#1e1e1e", "accent": "#BB86FC"},
     "Galaksi": {"bg": "#0B0E14", "text": "#E0E0E0", "box": "#161B22", "accent": "#00D4FF"},
     "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"},
     "Derin Okyanus": {"bg": "#0f2027", "text": "#e0eaf5", "box": "#203a43", "accent": "#2bc0e4"}
