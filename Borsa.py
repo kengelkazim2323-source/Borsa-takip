@@ -220,7 +220,7 @@ if st.session_state.portfoy:
             # --- YATAY SATIR VE SÜTUNLU TABLO ---
             table_html = "<table class='kral-table'><thead><tr>"
             table_html += "<th>HİSSE</th><th>SİNYAL</th><th>ADET</th><th>MALİYET(₺)</th><th>GÜNCEL(₺)</th><th>K/Z(₺)</th><th>TOPLAM(₺)</th>"
-            table_html += "</tr></thead><tbody>"
+            table_html += "<tr></thead><tbody>"
             for _, r in df.iterrows():
                 kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
                 table_html += "<tr>"
