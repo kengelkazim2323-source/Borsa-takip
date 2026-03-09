@@ -233,37 +233,7 @@ if st.session_state.portfoy:
         st.plotly_chart(px.pie(df, values='Değer', names='Hisse', hole=0.4), use_container_width=True)
     
     with t3:
-        st.success(f"### Yıllık Net Temettü: {tr_format(df['Temettu'].sum())} ₺")
-
-
-# ==========================================
-# 5. SATIR VE SÜTUNLU TABLO
-# ==========================================
-if st.session_state.portfoy:
-    tab_tr, tab_us = st.tabs(["🇹🇷 TÜRK BORSASI", "🇺🇸 ABD BORSASI"])
-    
-    full_data = []
-    for i, item in enumerate(st.session_state.portfoy):
-        d = fetch_stock_data(item['Hisse'])
-        if d:
-            c = d['hist']['Close'].iloc[-1]
-            full_data.append({
-                "id": i, "Piyasa": item.get("Piyasa", "Türk Borsası"), "Hisse": item['Hisse'], 
-                "Sinyal": get_signal(d['hist']), "Adet": item['Adet'], "Maliyet": item['Maliyet'], 
-                "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'], 
-                "Değer": c * item['Adet']
-            })
-
-    def tablo_olustur(piyasa_turu, tab_container, data_list):
-        with tab_container:
-            df = pd.DataFrame([x for x in data_list if x['Piyasa'] == piyasa_turu])
-            if df.empty: st.info("Varlık yok."); return
-            
-
-    tablo_olustur("Türk Borsası", tab_tr, full_data)
-    tablo_olustur("Amerikan Borsası", tab_us, full_data)
-else:
-    st.info("Portföy boş.")
+        st.success(f"### Yıllık Net Temettü: {tr_format(df['Temettu'].
     
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
