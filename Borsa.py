@@ -132,30 +132,6 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-/* METRİK SİMETRİ DÜZELTMESİ */
-[data-testid="stMetric"] {{
-        background: {t_sec['box']};
-        padding: 15px !important;
-        border-radius: 12px !important;
-        border: 1px solid {t_sec['accent']} !important;
-        min-height: 130px !important;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-    }}
-    [data-testid="stMetricLabel"] {{ font-size: 14px !important; color: {t_sec['text']} !important; opacity: 0.8; }}
-    [data-testid="stMetricValue"] {{ font-size: 24px !important; font-weight: 700 !important; color: {t_sec['accent']} !important; }}
-    
-    .ticker-wrapper {{ width: 100%; overflow: hidden; background: {t_sec['box']}; border-radius: 8px; margin-bottom: 30px; padding: 15px 0; border: 1px solid {t_sec['accent']}22; }}
-    .ticker-content {{ display: flex; animation: ticker 25s linear infinite; white-space: nowrap; gap: 60px; }}
-    @keyframes ticker {{ 0% {{ transform: translateX(100%); }} 100% {{ transform: translateX(-100%); }} }}
-    .up {{ color: #00e676; font-weight: bold; }} .down {{ color: #ff1744; font-weight: bold; }}
-    </style>
-    """, unsafe_allow_html=True)
-
-
 # ==========================================
 # 2. SAAT VE TARİH
 # ==========================================
