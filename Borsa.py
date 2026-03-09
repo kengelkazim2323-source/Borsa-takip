@@ -191,7 +191,7 @@ with st.expander("➕ PORTFÖYE VARLIK EKLE"):
         f1, f2, f3 = st.columns(3)
         if piyasa_sec == "Türk Borsası": hisse_sec = f1.selectbox("Hisse Seç", BIST_FULL)
         else: hisse_sec = f1.text_input("Sembol").upper()
-        adet_sec = f2.number_input("Adet", min_value=0.0)
+        adet_sec = f2.number_input("Adet", min_value=0)
         maliyet_sec = f3.number_input("Maliyet", min_value=0.0)
         if st.form_submit_button("🚀 EKLE"):
             st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": adet_sec, "Maliyet": maliyet_sec})
