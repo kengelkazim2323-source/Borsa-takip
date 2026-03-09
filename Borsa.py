@@ -225,7 +225,7 @@ if st.session_state.portfoy:
             df = df.sort_values(by="Hisse")
             
             birim = "₺" if piyasa_turu == "Türk Borsası" else "$"
-            
+             
             st.markdown("<br>", unsafe_allow_html=True)
             m1, m2, m3 = st.columns(3)
             m1.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} {birim}")
@@ -241,7 +241,30 @@ if st.session_state.portfoy:
             table_html += "</tr></thead><tbody>"
             
             for _, r in df.iterrows():
+            # --- TAŞINMA PAYI HESAPLAMA ---
+                agirlik = (r['Değer'] / toplam_portfoy_degeri * 100) if toplam_portfoy_degeri > 0 else 0
+                
+                kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
+                table_html += "<tr>"
+                table_html += f"<td><b>{r['Hisse']}</b></td>"
+                table_html += f"<td>{r['Sinyal']}</td>"
+                table_html += f"<td>{r['Adet']}</td>"
+                table_html += f"<td>%{tr_format(agirlik)}</td>" # Taşınma Payı
+                table_html += f"<td>{tr_format(r['Maliyet'])}</td>"
+                table_html += f"<td>{tr_format(r['Güncel'])}</td>"
+                table_html += f"<td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])}</td>"
+                table_html += f"<td><b>{tr_format(r['Değer'])}</td>"
+                table_html += "</tr>"
+            table_html += "</tbody></table>"
+            st.markdown(table_html, unsafe_allow_html=True)
 
+            # Silme Butonları
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander("⚙️ HİSSE SİL"):
+                cols = st.columns(4)
+                for idx, (index, r) in enumerate(df.iterrows()):
+                    if cols[idx % 4].button(f"❌ {r['Hisse']} Sil", key=f"del_{r['id']}"):
+                        st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
             
         
             # --- YATAY SATIR VE SÜTUNLU TABLO ---
