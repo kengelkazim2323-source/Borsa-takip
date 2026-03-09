@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
+
 # ==========================================
 # 0. VERİ YÖNETİMİ
 # ==========================================
@@ -215,22 +216,39 @@ if st.session_state.portfoy:
             m3.metric("GÜNLÜK FARK", f"{tr_format(df['DailyDiff'].sum())} {birim}", delta=f"{df['DailyDiff'].sum():,.2f}")
 
             st.markdown("<br>", unsafe_allow_html=True)
-            h_cols = st.columns([1.5, 1, 1, 1, 1, 0.5])
-            for col, txt in zip(h_cols, ["VARLIK | SİNYAL", "MALİYET", "GÜNCEL", "K/Z", "TOPLAM", "İŞLEM"]): col.markdown(f"**{txt}**")
-            st.divider()
-
+            
+            # --- YATAY SATIR VE SÜTUNLU TABLO ---
+            table_html = "<table class='kral-table'><thead><tr>"
+            table_html += "<th>HİSSE</th><th>SİNYAL</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th>"
+            table_html += "</tr></thead><tbody>"
             for _, r in df.iterrows():
-                c1, c2, c3, c4, c5, c6 = st.columns([1.5, 1, 1, 1, 1, 0.5])
-                c1.write(f"**{r['Hisse']}**\n{r['Sinyal']}")
-                c2.write(f"{tr_format(r['Maliyet'])} {birim}")
-                c3.write(f"**{tr_format(r['Güncel'])}** {birim}")
                 kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
-                c4.markdown(f"<span style='color:{kz_color};'>{tr_format(r['K/Z'])} {birim}</span>", unsafe_allow_html=True)
-                c5.write(f"**{tr_format(r['Değer'])}** {birim}")
-                if c6.button("❌", key=f"del_{r['id']}"):
-                    st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
-                st.divider()
-            st.plotly_chart(px.pie(df, values='Değer', names='Hisse', hole=0.4, color_discrete_sequence=px.colors.sequential.Electric), use_container_width=True)
+                table_html += "<tr>"
+                table_html += f"<td><b>{r['Hisse']}</b></td>"
+                table_html += f"<td>{r['Sinyal']}</td>"
+                table_html += f"<td>{r['Adet']}</td>"
+                table_html += f"<td>{tr_format(r['Maliyet'])}</td>"
+                table_html += f"<td>{tr_format(r['Güncel'])}</td>"
+                table_html += f"<td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])}</td>"
+                table_html += f"<td><b>{tr_format(r['Değer'])} {birim}</b></td>"
+                table_html += "</tr>"
+            table_html += "</tbody></table>"
+            st.markdown(table_html, unsafe_allow_html=True)
+
+            # Silme Butonları (Tablo yapısını bozmamak için expander içine alındı)
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander("⚙️ HİSSE SİL"):
+                cols = st.columns(4)
+                for idx, r in df.iterrows():
+                    if cols[idx % 4].button(f"❌ {r['Hisse']} Sil", key=f"del_{r['id']}"):
+                        st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
+            
+            # --- GELİŞTİRİLMİŞ DAİRESEL GRAFİK ---
+            st.markdown("<br>", unsafe_allow_html=True)
+            fig = px.pie(df, values='Değer', names='Hisse', hole=0.45, color_discrete_sequence=px.colors.qualitative.Pastel)
+            fig.update_traces(textposition='inside', textinfo='percent+label', textfont_size=14, marker=dict(line=dict(color='#000000', width=1)))
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color=t_sec['text']), showlegend=False, margin=dict(t=20, b=20, l=0, r=0))
+            st.plotly_chart(fig, use_container_width=True)
 
     portfoy_goster("Türk Borsası", tab_tr, full_data)
     portfoy_goster("Amerikan Borsası", tab_us, full_data)
@@ -264,6 +282,11 @@ if st.session_state.portfoy:
         st.session_state.portfoy = []; save_data([]); st.rerun()
 else:
     st.info("Portföy boş kral, ekleme yap.")
+    
+
+tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
+st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
+
     
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
