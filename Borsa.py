@@ -68,7 +68,7 @@ def get_signal(hist_data):
 # 1. YENİ NESİL RENK TEMALARI
 # ==========================================
 st.set_page_config(page_title="Borsa Takip", page_icon="📈", layout="wide")
-st_autorefresh(interval=60000, key="datarefresh")
+st_autorefresh(interval=1000, key="datarefresh")
 
 with st.sidebar:
     st.header("🎨 Borsa Takip")
@@ -152,7 +152,7 @@ st.components.v1.html(clock_html, height=80)
 # 3. CANLI PİYASA
 # ==========================================
 st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']};'>🚀 Borsa Takip</h2>", unsafe_allow_html=True)
-piyasa_izleme = { "BIST 100": "XU100.IS", "ALTIN": "GC=F", "USD/TRY": "USDTRY=X", "BTC": "BTC-USD"}
+piyasa_izleme = { "BIST 100": "XU100.IS", "ONS ALTIN": "GC=F", "ONS GÜMÜŞ": "SI=F", "USD/TRY": "USDTRY=X", "BTC": "BTC-USD"}
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
 for isim, sembol in piyasa_izleme.items():
     d = fetch_stock_data(sembol)
@@ -203,36 +203,23 @@ if st.session_state.portfoy:
             if df.empty: st.info("Varlık yok."); return
             birim = "₺" if piyasa_turu == "Türk Borsası" else "$"
 
-            # STANDART SATIR SÜTUN TABLO (NO SCROLL)
-            table_html = f"""
-            <table class="kral-table">
-                <thead>
-                    <tr>
-                        <th>HİSSE</th>
-                        <th>SİNYAL</th>
-                        <th>ADET</th>
-                        <th>ALIŞ FİYATI (MALİYET)</th>
-                        <th>GÜNCEL</th>
-                        <th>K/Z</th>
-                        <th>TOPLAM</th>
-                    </tr>
-                </thead>
-                <tbody>
-            """
+            # MARKDOWN HATASINI ENGELLEMEK İÇİN TEK SATIR HTML FORMATI
+            table_html = "<table class='kral-table'><thead><tr>"
+            table_html += "<th>HİSSE</th><th>SİNYAL</th><th>ADET</th><th>ALIŞ FİYATI (MALİYET)</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th>"
+            table_html += "</tr></thead><tbody>"
             for _, r in df.iterrows():
                 color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
-                table_html += f"""
-                    <tr>
-                        <td><b>{r['Hisse']}</b></td>
-                        <td>{r['Sinyal']}</td>
-                        <td>{r['Adet']}</td>
-                        <td>{tr_format(r['Maliyet'])}</td>
-                        <td>{tr_format(r['Güncel'])}</td>
-                        <td style="color:{color}; font-weight:bold;">{tr_format(r['K/Z'])}</td>
-                        <td><b>{tr_format(r['Değer'])} {birim}</b></td>
-                    </tr>
-                """
+                table_html += "<tr>"
+                table_html += f"<td><b>{r['Hisse']}</b></td>"
+                table_html += f"<td>{r['Sinyal']}</td>"
+                table_html += f"<td>{r['Adet']}</td>"
+                table_html += f"<td>{tr_format(r['Maliyet'])}</td>"
+                table_html += f"<td>{tr_format(r['Güncel'])}</td>"
+                table_html += f"<td style='color:{color}; font-weight:bold;'>{tr_format(r['K/Z'])}</td>"
+                table_html += f"<td><b>{tr_format(r['Değer'])} {birim}</b></td>"
+                table_html += "</tr>"
             table_html += "</tbody></table>"
+            
             st.markdown(table_html, unsafe_allow_html=True)
 
             with st.expander("⚙️ SİLME İŞLEMLERİ"):
@@ -244,6 +231,7 @@ if st.session_state.portfoy:
     tablo_olustur("Amerikan Borsası", tab_us, full_data)
 else:
     st.info("Portföy boş.")
+    
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
