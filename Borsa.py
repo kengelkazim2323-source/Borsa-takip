@@ -233,15 +233,6 @@ if st.session_state.portfoy:
             m3.metric("GÜNLÜK FARK", f"{tr_format(df['DailyDiff'].sum())} {birim}")
 
             st.markdown("<br>", unsafe_allow_html=True)
-            
-
-            # Silme Butonları
-            st.markdown("<br>", unsafe_allow_html=True)
-            with st.expander("⚙️ HİSSE SİL"):
-                cols = st.columns(4)
-                
-                       
-            
         
             # --- YATAY SATIR VE SÜTUNLU TABLO ---
             table_html = "<table class='kral-table'><thead><tr>"
