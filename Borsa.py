@@ -142,7 +142,7 @@ st.components.v1.html(clock_html, height=80)
 # ==========================================
 # 3. CANLI PİYASA
 # ==========================================
-st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:-20px;'>🚀 KRAL TERMİNAL</h2>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:-20px;'>🚀 Borsa Takip</h2>", unsafe_allow_html=True)
 piyasa_izleme = { "BIST 100": "XU100.IS", "ONS ALTIN": "GC=F", "ONS GÜMÜŞ": "SI=F", "GRAM ALTIN": "GAU-TRY", "USD/TRY": "USDTRY=X", "BITCOIN": "BTC-USD"}
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
 for isim, sembol in piyasa_izleme.items():
