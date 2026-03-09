@@ -265,63 +265,6 @@ if st.session_state.portfoy:
 else:
     st.info("Portföy boş kral, ekleme yap.")
     
-# ==========================================
-# 6. SATIR VE SÜTUNLU TABLO
-# ==========================================
-if st.session_state.portfoy:
-    tab_tr, tab_us = st.tabs(["🇹🇷 TÜRK BORSASI", "🇺🇸 ABD BORSASI"])
-    
-    full_data = []
-    for i, item in enumerate(st.session_state.portfoy):
-        d = fetch_stock_data(item['Hisse'])
-        if d:
-            c = d['hist']['Close'].iloc[-1]
-            full_data.append({
-                "id": i, "Piyasa": item.get("Piyasa", "Türk Borsası"), "Hisse": item['Hisse'], 
-                "Sinyal": get_signal(d['hist']), "Adet": item['Adet'], "Maliyet": item['Maliyet'], 
-                "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'], 
-                "Değer": c * item['Adet']
-            })
-
-    def tablo_olustur(piyasa_turu, tab_container, data_list):
-        with tab_container:
-            df = pd.DataFrame([x for x in data_list if x['Piyasa'] == piyasa_turu])
-            if df.empty: st.info("Varlık yok."); return
-            birim = "₺" if piyasa_turu == "Türk Borsası" else "$"
-
-            # MARKDOWN HATASINI ENGELLEMEK İÇİN TEK SATIR HTML FORMATI
-            table_html = "<table class='kral-table'><thead><tr>"
-            table_html += "<th>HİSSE</th><th>SİNYAL</th><th>ADET</th><th>ALIŞ FİYATI (MALİYET)</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th>"
-            table_html += "</tr></thead><tbody>"
-            for _, r in df.iterrows():
-                color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
-                table_html += "<tr>"
-                table_html += f"<td><b>{r['Hisse']}</b></td>"
-                table_html += f"<td>{r['Sinyal']}</td>"
-                table_html += f"<td>{r['Adet']}</td>"
-                table_html += f"<td>{tr_format(r['Maliyet'])}</td>"
-                table_html += f"<td>{tr_format(r['Güncel'])}</td>"
-                table_html += f"<td style='color:{color}; font-weight:bold;'>{tr_format(r['K/Z'])}</td>"
-                table_html += f"<td><b>{tr_format(r['Değer'])} {birim}</b></td>"
-                table_html += "</tr>"
-            table_html += "</tbody></table>"
-            
-            st.markdown(table_html, unsafe_allow_html=True)
-
-            with st.expander("⚙️ SİLME İŞLEMLERİ"):
-                for _, r in df.iterrows():
-                    if st.button(f"❌ {r['Hisse']} Sil", key=f"del_{r['id']}"):
-                        st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
-
-    tablo_olustur("Türk Borsası", tab_tr, full_data)
-    tablo_olustur("Amerikan Borsası", tab_us, full_data)
-else:
-    st.info("Portföy boş.")
-
-
-
-
-
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
