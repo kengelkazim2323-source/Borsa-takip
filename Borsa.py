@@ -233,7 +233,7 @@ if st.session_state.portfoy:
         st.plotly_chart(px.pie(df, values='Değer', names='Hisse', hole=0.4), use_container_width=True)
     
     with t3:
-        st.success(f"### Yıllık Net Temettü: {tr_format(df['Temettu'].
+        st.success(f"### Yıllık Net Temettü: {tr_format(df['Temettü'].
     
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
