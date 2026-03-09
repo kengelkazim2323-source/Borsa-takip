@@ -237,7 +237,7 @@ if st.session_state.portfoy:
             m1, m2, m3 = st.columns(3)
             m1.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} {birim}")
             m2.metric("TOPLAM K/Z", f"{tr_format(df['K/Z'].sum())} {birim}")
-            m3.metric("GÜNLÜK FARK", f"{tr_format(df['DailyDiff'].sum())} {birim}", delta=f"{df['DailyDiff'].sum():,.2f}")
+            m3.metric("GÜNLÜK FARK", f"{tr_format(df['DailyDiff'].sum())} {birim}")
 
             st.markdown("<br>", unsafe_allow_html=True)
             
