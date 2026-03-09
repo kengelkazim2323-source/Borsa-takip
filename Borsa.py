@@ -74,11 +74,11 @@ st_autorefresh(interval=1000, key="datarefresh")
 
 with st.sidebar:
     st.header("🎨 GÖRÜNÜM")
-    tema = st.selectbox("Tema Seçimi", ["Premium Koyu", "Galaksi (VIP)", "Matrix", "Derin Okyanus"])
+    tema = st.selectbox("Tema Seçimi", ["Premium Koyu", "Galaksi", "Matrix", "Derin Okyanus"])
 
 tema_renkleri = {
-    "Premium Koyu": {"bg": "#121212", "text": "#ffffff", "box": "#1e1e1e", "accent": "#BB86FC"},
-    "Galaksi (VIP)": {"bg": "#0B0E14", "text": "#E0E0E0", "box": "#161B22", "accent": "#00D4FF"},
+    "Premium Koyu": {"bg": "#ffffff", "text": "#666666", "box": "#1e1e1e", "accent": "#BB86FC"},
+    "Galaksi": {"bg": "#0B0E14", "text": "#E0E0E0", "box": "#161B22", "accent": "#00D4FF"},
     "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"},
     "Derin Okyanus": {"bg": "#0f2027", "text": "#e0eaf5", "box": "#203a43", "accent": "#2bc0e4"}
 }
