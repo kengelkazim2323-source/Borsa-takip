@@ -69,16 +69,16 @@ def get_signal(hist_data):
 # ==========================================
 # 1. TEMA VE GÖRSEL AYARLAR
 # ==========================================
-st.set_page_config(page_title="BORSA ANALİZ", page_icon="📈", layout="wide")
-st_autorefresh(interval=1000, key="datarefresh")
+st.set_page_config(page_title="KRAL BORSA", page_icon="📈", layout="wide")
+st_autorefresh(interval=60000, key="datarefresh")
 
 with st.sidebar:
     st.header("🎨 GÖRÜNÜM")
-    tema = st.selectbox("Tema Seçimi", ["Premium Koyu", "Galaksi", "Matrix", "Derin Okyanus"])
+    tema = st.selectbox("Tema Seçimi", ["Premium Koyu", "Galaksi (VIP)", "Matrix", "Derin Okyanus"])
 
 tema_renkleri = {
-    "Premium Koyu": {"bg": "#ffffff", "text": "#4c4c4c", "box": "#1e1e1e", "accent": "#BB86FC"},
-    "Galaksi": {"bg": "#0B0E14", "text": "#E0E0E0", "box": "#161B22", "accent": "#00D4FF"},
+    "Premium Koyu": {"bg": "#121212", "text": "#ffffff", "box": "#4c4c4c", "accent": "#BB86FC"},
+    "Galaksi (VIP)": {"bg": "#0B0E14", "text": "#E0E0E0", "box": "#161B22", "accent": "#00D4FF"},
     "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"},
     "Derin Okyanus": {"bg": "#0f2027", "text": "#e0eaf5", "box": "#203a43", "accent": "#2bc0e4"}
 }
@@ -88,20 +88,22 @@ st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@700&display=swap');
     .stApp {{ background-color: {t_sec['bg']}; color: {t_sec['text']}; font-family: 'Inter', sans-serif; }}
-    h1, h2, h3, p, span, label, .stMarkdown {{ color: {t_sec['text']} !important; }}
-    div[data-baseweb="select"], div[data-baseweb="input"], .stNumberInput input {{
-        background-color: {t_sec['box']} !important;
-        color: {t_sec['text']} !important;
+    
+    [data-testid="stMetric"] {{
+        background: {t_sec['box']};
+        padding: 20px !important;
+        border-radius: 12px !important;
         border: 1px solid {t_sec['accent']} !important;
-        border-radius: 8px !important;
-    }}
-    .stMetric {{ 
-        background: {t_sec['box']}; 
-        padding: 20px; 
-        border-radius: 12px; 
-        border: 1px solid {t_sec['accent']};
+        min-height: 130px !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
         text-align: center;
     }}
+    [data-testid="stMetricLabel"] {{ font-size: 14px !important; color: {t_sec['text']} !important; opacity: 0.8; }}
+    [data-testid="stMetricValue"] {{ font-size: 24px !important; font-weight: 700 !important; color: {t_sec['accent']} !important; }}
+    
     .ticker-wrapper {{ width: 100%; overflow: hidden; background: {t_sec['box']}; border-radius: 8px; margin-bottom: 30px; padding: 15px 0; border: 1px solid {t_sec['accent']}22; }}
     .ticker-content {{ display: flex; animation: ticker 25s linear infinite; white-space: nowrap; gap: 60px; }}
     @keyframes ticker {{ 0% {{ transform: translateX(100%); }} 100% {{ transform: translateX(-100%); }} }}
@@ -110,7 +112,7 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. SAAT VE TARİH MODÜLÜ (SAĞ ÜST)
+# 2. SAAT VE TARİH MODÜLÜ
 # ==========================================
 clock_html = f"""
 <div style="position: fixed; top: 10px; right: 10px; background: {t_sec['box']}; padding: 10px 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 99999; display: flex; flex-direction: column; align-items: flex-end; border: 1px solid {t_sec['accent']};">
@@ -119,8 +121,7 @@ clock_html = f"""
 </div>
 <script>
 function updateClock() {{
-    const now = new Date();
-    const trTime = new Date(now.toLocaleString("en-US", {{timeZone: "Europe/Istanbul"}}));
+    const trTime = new Date(new Date().toLocaleString("en-US", {{timeZone: "Europe/Istanbul"}}));
     document.getElementById('digital-clock').innerText = trTime.toLocaleTimeString('tr-TR', {{hour12: false}});
     document.getElementById('date-display').innerText = trTime.toLocaleDateString('tr-TR', {{day: '2-digit', month: 'long', year: 'numeric', weekday: 'long'}}).toUpperCase();
 }}
@@ -132,7 +133,7 @@ st.components.v1.html(clock_html, height=80)
 # ==========================================
 # 3. CANLI PİYASA
 # ==========================================
-st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:-20px;'>🚀 GAKGO BORSA</h2>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:-20px;'>🚀 KRAL TERMİNAL</h2>", unsafe_allow_html=True)
 piyasa_izleme = { "BIST 100": "XU100.IS", "ONS ALTIN": "GC=F", "ONS GÜMÜŞ": "SI=F", "GRAM ALTIN": "GAU-TRY", "USD/TRY": "USDTRY=X", "BITCOIN": "BTC-USD"}
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
 for isim, sembol in piyasa_izleme.items():
@@ -154,57 +155,51 @@ with st.expander("➕ PORTFÖYE VARLIK EKLE", expanded=False):
         f1, f2, f3 = st.columns(3)
         if piyasa_sec == "Türk Borsası": hisse_sec = f1.selectbox("Hisse Seç", BIST_FULL)
         else: hisse_sec = f1.text_input("Sembol (AAPL, TSLA vs.)").upper()
-        adet_sec = f2.number_input("Adet", min_value=0.0)
+        adet_sec = f2.number_input("Adet", min_value=0.0001)
         maliyet_sec = f3.number_input("Maliyet", min_value=0.0)
         if st.form_submit_button("🚀 EKLE", use_container_width=True) and hisse_sec:
             st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": adet_sec, "Maliyet": maliyet_sec})
             save_data(st.session_state.portfoy); st.rerun()
 
 # ==========================================
-# 5. LİSTELEME
+# 5. LİSTELEME VE TEMETTÜ
 # ==========================================
 if st.session_state.portfoy:
-    tab_tr, tab_us = st.tabs(["🇹🇷 TÜRK BORSASI", "🇺🇸 AMERİKAN BORSASI"])
+    tab_tr, tab_us, tab_div = st.tabs(["🇹🇷 TÜRK BORSASI", "🇺🇸 AMERİKAN BORSASI", "💰 TEMETTÜ GELİRİ"])
     
-    def portfoy_goster(piyasa_turu, tab_container):
-        with tab_container:
-            ilgili_portfoy = [item for item in st.session_state.portfoy if item.get("Piyasa", "Türk Borsası") == piyasa_turu]
-            if not ilgili_portfoy:
-                st.info("Henüz varlık yok.")
-                return
+    # ORTAK VERİ HAZIRLAMA
+    full_data = []
+    for i, item in enumerate(st.session_state.portfoy):
+        d = fetch_stock_data(item['Hisse'])
+        if d:
+            c = d['hist']['Close'].iloc[-1]
+            pc = d['hist']['Close'].iloc[-2]
+            full_data.append({
+                "id": i, "Piyasa": item.get("Piyasa", "Türk Borsası"), "Hisse": item['Hisse'], 
+                "Sinyal": get_signal(d['hist']), "Adet": item['Adet'], "Maliyet": item['Maliyet'], 
+                "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'], 
+                "Değer": c * item['Adet'], "Temettu": d['temettu'], 
+                "NetTemettu": d['temettu'] * item['Adet'], "DailyDiff": (c - pc) * item['Adet']
+            })
 
-            p_data = []; total_daily = 0
-            for i, item in enumerate(st.session_state.portfoy):
-                if item.get("Piyasa", "Türk Borsası") != piyasa_turu: continue
-                d = fetch_stock_data(item['Hisse'])
-                if d:
-                    c = d['hist']['Close'].iloc[-1]; pc = d['hist']['Close'].iloc[-2]
-                    p_data.append({
-                        "id": i, "Hisse": item['Hisse'], "Sinyal": get_signal(d['hist']),
-                        "Adet": item['Adet'], "Maliyet": item['Maliyet'], "Güncel": c,
-                        "K/Z": (c - item['Maliyet']) * item['Adet'], "Değer": c * item['Adet'], "Temettu": d['temettu'] * item['Adet']
-                    })
-                    total_daily += (c - pc) * item['Adet']
-            
-            if not p_data: return
-            df = pd.DataFrame(p_data)
+    def portfoy_goster(piyasa_turu, tab_container, data_list):
+        with tab_container:
+            df = pd.DataFrame([x for x in data_list if x['Piyasa'] == piyasa_turu])
+            if df.empty: st.info("Henüz varlık yok."); return
             birim = "₺" if piyasa_turu == "Türk Borsası" else "$"
             
-            # SİMETRİK METRİKLER
             st.markdown("<br>", unsafe_allow_html=True)
             m1, m2, m3 = st.columns(3)
-            with m1: st.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} {birim}")
-            with m2: st.metric("TOPLAM K/Z", f"{tr_format(df['K/Z'].sum())} {birim}")
-            with m3: st.metric("GÜNLÜK FARK", f"{tr_format(total_daily)} {birim}", delta=f"{total_daily:,.2f}")
+            m1.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} {birim}")
+            m2.metric("TOPLAM K/Z", f"{tr_format(df['K/Z'].sum())} {birim}")
+            m3.metric("GÜNLÜK FARK", f"{tr_format(df['DailyDiff'].sum())} {birim}", delta=f"{df['DailyDiff'].sum():,.2f}")
 
-            # SİMETRİK MİNİ TABLO
             st.markdown("<br>", unsafe_allow_html=True)
             h_cols = st.columns([1.5, 1, 1, 1, 1, 0.5])
-            headers = ["VARLIK | SİNYAL", "MALİYET", "GÜNCEL", "K/Z", "TOPLAM", "İSLEM"]
-            for col, text in zip(h_cols, headers): col.markdown(f"**{text}**")
+            for col, txt in zip(h_cols, ["VARLIK | SİNYAL", "MALİYET", "GÜNCEL", "K/Z", "TOPLAM", "İŞLEM"]): col.markdown(f"**{txt}**")
             st.divider()
 
-            for idx, r in df.iterrows():
+            for _, r in df.iterrows():
                 c1, c2, c3, c4, c5, c6 = st.columns([1.5, 1, 1, 1, 1, 0.5])
                 c1.write(f"**{r['Hisse']}**\n{r['Sinyal']}")
                 c2.write(f"{tr_format(r['Maliyet'])} {birim}")
@@ -215,11 +210,41 @@ if st.session_state.portfoy:
                 if c6.button("❌", key=f"del_{r['id']}"):
                     st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
                 st.divider()
-
             st.plotly_chart(px.pie(df, values='Değer', names='Hisse', hole=0.4, color_discrete_sequence=px.colors.sequential.Electric), use_container_width=True)
 
-    portfoy_goster("Türk Borsası", tab_tr)
-    portfoy_goster("Amerikan Borsası", tab_us)
+    portfoy_goster("Türk Borsası", tab_tr, full_data)
+    portfoy_goster("Amerikan Borsası", tab_us, full_data)
+
+    # TEMETTÜ SEKMESİ
+    with tab_div:
+        df_div = pd.DataFrame(full_data)
+        if not df_div.empty:
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.subheader("💰 Yıllık Beklenen Nakit Akışı")
+            
+            tr_total = df_div[df_div['Piyasa'] == "Türk Borsası"]['NetTemettu'].sum()
+            us_total = df_div[df_div['Piyasa'] == "Amerikan Borsası"]['NetTemettu'].sum()
+            
+            c1, c2 = st.columns(2)
+            c1.metric("TOPLAM (BIST)", f"{tr_format(tr_total)} ₺")
+            c2.metric("TOPLAM (ABD)", f"{tr_format(us_total)} $")
+            
+            st.markdown("---")
+            h_cols = st.columns([2, 1, 1, 1.5])
+            for col, txt in zip(h_cols, ["VARLIK", "ADET", "HİSSE BAŞI", "YILLIK NET GELİR"]): col.markdown(f"**{txt}**")
+            st.divider()
+            
+            for _, r in df_div.sort_values(by="NetTemettu", ascending=False).iterrows():
+                if r['Temettu'] > 0:
+                    birim = "₺" if r['Piyasa'] == "Türk Borsası" else "$"
+                    cc1, cc2, cc3, cc4 = st.columns([2, 1, 1, 1.5])
+                    cc1.write(f"**{r['Hisse']}**")
+                    cc2.write(f"{r['Adet']}")
+                    cc3.write(f"{tr_format(r['Temettu'])} {birim}")
+                    cc4.write(f"**{tr_format(r['NetTemettu'])} {birim}**")
+                    st.divider()
+        else:
+            st.info("Temettü veren hisse bulunamadı.")
 
     if st.button("🗑️ TÜMÜNÜ SİL"):
         st.session_state.portfoy = []; save_data([]); st.rerun()
