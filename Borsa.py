@@ -75,7 +75,10 @@ with st.sidebar:
     st.header("🎨 Borsa Takip")
     tema = st.selectbox("Tema Seçimi", [
         "Galaksi (VIP)", "Premium Koyu", "Altın Vuruş", 
-        "Zümrüt Yeşili", "Siber Punk", "Retro Kehribar", "Matrix"
+        "Zümrüt Yeşili", "Siber Punk", "Retro Kehribar", "Matrix",
+        "Okyanus Derinliği", "Lav Akışı", "Kuzey Işıkları", 
+        "Buzul (Dark)", "Mor Ötesi", "Bakır Buharı", 
+        "Gece Yarısı", "Safir Gece", "Çöl Fırtınası", "Kızıl Elmas"
     ])
 
 tema_renkleri = {
@@ -85,10 +88,20 @@ tema_renkleri = {
     "Zümrüt Yeşili": {"bg": "#06120B", "text": "#E8F5E9", "box": "#0D2114", "accent": "#00E676"},
     "Siber Punk": {"bg": "#0D0221", "text": "#FFFFFF", "box": "#190033", "accent": "#FF00FF"},
     "Retro Kehribar": {"bg": "#0A0A0A", "text": "#FFB300", "box": "#1A1A1A", "accent": "#FF8F00"},
-    "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"}
+    "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"},
+    # --- YENİ EKLENEN 10 TEMA ---
+    "Okyanus Derinliği": {"bg": "#001B2E", "text": "#ADB5BD", "box": "#003554", "accent": "#24D1FF"},
+    "Lav Akışı": {"bg": "#1A0F0F", "text": "#F8F9FA", "box": "#2D1B1B", "accent": "#FF4D4D"},
+    "Kuzey Işıkları": {"bg": "#0B101B", "text": "#E9ECEF", "box": "#1B263B", "accent": "#A5FFD6"},
+    "Buzul (Dark)": {"bg": "#0D1117", "text": "#C9D1D9", "box": "#161B22", "accent": "#58A6FF"},
+    "Mor Ötesi": {"bg": "#120D1D", "text": "#E0D7FF", "box": "#1E1631", "accent": "#9D4EDD"},
+    "Bakır Buharı": {"bg": "#1B1510", "text": "#D4A373", "box": "#2C211A", "accent": "#E76F51"},
+    "Gece Yarısı": {"bg": "#050505", "text": "#FFFFFF", "box": "#121212", "accent": "#F72585"},
+    "Safir Gece": {"bg": "#03045E", "text": "#CAF0F8", "box": "#023E8A", "accent": "#00B4D8"},
+    "Çöl Fırtınası": {"bg": "#1C1917", "text": "#F5F5F4", "box": "#292524", "accent": "#EAB308"},
+    "Kızıl Elmas": {"bg": "#0F0202", "text": "#FFFFFF", "box": "#1F0505", "accent": "#D00000"}
 }
 t_sec = tema_renkleri[tema]
-
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@700&display=swap');
