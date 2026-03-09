@@ -135,7 +135,7 @@ st.markdown(f"""
 /* METRİK SİMETRİ DÜZELTMESİ */
 [data-testid="stMetric"] {{
         background: {t_sec['box']};
-        padding: 0px !important;
+        padding: 0.5px !important;
         border-radius: 12px !important;
         border: 1px solid {t_sec['accent']} !important;
         min-height: 130px !important;
