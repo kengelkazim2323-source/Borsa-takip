@@ -110,7 +110,7 @@ st.markdown(f"""
 # 2. OVAL SAAT MODÜLÜ (TAM KÖŞE VE OVAL)
 # ==========================================
 clock_html = f"""
-<div style="position: fixed; top: 0px; right: 0px; background: {t_sec['box']}; padding: 10px 20px; border-radius: 50px; box-shadow: -2px 2px 10px rgba(0,0,0,0.4); z-index: 99999; display: flex; align-items: center; gap: 15px; border: 2px solid {t_sec['accent']};"
+<div style="position: fixed; top: 0px; right: 0px; background: {t_sec['box']}; padding: 10px 20px; border-radius: 50px; box-shadow: 0px 4px 15px rgba(0,0,0,0.4); z-index: 99999; display: flex; align-items: center; gap: 15px; border: 2px solid {t_sec['accent']};
     <div style="position: relative; width: 35px; height: 35px; border: 2px solid {t_sec['accent']}; border-radius: 50%;">
         <div id="hour-hand" style="position: absolute; bottom: 50%; left: 50%; width: 2px; height: 10px; background: {t_sec['text']}; transform-origin: bottom; transform: translateX(-50%);"></div>
         <div id="minute-hand" style="position: absolute; bottom: 50%; left: 50%; width: 2px; height: 14px; background: {t_sec['text']}; transform-origin: bottom; transform: translateX(-50%);"></div>
