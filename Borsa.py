@@ -235,29 +235,6 @@ if st.session_state.portfoy:
             st.markdown("<br>", unsafe_allow_html=True)
             
 
-            # --- TABLO BAŞLIĞINA "AĞIRLIK" EKLENDİ ---
-            table_html = "<table class='kral-table'><thead><tr>"
-            table_html += f"<th>HİSSE</th><th>SİNYAL</th><th>ADET</th><th>AĞIRLIK</th><th>MALİYET({birim})</th><th>GÜNCEL({birim})</th><th>K/Z({birim})</th><th>TOPLAM({birim})</th>"
-            table_html += "</tr></thead><tbody>"
-            
-            for _, r in df.iterrows():
-            # --- TAŞINMA PAYI HESAPLAMA ---
-                agirlik = (r['Değer'] / toplam_portfoy_degeri * 100) if toplam_portfoy_degeri > 0 else 0
-                
-                kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
-                table_html += "<tr>"
-                table_html += f"<td><b>{r['Hisse']}</b></td>"
-                table_html += f"<td>{r['Sinyal']}</td>"
-                table_html += f"<td>{r['Adet']}</td>"
-                table_html += f"<td>%{tr_format(agirlik)}</td>" # Taşınma Payı
-                table_html += f"<td>{tr_format(r['Maliyet'])}</td>"
-                table_html += f"<td>{tr_format(r['Güncel'])}</td>"
-                table_html += f"<td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])}</td>"
-                table_html += f"<td><b>{tr_format(r['Değer'])}</td>"
-                table_html += "</tr>"
-            table_html += "</tbody></table>"
-            st.markdown(table_html, unsafe_allow_html=True)
-
             # Silme Butonları
             st.markdown("<br>", unsafe_allow_html=True)
             with st.expander("⚙️ HİSSE SİL"):
