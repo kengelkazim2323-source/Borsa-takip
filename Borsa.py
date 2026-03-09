@@ -78,18 +78,17 @@ def get_signal(hist_data):
 # ==========================================
 # 2. GÖRSEL AYARLAR VE TEMA SEÇİMİ
 # ==========================================
-st.set_page_config(page_title="KRAL BORSA", page_icon="📈", layout="wide")
-st_autorefresh(interval=60000, key="datarefresh") # API'yi yormamak için 60sn
+st.set_page_config(page_title="Borsa Analiz", page_icon="📈", layout="wide")
+st_autorefresh(interval=1000, key="datarefresh") # API'yi yormamak için 60sn
 
 with st.sidebar:
     st.header("🎨 GÖRÜNÜM")
-    tema = st.selectbox("Tema Seçimi", ["Premium Koyu", "Aydınlık Gündüz", "Matrix", "Derin Okyanus"])
+    tema = st.selectbox("Tema Seçimi", ["Premium Koyu", "Matrix", "Derin Okyanus"])
     st.markdown("<br><br>", unsafe_allow_html=True)
 
 # Tema Renk Sözlüğü
 tema_renkleri = {
     "Premium Koyu": {"bg": "#121212", "text": "#ffffff", "box": "#1e1e1e", "accent": "#BB86FC"},
-    "Aydınlık Gündüz": {"bg": "#f8f9fa", "text": "#202124", "box": "#ffffff", "accent": "#1a73e8"},
     "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"},
     "Derin Okyanus": {"bg": "#0f2027", "text": "#e0eaf5", "box": "#203a43", "accent": "#2bc0e4"}
 }
@@ -108,7 +107,7 @@ st.markdown(f"""
     
     /* Canlı Ticker Bandı */
     .ticker-wrapper {{ width: 100%; overflow: hidden; background: {t_sec['box']}; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); padding: 15px 0; }}
-    .ticker-content {{ display: flex; animation: ticker 40s linear infinite; white-space: nowrap; gap: 60px; }}
+    .ticker-content {{ display: flex; animation: ticker 30s linear infinite; white-space: nowrap; gap: 60px; }}
     @keyframes ticker {{ 0% {{ transform: translateX(100%); }} 100% {{ transform: translateX(-100%); }} }}
     .up {{ color: #00e676; font-weight: bold; font-family: 'JetBrains Mono', monospace; }} 
     .down {{ color: #ff1744; font-weight: bold; font-family: 'JetBrains Mono', monospace; }}
@@ -125,8 +124,8 @@ st.markdown(f"""
 # ==========================================
 # JavaScript ile kendi kendine güncellenen, sayfayı yormayan saat
 clock_html = f"""
-<div style="position: fixed; top: 15px; right: 20px; background: {t_sec['box']}; padding: 10px 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; gap: 15px; border: 1px solid {t_sec['accent']};">
-    <div style="position: relative; width: 40px; height: 40px; border: 2px solid {t_sec['accent']}; border-radius: 50%;">
+<div style="position: fixed; top: 10px; right: 20px; background: {t_sec['box']}; padding: 10px 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; gap: 15px; border: 1px solid {t_sec['accent']};">
+    <div style="position: relative; width: 30px; height: 30px; border: 2px solid {t_sec['accent']}; border-radius: 50%;">
         <div id="hour-hand" style="position: absolute; bottom: 50%; left: 50%; width: 2px; height: 12px; background: {t_sec['text']}; transform-origin: bottom; transform: translateX(-50%);"></div>
         <div id="minute-hand" style="position: absolute; bottom: 50%; left: 50%; width: 2px; height: 16px; background: {t_sec['text']}; transform-origin: bottom; transform: translateX(-50%);"></div>
         <div id="second-hand" style="position: absolute; bottom: 50%; left: 50%; width: 1px; height: 18px; background: #ff1744; transform-origin: bottom; transform: translateX(-50%);"></div>
@@ -171,7 +170,7 @@ st.components.v1.html(clock_html, height=80)
 # ==========================================
 # 4. GENİŞLETİLMİŞ CANLI PİYASA BANDI
 # ==========================================
-st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:-30px;'>📈 PORTFÖY YÖNETİM MERKEZİ</h2><br>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:-20px;'>📈 PORTFÖY YÖNETİM MERKEZİ</h2><br>", unsafe_allow_html=True)
 
 piyasa_izleme = {
     "BIST 100": "XU100.IS", "BIST 30": "XU030.IS", "GRAM ALTIN": "GAU-TRY", "ONS ALTIN": "GC=F", 
