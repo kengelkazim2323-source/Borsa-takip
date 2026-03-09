@@ -136,32 +136,20 @@ st.markdown(f"""
 # ==========================================
 
 clock_html = f"""
-<div style="position: fixed; top: 0px; right: 0px; background: {t_sec['box']}; padding: 10px 20px; border-radius: 0 0 0 30px; box-shadow: -4px 4px 15px rgba(0,0,0,0.5); z-index: 99999; display: flex; align-items: center; gap: 15px; border-left: 2px solid {t_sec['accent']}; border-bottom: 2px solid {t_sec['accent']};">
-    <div style="position: relative; width: 35px; height: 35px; border: 2px solid {t_sec['accent']}; border-radius: 50%;">
-        <div id="hour-hand" style="position: absolute; bottom: 50%; left: 50%; width: 2px; height: 10px; background: {t_sec['text']}; transform-origin: bottom; transform: translateX(-50%);"></div>
-        <div id="minute-hand" style="position: absolute; bottom: 50%; left: 50%; width: 2px; height: 14px; background: {t_sec['text']}; transform-origin: bottom; transform: translateX(-50%);"></div>
-        <div id="second-hand" style="position: absolute; bottom: 50%; left: 50%; width: 1px; height: 16px; background: #ff1744; transform-origin: bottom; transform: translateX(-50%);"></div>
-    </div>
-    <div style="text-align: right;">
-        <div id="digital-clock" style="font-size: 15px; font-weight: bold; font-family: 'JetBrains Mono', monospace; color: {t_sec['text']};"></div>
-        <div id="date-display" style="font-size: 10px; color: {t_sec['text']}; opacity: 0.8;"></div>
-    </div>
+<div style="position: fixed; top: 10px; right: 10px; background: {t_sec['box']}; padding: 10px 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 99999; display: flex; flex-direction: column; align-items: flex-end; border: 1px solid {t_sec['accent']};">
+    <div id="digital-clock" style="font-size: 20px; font-weight: bold; font-family: 'JetBrains Mono', monospace; color: {t_sec['accent']};"></div>
+    <div id="date-display" style="font-size: 11px; font-weight: 600; color: {t_sec['text']}; opacity: 0.8; letter-spacing: 1px;"></div>
 </div>
 <script>
 function updateClock() {{
-    const now = new Date();
-    const trTime = new Date(now.toLocaleString("en-US", {{timeZone: "Europe/Istanbul"}}));
+    const trTime = new Date(new Date().toLocaleString("en-US", {{timeZone: "Europe/Istanbul"}}));
     document.getElementById('digital-clock').innerText = trTime.toLocaleTimeString('tr-TR', {{hour12: false}});
-    document.getElementById('date-display').innerText = trTime.toLocaleDateString('tr-TR', {{weekday:'short', day:'numeric', month:'short'}});
-    const h = trTime.getHours() % 12; const m = trTime.getMinutes(); const s = trTime.getSeconds();
-    document.getElementById('hour-hand').style.transform = `translateX(-50%) rotate(${{(h*30)+(m*0.5)}}deg)`;
-    document.getElementById('minute-hand').style.transform = `translateX(-50%) rotate(${{(m*6)+(s*0.1)}}deg)`;
-    document.getElementById('second-hand').style.transform = `translateX(-50%) rotate(${{s*6}}deg)`;
+    document.getElementById('date-display').innerText = trTime.toLocaleDateString('tr-TR', {{day: '2-digit', month: 'long', year: 'numeric', weekday: 'long'}}).toUpperCase();
 }}
 setInterval(updateClock, 1000); updateClock();
 </script>
 """
-st.components.v1.html(clock_html, height=70)
+st.components.v1.html(clock_html, height=80)
 
 
 # ==========================================
