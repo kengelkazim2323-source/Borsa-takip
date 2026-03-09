@@ -230,7 +230,7 @@ if st.session_state.portfoy:
                 table_html += f"<td>{tr_format(r['Maliyet'])}</td>"
                 table_html += f"<td>{tr_format(r['Güncel'])}</td>"
                 table_html += f"<td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])}</td>"
-                table_html += f"<td><b>{tr_format(r['Değer'])} {birim}</b></td>"
+                table_html += f"<td><b>{tr_format(r['Değer'])}</td>"
                 table_html += "</tr>"
             table_html += "</tbody></table>"
             st.markdown(table_html, unsafe_allow_html=True)
