@@ -170,7 +170,7 @@ st.components.v1.html(clock_html, height=80)
 # ==========================================
 # 4. GENİŞLETİLMİŞ CANLI PİYASA BANDI
 # ==========================================
-st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:-20px;'>📈 PORTFÖY YÖNETİM MERKEZİ</h2><br>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:-10px;'>📈 PORTFÖY YÖNETİM MERKEZİ</h2><br>", unsafe_allow_html=True)
 
 piyasa_izleme = {
     "BIST 100": "XU100.IS", "BIST 30": "XU030.IS", "GRAM ALTIN": "GAU-TRY", "ONS ALTIN": "GC=F", 
