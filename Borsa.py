@@ -281,13 +281,20 @@ if st.session_state.portfoy:
             c1.metric("TOPLAM (BIST)", f"{tr_format(tr_total)} ₺")
             c2.metric("TOPLAM (ABD)", f"{tr_format(us_total)} $")
             st.markdown("---")
-            h_cols = st.columns([1, 1, 1, 1.5])
+            h_cols = st.columns([2, 1, 1, 1.5])
             for col, txt in zip(h_cols, ["VARLIK", "ADET", "HİSSE BAŞI", "YILLIK NET GELİR"]): col.markdown(f"**{txt}**")
             st.divider()
             for _, r in df_div.sort_values(by="NetTemettu", ascending=False).iterrows():
                 if r['Temettu'] > 0:
-                    birim = "₺" if r['Piyasa'] == "Türk Borsası" else "$"
-                    cc1, cc2, cc3, cc4 = st.columns([2, 1, 1, 1.5])
+                    birim = "₺" if r['Piyasa'] == "Türk Borsası" else "$"                                                     
+                   
+                    table_html += "<tr>"
+                table_html += f"<td><b>{r['VARLIK']}</b></td>"
+                table_html += f"<td>{r['ADET']}</td>"
+                table_html += f"<td>{r['HİSSE BAŞI']}</td>"
+                table_html += f"<td>{tr_format(r['YILLIK NET GELİR'])}</td>"
+                   
+                cc1, cc2, cc3, cc4 = st.columns([2, 1, 1, 1.5])
                     cc1.write(f"**{r['Hisse']}**")
                     cc2.write(f"{r['Adet']}")
                     cc3.write(f"{tr_format(r['Temettu'])} {birim}")
