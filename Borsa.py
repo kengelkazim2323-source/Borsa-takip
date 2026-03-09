@@ -69,8 +69,8 @@ def get_signal(hist_data):
 # ==========================================
 # 1. TEMA VE GÖRSEL AYARLAR
 # ==========================================
-st.set_page_config(page_title="KRAL BORSA", page_icon="📈", layout="wide")
-st_autorefresh(interval=60000, key="datarefresh")
+st.set_page_config(page_title="BORSA ANALİZ", page_icon="📈", layout="wide")
+st_autorefresh(interval=1000, key="datarefresh")
 
 with st.sidebar:
     st.header("🎨 GÖRÜNÜM")
@@ -154,7 +154,7 @@ with st.expander("➕ PORTFÖYE VARLIK EKLE", expanded=False):
         f1, f2, f3 = st.columns(3)
         if piyasa_sec == "Türk Borsası": hisse_sec = f1.selectbox("Hisse Seç", BIST_FULL)
         else: hisse_sec = f1.text_input("Sembol (AAPL, TSLA vs.)").upper()
-        adet_sec = f2.number_input("Adet", min_value=0.0001)
+        adet_sec = f2.number_input("Adet", min_value=0.0)
         maliyet_sec = f3.number_input("Maliyet", min_value=0.0)
         if st.form_submit_button("🚀 EKLE", use_container_width=True) and hisse_sec:
             st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": adet_sec, "Maliyet": maliyet_sec})
