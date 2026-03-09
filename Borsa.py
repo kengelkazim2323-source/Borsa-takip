@@ -258,7 +258,7 @@ if st.session_state.portfoy:
         with tab_container:
             df = pd.DataFrame([x for x in data_list if x['Piyasa'] == piyasa_turu])
             if df.empty: st.info("Varlık yok."); return
-            birim = "₺" if piyasa_turu == "Türk Borsası" 
+            
 
     tablo_olustur("Türk Borsası", tab_tr, full_data)
     tablo_olustur("Amerikan Borsası", tab_us, full_data)
