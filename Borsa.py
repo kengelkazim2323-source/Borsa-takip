@@ -137,8 +137,8 @@ st.markdown(f"""
 # ==========================================
 # 2. SAAT VE TARİH MODÜLÜ
 # ==========================================
- clock html = f"""
-<v style=position fixed; top: tpx; right: 10px; background: {t_sec['box' 1}; padding: 10px 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+clock html = f"""
+<div style=position fixed; top: tpx; right: 10px; background: {t_sec['box' 1}; padding: 10px 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 z index: 99999; display: flex; flex-direction: column; align-items: flex-end;
 border: Ipx solid {t_sec['accent' 1}: "»
 <div id="digital-clock" style="font-size: 20px; font-weight: bold; font-family:
@@ -149,7 +149,7 @@ size: 11px; font-weight: 600; color: {t_sec|'text' ]}; opacity: 0.8; letter-spac
 function updateClock () { {
 const trTime = new Date (new
 Date () .tolocaleString("en-US"
-• {{timezone:
+ {{timezone:
 "Europe/Istanbul" }})) ;
 document. getElementById('digital-
 clock'). innerText =
