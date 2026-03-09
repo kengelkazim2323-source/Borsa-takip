@@ -258,31 +258,7 @@ if st.session_state.portfoy:
         with tab_container:
             df = pd.DataFrame([x for x in data_list if x['Piyasa'] == piyasa_turu])
             if df.empty: st.info("Varlık yok."); return
-            birim = "₺" if piyasa_turu == "Türk Borsası" else "$"
-
-            # MARKDOWN HATASINI ENGELLEMEK İÇİN TEK SATIR HTML FORMATI
-            table_html = "<table class='kral-table'><thead><tr>"
-            table_html += "<th>HİSSE</th><th>SİNYAL</th><th>ADET</th><th>ALIŞ FİYATI (MALİYET)</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th>"
-            table_html += "</tr></thead><tbody>"
-            for _, r in df.iterrows():
-                color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
-                table_html += "<tr>"
-                table_html += f"<td><b>{r['Hisse']}</b></td>"
-                table_html += f"<td>{r['Sinyal']}</td>"
-                table_html += f"<td>{r['Adet']}</td>"
-                table_html += f"<td>{tr_format(r['Maliyet'])}</td>"
-                table_html += f"<td>{tr_format(r['Güncel'])}</td>"
-                table_html += f"<td style='color:{color}; font-weight:bold;'>{tr_format(r['K/Z'])}</td>"
-                table_html += f"<td><b>{tr_format(r['Değer'])} {birim}</b></td>"
-                table_html += "</tr>"
-            table_html += "</tbody></table>"
-            
-            st.markdown(table_html, unsafe_allow_html=True)
-
-            with st.expander("⚙️ SİLME İŞLEMLERİ"):
-                for _, r in df.iterrows():
-                    if st.button(f"❌ {r['Hisse']} Sil", key=f"del_{r['id']}"):
-                        st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
+            birim = "₺" if piyasa_turu == "Türk Borsası" 
 
     tablo_olustur("Türk Borsası", tab_tr, full_data)
     tablo_olustur("Amerikan Borsası", tab_us, full_data)
