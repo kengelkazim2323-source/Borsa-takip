@@ -137,19 +137,32 @@ st.markdown(f"""
 # ==========================================
 # 2. SAAT VE TARİH MODÜLÜ
 # ==========================================
-clock_html = f"""
-<div style="position: fixed; top: 10px; right: 10px; background: {t_sec['box']}; padding: 10px 25px; border-radius: 15px; z-index: 99999; border: 1px solid {t_sec['accent']};">
-    <div id="digital-clock" style="font-size: 20px; font-weight: bold; font-family: 'JetBrains Mono', monospace; color: {t_sec['accent']}; text-align: right;"></div>
-</div>
+ clock html = f"""
+<v style=position fixed; top: tpx; right: 10px; background: {t_sec['box' 1}; padding: 10px 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+z index: 99999; display: flex; flex-direction: column; align-items: flex-end;
+border: Ipx solid {t_sec['accent' 1}: "»
+<div id="digital-clock" style="font-size: 20px; font-weight: bold; font-family:
+'JetBrains Mono', monospace; color:
+It_sec! 'accent' !);"></div> <div id="date-display" style="font-
+size: 11px; font-weight: 600; color: {t_sec|'text' ]}; opacity: 0.8; letter-spacing: 1px;"></div></div>
 <script>
-function updateClock() {{
-    const trTime = new Date(new Date().toLocaleString("en-US", {{timeZone: "Europe/Istanbul"}}));
-    document.getElementById('digital-clock').innerText = trTime.toLocaleTimeString('tr-TR', {{hour12: false}});
-}}
-setInterval(updateClock, 1000); updateClock();
+function updateClock () { {
+const trTime = new Date (new
+Date () .tolocaleString("en-US"
+• {{timezone:
+"Europe/Istanbul" }})) ;
+document. getElementById('digital-
+clock'). innerText =
+trTime tolocaleTimeString('tr-TR'
+{{hour12: false}}) ;
+document. getElementById(' date-
+display'). innerText = trTime tolocaleDateString('tr-TR', {{day: '2-digit', month: 'long',
+year: 'numeric', weekday: 'long'}}).toUpperCase();}}
+setInterval (updateclock, 1000) ; updateClock ();
 </script>
-"""
-st.components.v1.html(clock_html, height=80)
+" ИН
+st. components. vi. htm1 (clock_html, height=80) 
+
 
 # ==========================================
 # 3. CANLI PİYASA
