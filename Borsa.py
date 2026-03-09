@@ -234,11 +234,6 @@ if st.session_state.portfoy:
     
     with t3:
         st.success(f"### Yıllık Net Temettü: {tr_format(df['Temettu'].sum())} ₺")
-if st.button("🗑️ TÜMÜNÜ SİL"):
-    
-st.session_state.portfoy = []; save_data([]); st.rerun()
-else:
-    st.info("Portföyün henüz boş, yukarıdan ekleme yapabilirsin.")
 
 
 # ==========================================
