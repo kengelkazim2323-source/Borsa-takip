@@ -195,45 +195,87 @@ with st.expander("➕ PORTFÖYE VARLIK EKLE"):
             st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": adet_sec, "Maliyet": maliyet_sec})
             save_data(st.session_state.portfoy); st.rerun()
 
-#==========================================
-# 5. LİSTELEME VE ANALİZ (AYNI KALDI)
+# ==========================================
+# 5. LİSTELEME VE TEMETTÜ
 # ==========================================
 if st.session_state.portfoy:
-    p_data = []; total_daily = 0
+    tab_tr, tab_us, tab_div = st.tabs(["🇹🇷 TÜRK BORSASI", "🇺🇸 AMERİKAN BORSASI", "💰 TEMETTÜ GELİRİ"])
+    
+    full_data = []
     for i, item in enumerate(st.session_state.portfoy):
         d = fetch_stock_data(item['Hisse'])
         if d:
             c = d['hist']['Close'].iloc[-1]; pc = d['hist']['Close'].iloc[-2]
-            daily_tl = (c - pc) * item['Adet']; total_daily += daily_tl
-            p_data.append({
-                "id": i, "Hisse": item['Hisse'], "Sinyal": get_signal(d['hist']),
-                "Adet": item['Adet'], "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'],
-                "Değer": c * item['Adet'], "Temettu": d['temettu'] * item['Adet']
+            full_data.append({
+                "id": i, "Piyasa": item.get("Piyasa", "Türk Borsası"), "Hisse": item['Hisse'], 
+                "Sinyal": get_signal(d['hist']), "Adet": item['Adet'], "Maliyet": item['Maliyet'], 
+                "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'], 
+                "Değer": c * item['Adet'], "Temettu": d['temettu'], 
+                "NetTemettu": d['temettu'] * item['Adet'], "DailyDiff": (c - pc) * item['Adet']
             })
-    
-    df = pd.DataFrame(p_data)
-    t1, t2, t3 = st.tabs(["📊 LİSTE", "📈 GRAFİK", "💰 TEMETTÜ"])
-    
-    with t1:
-        m1, m2, m3 = st.columns(3)
-        m1.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} ₺")
-        m2.metric("TOPLAM K/Z", f"{tr_format(df['K/Z'].sum())} ₺")
-        m3.metric("GÜNLÜK FARK", f"{tr_format(total_daily)} ₺", delta=f"{total_daily:,.2f}")
-        
-        for idx, r in df.iterrows():
-            c1, c2, c3, c4 = st.columns([2, 2, 2, 0.5])
-            c1.write(f"**{r['Hisse']}** | {r['Sinyal']}")
-            c2.write(f"Değer: {tr_format(r['Değer'])} ₺")
-            c3.write(f"K/Z: {tr_format(r['K/Z'])} ₺")
-            if c4.button("❌", key=f"del_{idx}"):
-                st.session_state.portfoy.pop(idx); save_data(st.session_state.portfoy); st.rerun()
+
+    def portfoy_goster(piyasa_turu, tab_container, data_list):
+        with tab_container:
+            df = pd.DataFrame([x for x in data_list if x['Piyasa'] == piyasa_turu])
+            if df.empty: st.info("Henüz varlık yok."); return
+            birim = "₺" if piyasa_turu == "Türk Borsası" else "$"
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            m1, m2, m3 = st.columns(3)
+            m1.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} {birim}")
+            m2.metric("TOPLAM K/Z", f"{tr_format(df['K/Z'].sum())} {birim}")
+            m3.metric("GÜNLÜK FARK", f"{tr_format(df['DailyDiff'].sum())} {birim}", delta=f"{df['DailyDiff'].sum():,.2f}")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            h_cols = st.columns([1.5, 1, 1, 1, 1, 0.5])
+            for col, txt in zip(h_cols, ["VARLIK | SİNYAL", "MALİYET", "GÜNCEL", "K/Z", "TOPLAM", "İŞLEM"]): col.markdown(f"**{txt}**")
             st.divider()
 
-    with t2:
-        st.plotly_chart(px.pie(df, values='Değer', names='Hisse', hole=0.4), use_container_width=True)
-    
-    with t3:
-        st.success(f"### Yıllık Net Temettü: {tr_format(df['Temettü'].
+            for _, r in df.iterrows():
+                c1, c2, c3, c4, c5, c6 = st.columns([1.5, 1, 1, 1, 1, 0.5])
+                c1.write(f"**{r['Hisse']}**\n{r['Sinyal']}")
+                c2.write(f"{tr_format(r['Maliyet'])} {birim}")
+                c3.write(f"**{tr_format(r['Güncel'])}** {birim}")
+                kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
+                c4.markdown(f"<span style='color:{kz_color};'>{tr_format(r['K/Z'])} {birim}</span>", unsafe_allow_html=True)
+                c5.write(f"**{tr_format(r['Değer'])}** {birim}")
+                if c6.button("❌", key=f"del_{r['id']}"):
+                    st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
+                st.divider()
+            st.plotly_chart(px.pie(df, values='Değer', names='Hisse', hole=0.4, color_discrete_sequence=px.colors.sequential.Electric), use_container_width=True)
+
+    portfoy_goster("Türk Borsası", tab_tr, full_data)
+    portfoy_goster("Amerikan Borsası", tab_us, full_data)
+
+    with tab_div:
+        df_div = pd.DataFrame(full_data)
+        if not df_div.empty:
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.subheader("💰 Yıllık Beklenen Nakit Akışı")
+            tr_total = df_div[df_div['Piyasa'] == "Türk Borsası"]['NetTemettu'].sum()
+            us_total = df_div[df_div['Piyasa'] == "Amerikan Borsası"]['NetTemettu'].sum()
+            c1, c2 = st.columns(2)
+            c1.metric("TOPLAM (BIST)", f"{tr_format(tr_total)} ₺")
+            c2.metric("TOPLAM (ABD)", f"{tr_format(us_total)} $")
+            st.markdown("---")
+            h_cols = st.columns([2, 1, 1, 1.5])
+            for col, txt in zip(h_cols, ["VARLIK", "ADET", "HİSSE BAŞI", "YILLIK NET GELİR"]): col.markdown(f"**{txt}**")
+            st.divider()
+            for _, r in df_div.sort_values(by="NetTemettu", ascending=False).iterrows():
+                if r['Temettu'] > 0:
+                    birim = "₺" if r['Piyasa'] == "Türk Borsası" else "$"
+                    cc1, cc2, cc3, cc4 = st.columns([2, 1, 1, 1.5])
+                    cc1.write(f"**{r['Hisse']}**")
+                    cc2.write(f"{r['Adet']}")
+                    cc3.write(f"{tr_format(r['Temettu'])} {birim}")
+                    cc4.write(f"**{tr_format(r['NetTemettu'])} {birim}**")
+                    st.divider()
+        else: st.info("Temettü veren hisse bulunamadı.")
+
+    if st.button("🗑️ TÜMÜNÜ SİL"):
+        st.session_state.portfoy = []; save_data([]); st.rerun()
+else:
+    st.info("Portföy boş kral, ekleme yap.")
     
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
