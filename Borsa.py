@@ -281,7 +281,7 @@ if st.session_state.portfoy:
             c1.metric("TOPLAM (BIST)", f"{tr_format(tr_total)} ₺")
             c2.metric("TOPLAM (ABD)", f"{tr_format(us_total)} $")
             st.markdown("---")
-            h_cols = st.columns([2, 1, 1, 1.5])
+            h_cols = st.columns([1, 1, 1, 1.5])
             for col, txt in zip(h_cols, ["VARLIK", "ADET", "HİSSE BAŞI", "YILLIK NET GELİR"]): col.markdown(f"**{txt}**")
             st.divider()
             for _, r in df_div.sort_values(by="NetTemettu", ascending=False).iterrows():
@@ -298,7 +298,7 @@ if st.session_state.portfoy:
     if st.button("🗑️ TÜMÜNÜ SİL"):
         st.session_state.portfoy = []; save_data([]); st.rerun()
 else:
-    st.info("Portföy boş kral, ekleme yap.")
+    st.info("Portföy boş, lütfen ekleme yapınız.")
     
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
