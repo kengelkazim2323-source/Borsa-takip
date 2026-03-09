@@ -66,7 +66,7 @@ if 'portfoy' not in st.session_state:
 # 2. TEMA VE SAAT
 # ==========================================
 st.set_page_config(page_title="BORSA TAKİP", page_icon="📈", layout="wide")
-st_autorefresh(interval=1000, key="datarefresh")
+st_autorefresh(interval=500, key="datarefresh")
 
 main_color = "#1a73e8"
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
@@ -78,7 +78,7 @@ st.markdown(f"""
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
     html, body, [class*="st-"] {{ font-family: 'JetBrains Mono', monospace; color: #202124; }}
     .top-right-clock {{ 
-        position: fixed; top: 0px; right: 0px; color: #ffffff; font-weight: bold; font-size: 18px; 
+        position: fixed; top: 0px; right: 0px; color: #ffffff; font-weight: bold; font-size: 9px; 
         z-index: 9999; padding: 12px 20px; background: #202124;
         border-bottom-left-radius: 12px; box-shadow: -2px 2px 8px rgba(0,0,0,0.1);
         border-left: 4px solid {main_color};
