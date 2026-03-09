@@ -237,6 +237,9 @@ if st.session_state.portfoy:
 if st.button("🗑️ TÜMÜNÜ SİL"):
     
 st.session_state.portfoy = []; save_data([]); st.rerun()
+else:
+    st.info("Portföyün henüz boş, yukarıdan ekleme yapabilirsin.")
+
 
 # ==========================================
 # 5. SATIR VE SÜTUNLU TABLO
