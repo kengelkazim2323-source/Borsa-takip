@@ -6,7 +6,7 @@ import os
 import pytz
 from datetime import datetime
 import plotly.express as px
-from streamlit_autorefresh import 
+from streamlit_autorefresh import st_autorefresh
 
 
 
