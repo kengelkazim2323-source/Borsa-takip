@@ -261,7 +261,7 @@ if st.session_state.portfoy:
             tr_total = df_div[df_div['Piyasa'] == "Türk Borsası"]['NetTemettu'].sum()
             us_total = df_div[df_div['Piyasa'] == "Amerikan Borsası"]['NetTemettu'].sum()
             c1, c2 = st.columns(2)
-            c1.metric("TOPLAM (BIST)", f"{tr_format(tr_total)} ₺")
+            c1.metric("TOPLAM (BIST)", f"{tr_format(tr_total)} ")
             c2.metric("TOPLAM (ABD)", f"{tr_format(us_total)} $")
             st.markdown("---")
             h_cols = st.columns([2, 1, 1, 1.5])
