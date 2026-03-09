@@ -220,6 +220,10 @@ if st.session_state.portfoy:
         with tab_container:
             df = pd.DataFrame([x for x in data_list if x['Piyasa'] == piyasa_turu])
             if df.empty: st.info("Henüz varlık yok."); return
+                
+            # --- SIRALAMA EKLE (Hisse Adına Göre Alfabetik) ---
+            df = df.sort_values(by="Hisse")
+            
             birim = "₺" if piyasa_turu == "Türk Borsası" else "$"
             
             st.markdown("<br>", unsafe_allow_html=True)
