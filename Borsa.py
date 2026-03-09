@@ -241,7 +241,7 @@ if st.session_state.portfoy:
                 cols = st.columns(4)
                 for idx, (index, r) in enumerate(df.iterrows()):
                     if cols[idx % 4].button(f"❌ {r['Hisse']} Sil", key=f"del_{r['id']}"):
-                        st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
+                       
             
         
             # --- YATAY SATIR VE SÜTUNLU TABLO ---
