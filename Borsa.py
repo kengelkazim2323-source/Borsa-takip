@@ -6,7 +6,8 @@ import os
 import pytz
 from datetime import datetime
 import plotly.express as px
-from streamlit_autorefresh import st_autorefresh
+from streamlit_autorefresh import 
+
 
 
 # ==========================================
@@ -78,15 +79,16 @@ def get_signal(hist_data):
 # ==========================================
 # 2. GÖRSEL AYARLAR VE TEMA SEÇİMİ
 # ==========================================
-st.set_page_config(page_title="Borsa Analiz", page_icon="📈", layout="wide")
-st_autorefresh(interval=1000, key="datarefresh") # API'yi yormamak için 60sn
+st.set_page_config(page_title="KRAL BORSA", page_icon="📈", layout="wide")
+st_autorefresh(interval=60000, key="datarefresh") # API'yi yormamak için 60sn
 
 with st.sidebar:
     st.header("🎨 GÖRÜNÜM")
+    # Aydınlık Gündüz kaldırıldı
     tema = st.selectbox("Tema Seçimi", ["Premium Koyu", "Matrix", "Derin Okyanus"])
     st.markdown("<br><br>", unsafe_allow_html=True)
 
-# Tema Renk Sözlüğü
+# Tema Renk Sözlüğü (Aydınlık Gündüz çıkarıldı)
 tema_renkleri = {
     "Premium Koyu": {"bg": "#121212", "text": "#ffffff", "box": "#1e1e1e", "accent": "#BB86FC"},
     "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"},
@@ -107,7 +109,7 @@ st.markdown(f"""
     
     /* Canlı Ticker Bandı */
     .ticker-wrapper {{ width: 100%; overflow: hidden; background: {t_sec['box']}; border-radius: 8px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); padding: 15px 0; }}
-    .ticker-content {{ display: flex; animation: ticker 30s linear infinite; white-space: nowrap; gap: 60px; }}
+    .ticker-content {{ display: flex; animation: ticker 40s linear infinite; white-space: nowrap; gap: 60px; }}
     @keyframes ticker {{ 0% {{ transform: translateX(100%); }} 100% {{ transform: translateX(-100%); }} }}
     .up {{ color: #00e676; font-weight: bold; font-family: 'JetBrains Mono', monospace; }} 
     .down {{ color: #ff1744; font-weight: bold; font-family: 'JetBrains Mono', monospace; }}
@@ -120,12 +122,11 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. ANALOG + DİJİTAL SAAT & TAKVİM
+# 3. ANALOG + DİJİTAL SAAT & TAKVİM (KÖŞEYE SIFIRLANDI)
 # ==========================================
-# JavaScript ile kendi kendine güncellenen, sayfayı yormayan saat
 clock_html = f"""
-<div style="position: fixed; top: 10px; right: 20px; background: {t_sec['box']}; padding: 10px 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; gap: 15px; border: 1px solid {t_sec['accent']};">
-    <div style="position: relative; width: 30px; height: 30px; border: 2px solid {t_sec['accent']}; border-radius: 50%;">
+<div style="position: fixed; top: 0px; right: 0px; background: {t_sec['box']}; padding: 10px 15px; border-radius: 0 0 0 15px; box-shadow: -2px 2px 10px rgba(0,0,0,0.3); z-index: 99999; display: flex; align-items: center; gap: 15px; border-left: 2px solid {t_sec['accent']}; border-bottom: 2px solid {t_sec['accent']};">
+    <div style="position: relative; width: 40px; height: 40px; border: 2px solid {t_sec['accent']}; border-radius: 50%;">
         <div id="hour-hand" style="position: absolute; bottom: 50%; left: 50%; width: 2px; height: 12px; background: {t_sec['text']}; transform-origin: bottom; transform: translateX(-50%);"></div>
         <div id="minute-hand" style="position: absolute; bottom: 50%; left: 50%; width: 2px; height: 16px; background: {t_sec['text']}; transform-origin: bottom; transform: translateX(-50%);"></div>
         <div id="second-hand" style="position: absolute; bottom: 50%; left: 50%; width: 1px; height: 18px; background: #ff1744; transform-origin: bottom; transform: translateX(-50%);"></div>
@@ -140,7 +141,6 @@ function updateClock() {{
     const now = new Date();
     const trTime = new Date(now.toLocaleString("en-US", {{timeZone: "Europe/Istanbul"}}));
     
-    // Digital & Date
     const timeString = trTime.toLocaleTimeString('tr-TR', {{hour12: false}});
     const dateOptions = {{ weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }};
     const dateString = trTime.toLocaleDateString('tr-TR', dateOptions);
@@ -148,7 +148,6 @@ function updateClock() {{
     document.getElementById('digital-clock').innerText = timeString;
     document.getElementById('date-display').innerText = dateString;
 
-    // Analog
     const hours = trTime.getHours() % 12;
     const minutes = trTime.getMinutes();
     const seconds = trTime.getSeconds();
@@ -170,7 +169,7 @@ st.components.v1.html(clock_html, height=80)
 # ==========================================
 # 4. GENİŞLETİLMİŞ CANLI PİYASA BANDI
 # ==========================================
-st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:50px;'>📈 PORTFÖY YÖNETİM MERKEZİ</h2><br>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']}; margin-top:-30px;'>📈 PORTFÖY YÖNETİM MERKEZİ</h2><br>", unsafe_allow_html=True)
 
 piyasa_izleme = {
     "BIST 100": "XU100.IS", "BIST 30": "XU030.IS", "GRAM ALTIN": "GAU-TRY", "ONS ALTIN": "GC=F", 
@@ -191,26 +190,29 @@ for isim, sembol in piyasa_izleme.items():
 st.markdown(ticker_content + '</div></div>', unsafe_allow_html=True)
 
 # ==========================================
-# 5. TAM BİST LİSTESİ VE HİSSE EKLEME
+# 5. TAM BİST LİSTESİ VE HİSSE EKLEME (FİXLENDİ)
 # ==========================================
-# KESİNLİKLE DOKUNULMAYAN FULL LİSTE
 BIST_FULL = sorted(["A1CAP.IS", "ACSEL.IS", "ADEL.IS", "ADESE.IS", "AEFES.IS", "AFYON.IS", "AGESA.IS", "AGHOL.IS", "AGROT.IS", "AHGAZ.IS", "AKBNK.IS", "AKCNS.IS", "AKENR.IS", "AKFGY.IS", "AKFYE.IS", "AKGRT.IS", "AKMGY.IS", "AKSA.IS", "AKSEN.IS", "ALARK.IS", "ALBRK.IS", "ALFAS.IS", "ALGYO.IS", "ALKA.IS", "ALKIM.IS", "ALMAD.IS", "ANELE.IS", "ANGEN.IS", "ANHYT.IS", "ANSGR.IS", "ARCLK.IS", "ARDYZ.IS", "ARENA.IS", "ARSAN.IS", "ASGYO.IS", "ASELS.IS", "ASTOR.IS", "ASUZU.IS", "ATAKP.IS", "ATEKS.IS", "ATGRP.IS", "ATLAS.IS", "ATSYH.IS", "AVHOL.IS", "AVOD.IS", "AVPGY.IS", "AYDEM.IS", "AYEN.IS", "AYGAZ.IS", "AZTEK.IS", "BAGFS.IS", "BAKAB.IS", "BALAT.IS", "BANVT.IS", "BARMA.IS", "BASGZ.IS", "BAYRK.IS", "BEGYO.IS", "BERA.IS", "BEYAZ.IS", "BFREN.IS", "BIENP.IS", "BIGCH.IS", "BIMAS.IS", "BINHO.IS", "BIOEN.IS", "BIZIM.IS", "BJKAS.IS", "BLCYT.IS", "BMSCH.IS", "BMSTL.IS", "BNTAS.IS", "BOBET.IS", "BORLS.IS", "BORSK.IS", "BOSSA.IS", "BRISA.IS", "BRKO.IS", "BRKSN.IS", "BRKVY.IS", "BRLSM.IS", "BRMEN.IS", "BRYAT.IS", "BSOKE.IS", "BTCIM.IS", "BUCIM.IS", "BURCE.IS", "BURVA.IS", "BVSAN.IS", "BYDNR.IS", "CANTE.IS", "CASA.IS", "CATES.IS", "CCOLA.IS", "CELHA.IS", "CEMAS.IS", "CEMTS.IS", "CEVNY.IS", "CIMSA.IS", "CLEBI.IS", "CMBTN.IS", "CMENT.IS", "CONSE.IS", "COSMO.IS", "CRDFA.IS", "CRFSA.IS", "CUSAN.IS", "CVKMD.IS", "CWENE.IS", "DAGHL.IS", "DAGI.IS", "DAPGM.IS", "DARDL.IS", "DENGE.IS", "DERAS.IS", "DERIM.IS", "DESA.IS", "DESPC.IS", "DEVA.IS", "DGGYO.IS", "DGNMO.IS", "DIRIT.IS", "DITAS.IS", "DMSAS.IS", "DOAS.IS", "DOCO.IS", "DOGUB.IS", "DOHOL.IS", "DOKTA.IS", "DURDO.IS", "DYOBY.IS", "DZGYO.IS", "EBEBK.IS", "ECILC.IS", "ECZYT.IS", "EDATA.IS", "EDIP.IS", "EGEEN.IS", "EGEPO.IS", "EGGUB.IS", "EGPRO.IS", "EGSER.IS", "EKGYO.IS", "EKIZ.IS", "EKOS.IS", "EKSUN.IS", "ELITE.IS", "EMKEL.IS", "ENERY.IS", "ENJSA.IS", "ENKAI.IS", "ERBOS.IS", "EREGL.IS", "ERSU.IS", "ESCOM.IS", "ESEN.IS", "ETILER.IS", "EUPWR.IS", "EUREN.IS", "EYGYO.IS", "FMIZP.IS", "FONET.IS", "FORMT.IS", "FORTE.IS", "FRIGO.IS", "FROTO.IS", "FZLGY.IS", "GARAN.IS", "GBUFG.IS", "GENTS.IS", "GEREL.IS", "GESAN.IS", "GIPTA.IS", "GLBMD.IS", "GLCVY.IS", "GLRYH.IS", "GLYHO.IS", "GMTAS.IS", "GOKNR.IS", "GOLTS.IS", "GOODY.IS", "GOZDE.IS", "GRNYO.IS", "GRSEL.IS", "GSDDE.IS", "GSDHO.IS", "GUBRF.IS", "GWIND.IS", "GZNMI.IS", "HALKB.IS", "HATEK.IS", "HATSN.IS", "HEDEF.IS", "HEKTS.IS", "HKTM.IS", "HLGYO.IS", "HTTBT.IS", "HUBVC.IS", "HUNER.IS", "HURGZ.IS", "ICBCT.IS", "IDAS.IS", "IDEAS.IS", "IDGYO.IS", "IEYHO.IS", "IHEVA.IS", "IHGZT.IS", "IHLAS.IS", "IHLGM.IS", "IHYAY.IS", "IMASM.IS", "INDES.IS", "INFO.IS", "INGRM.IS", "INTEM.IS", "IPEKE.IS", "ISATR.IS", "ISBTR.IS", "ISCTR.IS", "ISDMR.IS", "ISFIN.IS", "ISGSY.IS", "ISGYO.IS", "ISMEN.IS", "ISSEN.IS", "ISYAT.IS", "ITTFH.IS", "IZENR.IS", "IZFAS.IS", "IZINV.IS", "IZMDC.IS", "JANTS.IS", "KAPLM.IS", "KAREL.IS", "KARSN.IS", "KARTN.IS", "KARYE.IS", "KATMR.IS", "KAYSE.IS", "KBCOR.IS", "KCAER.IS", "KCHOL.IS", "KFEIN.IS", "KGYO.IS", "KIMMR.IS", "KLGYO.IS", "KLMSN.IS", "KLNMA.IS", "KLRHO.IS", "KLSYN.IS", "KLYAS.IS", "KMEPU.IS", "KMPUR.IS", "KNFRT.IS", "KONTR.IS", "KONYA.IS", "KORDS.IS", "KOZAA.IS", "KOZAL.IS", "KRDMA.IS", "KRDMB.IS", "KRDMD.IS", "KRGYO.IS", "KRONT.IS", "KRPLS.IS", "KRSTL.IS", "KRTEK.IS", "KRVGD.IS", "KSTUR.IS", "KUTPO.IS", "KUVVA.IS", "KUYAS.IS", "KZBGY.IS", "KZGYO.IS", "LIDER.IS", "LIDFA.IS", "LINK.IS", "LMKDC.IS", "LOGAS.IS", "LOGO.IS", "LRSHO.IS", "LUKSK.IS", "MAALT.IS", "MACKO.IS", "MAGEN.IS", "MAKIM.IS", "MAKTK.IS", "MANAS.IS", "MARKA.IS", "MARTI.IS", "MAVI.IS", "MEDTR.IS", "MEGAP.IS", "MEKAG.IS", "MEPET.IS", "MERCN.IS", "MERKO.IS", "METRO.IS", "METUR.IS", "MHRGY.IS", "MIATK.IS", "MIPAZ.IS", "MNDRS.IS", "MNDTR.IS", "MOBTL.IS", "MPARK.IS", "MRGYO.IS", "MRSHL.IS", "MSGYO.IS", "MTRKS.IS", "MUDO.IS", "MZHLD.IS", "NATEN.IS", "NETAS.IS", "NIBAS.IS", "NTGAZ.IS", "NTHOL.IS", "NUGYO.IS", "NUHCM.IS", "OBAMS.IS", "OBASE.IS", "ODAS.IS", "ONCSM.IS", "ORCAY.IS", "ORGE.IS", "ORMA.IS", "OSMEN.IS", "OSTIM.IS", "OTKAR.IS", "OYAKC.IS", "OYAYO.IS", "OYLUM.IS", "OYYAT.IS", "OZGYO.IS", "OZKGY.IS", "OZRDN.IS", "OZSUB.IS", "PAGYO.IS", "PAMEL.IS", "PAPIL.IS", "PARSN.IS", "PASEU.IS", "PATEK.IS", "PCILT.IS", "PEGYO.IS", "PEKGY.IS", "PENTA.IS", "PETKM.IS", "PETUN.IS", "PGSUS.IS", "PINSU.IS", "PKART.IS", "PKENT.IS", "PNLSN.IS", "PNSUT.IS", "POLHO.IS", "POLTK.IS", "PRKAB.IS", "PRKME.IS", "PRZMA.IS", "PSDTC.IS", "PSGYO.IS", "QNBFB.IS", "QNBFL.IS", "QUAGR.IS", "RALYH.IS", "RAYYS.IS", "REEDR.IS", "RNPOL.IS", "RODRG.IS", "ROYAL.IS", "RTALB.IS", "RUBNS.IS", "RYGYO.IS", "RYSAS.IS", "SAHOL.IS", "SAMAT.IS", "SANEL.IS", "SANFO.IS", "SANIC.IS", "SARKY.IS", "SASA.IS", "SAYAS.IS", "SDTTR.IS", "SEGYO.IS", "SEKFK.IS", "SEKOK.IS", "SELEC.IS", "SELGD.IS", "SERVE.IS", "SEYKM.IS", "SILVR.IS", "SISE.IS", "SKBNK.IS", "SKTAS.IS", "SKYMD.IS", "SKYLP.IS", "SMART.IS", "SMRTG.IS", "SNGYO.IS", "SNICA.IS", "SNKPA.IS", "SOKM.IS", "SONME.IS", "SRVGY.IS", "SUMAS.IS", "SUNTK.IS", "SURGY.IS", "SUWEN.IS", "TABGD.IS", "TAPDI.IS", "TARKM.IS", "TATEN.IS", "TATGD.IS", "TAVHL.IS", "TBORG.IS", "TCELL.IS", "TDGYO.IS", "TEKTU.IS", "TERA.IS", "TETMT.IS", "TEZOL.IS", "TGSAS.IS", "THYAO.IS", "TIRE.IS", "TKFEN.IS", "TKNSA.IS", "TMSN.IS", "TOASO.IS", "TRCAS.IS", "TRGYO.IS", "TRILC.IS", "TSKB.IS", "TSPOR.IS", "TTKOM.IS", "TTRAK.IS", "TUCLK.IS", "TUKAS.IS", "TUPRS.IS", "TURSG.IS", "UFUK.IS", "ULAS.IS", "ULKER.IS", "ULUFA.IS", "ULUSE.IS", "VAKBN.IS", "VAKFN.IS", "VAKKO.IS", "VANGD.IS", "VBTYM.IS", "VERTU.IS", "VERUS.IS", "VESBE.IS", "VESTL.IS", "VKGYO.IS", "VKING.IS", "VRGYO.IS", "YAPRK.IS", "YATAS.IS", "YAYLA.IS", "YEOTK.IS", "YESIL.IS", "YGGYO.IS", "YGYO.IS", "YKBNK.IS", "YONGA.IS", "YOTAS.IS", "YUNSA.IS", "YYLGD.IS", "ZEDUR.IS", "ZOREN.IS", "ZRGYO.IS"])
 
 with st.expander("➕ LİSTEYE YENİ HİSSE EKLE", expanded=False):
     col_v, col_a, col_m, col_b = st.columns([2, 1, 1, 1])
     with col_v: s_varlik = st.selectbox("Hisse Seç", BIST_FULL)
-    with col_a: s_adet = st.number_input("Adet", min_value=0.0, step=1.0)
+    with col_a: s_adet = st.number_input("Adet", min_value=0.01, step=1.0) # 0.01 yapıldı ki boş geçilmesin
     with col_m: s_maliyet = st.number_input("Maliyet (₺)", min_value=0.0, format="%.2f")
     with col_b: 
-        st.write("") # Boşluk hizalaması için
+        st.write("") 
         st.write("")
-        if st.button("🚀 EKLE", use_container_width=True):
+        if st.button("🚀 PORTFÖYE EKLE", use_container_width=True):
             if s_varlik and s_adet > 0:
-                st.session_state.portfoy.append({"Hisse": s_varlik, "Adet": s_adet, "Maliyet": s_maliyet})
+                yeni_kayit = {"Hisse": s_varlik, "Adet": float(s_adet), "Maliyet": float(s_maliyet)}
+                st.session_state.portfoy.append(yeni_kayit)
                 save_data(st.session_state.portfoy)
+                st.success(f"Başarılı: {s_varlik} eklendi!") # Ince ayar: Kullanıcıya bilgi
                 st.rerun()
+            else:
+                st.error("Adet 0'dan büyük olmalı!") # Ince ayar: Hata yakalama
 
-st.markdown("<br>", unsafe_allow_html=True) # Araya esneklik payı
+st.markdown("<br>", unsafe_allow_html=True) 
 
 # ==========================================
 # 6. VERİ ANALİZİ VE SİNYALLER
@@ -255,13 +257,11 @@ if st.session_state.portfoy:
             
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # Gelişmiş Tablo ve Tekli Silme Butonları
             for idx, row in df.iterrows():
                 c1, c2, c3, c4, c5, c6 = st.columns([2, 1.5, 1.5, 1.5, 1.5, 0.5])
                 c1.write(f"**{row['Varlık']}** ({row['Sinyal']})")
                 c2.write(f"Fiyat: {tr_format(row['Güncel'])}")
                 
-                # Günlük değişim renklendirme
                 renk = "#00e676" if row['Günlük (%)'] >= 0 else "#ff1744"
                 c3.markdown(f"<span style='color:{renk}; font-weight:bold;'>%{row['Günlük (%)']:+.2f}</span>", unsafe_allow_html=True)
                 
@@ -295,7 +295,6 @@ if st.session_state.portfoy:
             st.rerun()
 else:
     st.info("Portföy boş kral, ekleme yapmanı bekliyorum.")
-
 
 
 
