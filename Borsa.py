@@ -289,9 +289,9 @@ with tab_fon:
 # Temettü Sekmesi
 with tab_div:
     df_div = pd.DataFrame(full_data)
-    if not df_div.empty and df_div['Net Temettü'].sum() > 0:
-        st.metric("YILLIK TOPLAM TEMETTÜ", f"{tr_format(df_div['Net Temettü'].sum())} ₺")
-        st.table(df_div[df_div['Net Temettü'] > 0][['Hisse', 'Net Temettü']])
+    if not df_div.empty and df_div['NET TEMETTÜ'].sum() > 0:
+        st.metric("YILLIK TOPLAM TEMETTÜ", f"{tr_format(df_div['NET TEMETTÜ'].sum())} ₺")
+        st.table(df_div[df_div['NET TEMETTÜ'] > 0][['HİSSE', 'NET TEMETTÜ']])
     else: st.info("Temettü verisi bulunamadı.")
 
 # Halka Arz Sekmesi
