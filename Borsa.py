@@ -55,8 +55,8 @@ def get_signal(hist_data):
     try:
         if len(hist_data) < 20: return "VERİ YETERSİZ"
         delta = hist_data['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=13).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=13).mean()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs)).iloc[-1]
         ma20 = hist_data['Close'].rolling(window=20).mean().iloc[-1]
@@ -250,6 +250,14 @@ if st.session_state.portfoy:
                 table_html += f"<td><b>{tr_format(r['Değer'])}</td>"
                 table_html += "</tr>"
             table_html += "</tbody></table>"
+<table>
+<colgroup>
+<col style="width: 100px;"> <col style="width: 250px; "> <col style="width:
+auto;"> </colgroup> <thead›...</thead› <tbody>...</tbody>
+</table>
+
+
+            
             st.markdown(table_html, unsafe_allow_html=True)
 
             # Silme Butonları (Tablo yapısını bozmamak için expander içine alındı)
