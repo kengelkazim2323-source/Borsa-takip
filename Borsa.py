@@ -250,13 +250,6 @@ if st.session_state.portfoy:
                 table_html += f"<td><b>{tr_format(r['Değer'])}</td>"
                 table_html += "</tr>"
             table_html += "</tbody></table>"
-<table>
-<colgroup>
-<col style="width: 100px;"> <col style="width: 250px; "> <col style="width:
-auto
-
-
-
             
             st.markdown(table_html, unsafe_allow_html=True)
 
