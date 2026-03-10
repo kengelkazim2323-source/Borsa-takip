@@ -313,17 +313,6 @@ if st.session_state.portfoy or st.session_state.ipo_liste:
 
 
 
-
-
-    # --- TOPLU SİLME ---
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🗑️ TÜM PORTFÖYÜ SİL"):
-        st.session_state.portfoy = []
-        st.session_state.ipo_liste = []
-        save_data([])
-        st.rerun()
-else:
-    st.info("Portföy boş, lütfen yukarıdan ekleme yapınız.")
     
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
