@@ -334,8 +334,8 @@ with tab_ipo:
                         tavan_data.append({
 
                             "Gün": f"{gun}. Gün",
-                            "Hisse Fiyatı": f"{tr_format(current_price)} ₺"
-                            "Toplam Değer": f"{tr_format(gunluk_deger)} ₺"
+                            "Hisse Fiyatı": f"{tr_format(current_price)} ₺",
+                            "Toplam Değer": f"{tr_format(gunluk_deger)} ₺",
                             "Toplam Kar": f"{tr_format(gunluk_kar)} ₺"
                         })
 
