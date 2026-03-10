@@ -7,7 +7,8 @@ import pytz
 from datetime import datetime, timedelta
 import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
-
+import urllib.request
+import re
 
 # ==========================================
 # 0. VERİ YÖNETİMİ
@@ -46,6 +47,23 @@ def fetch_stock_data(symbol):
         else: yillik_temettu = 0.0
         return {"hist": hist, "temettu": yillik_temettu}
     except: return None
+
+@st.cache_data(ttl=300)
+def fetch_tefas_price(symbol):
+    try:
+        # Yatırım fonları için anlık fiyat çekme (TEFAS)
+        code = symbol.replace(".IS", "").upper()
+        url = f"https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod={code}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        html = urllib.request.urlopen(req, timeout=5).read().decode('utf-8')
+        m = re.search(r'Son Fiyat \(TL\).*?<span>([\d,]+)</span>', html, re.DOTALL)
+        if not m:
+            m = re.search(r'top-list-right">([\d,]+)</span>', html)
+        if m:
+            return float(m.group(1).replace(',', '.'))
+    except:
+        pass
+    return None
 
 def tr_format(val):
     try:
@@ -216,20 +234,34 @@ tab_tr, tab_fon, tab_div, tab_ipo = st.tabs(["🇹🇷 TÜRK BORSASI", "📊 YAT
 
 full_data = []
 for i, item in enumerate(st.session_state.portfoy):
-    d = fetch_stock_data(item['Hisse'])
+    piyasa_durumu = item.get("Piyasa", "Türk Borsası")
     
-    if d:
-        c = d['hist']['Close'].iloc[-1]; pc = d['hist']['Close'].iloc[-2]
-        sinyal = get_signal(d['hist'])
-        temettu = d['temettu']
+    if piyasa_durumu == "Yatırım Fonu":
+        # TEFAS Üzerinden Anlık Yatırım Fonu Çekimi
+        fon_fiyati = fetch_tefas_price(item['Hisse'])
+        if fon_fiyati:
+            c = fon_fiyati
+            pc = fon_fiyati # Önceki kapanış fonlar için karmaşık, fiyat eşit varsayılıyor
+            sinyal = "VERİ YOK"
+            temettu = 0.0
+        else:
+            c = item['Maliyet']; pc = item['Maliyet']
+            sinyal = "VERİ YOK"
+            temettu = 0.0
     else:
-        # Yatırım fonlarından veya geçersiz hisselerden veri çekilemezse patlamaması için fallback (Kurtarıcı Halka)
-        c = item['Maliyet']; pc = item['Maliyet']
-        sinyal = "VERİ YOK"
-        temettu = 0.0
+        # Normal Borsa Hissesi Çekimi (YFinance)
+        d = fetch_stock_data(item['Hisse'])
+        if d:
+            c = d['hist']['Close'].iloc[-1]; pc = d['hist']['Close'].iloc[-2]
+            sinyal = get_signal(d['hist'])
+            temettu = d['temettu']
+        else:
+            c = item['Maliyet']; pc = item['Maliyet']
+            sinyal = "VERİ YOK"
+            temettu = 0.0
 
     full_data.append({
-        "id": i, "Piyasa": item.get("Piyasa", "Türk Borsası"), "Hisse": item['Hisse'], 
+        "id": i, "Piyasa": piyasa_durumu, "Hisse": item['Hisse'], 
         "Sinyal": sinyal, "Adet": item['Adet'], "Maliyet": item['Maliyet'], 
         "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'], 
         "Değer": c * item['Adet'], "Temettu": temettu, 
@@ -345,39 +377,55 @@ if full_data:
         # Grafik Renk Paleti (Temaya Uygun)
         renk_skalasi = [t_sec['accent'], "#00D4FF", "#9D4EDD", "#FF00FF", "#00E676", "#FFB300", "#FF4D4D", "#F72585", "#24D1FF", "#A5FFD6"]
         
-        fig = px.pie(
-            df_chart, 
-            values='Değer', 
-            names='Hisse', 
-            hole=0.5,
-            color_discrete_sequence=renk_skalasi,
-            hover_data=['Adet', 'K/Z'],
-            labels={'Değer': 'Toplam Değer (₺)', 'Hisse': 'Varlık'}
-        )
+        g1, g2 = st.columns(2)
         
-        fig.update_traces(
-            textposition='inside', 
-            textinfo='percent+label',
-            marker=dict(line=dict(color=t_sec['bg'], width=2))
-        )
-        
-        fig.update_layout(
-            showlegend=True,
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color=t_sec['text']),
-            margin=dict(t=30, b=30, l=30, r=30),
-            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
+        # BIST Grafiği
+        df_bist = df_chart[df_chart['Piyasa'] == 'Türk Borsası']
+        if not df_bist.empty:
+            fig_bist = px.pie(
+                df_bist, 
+                values='Değer', 
+                names='Hisse', 
+                hole=0.5,
+                color_discrete_sequence=renk_skalasi,
+                hover_data=['Adet', 'K/Z'],
+                title='🇹🇷 Türk Borsası Dağılımı',
+                labels={'Değer': 'Toplam Değer (₺)', 'Hisse': 'Hisse'}
+            )
+            fig_bist.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color=t_sec['bg'], width=2)))
+            fig_bist.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color=t_sec['text']), margin=dict(t=50, b=30, l=30, r=30), legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5), title_x=0.5)
+            g1.plotly_chart(fig_bist, use_container_width=True)
+        else:
+            g1.info("Türk Borsası için grafik oluşturulacak varlık yok.")
+
+        # Yatırım Fonu Grafiği
+        df_fon = df_chart[df_chart['Piyasa'] == 'Yatırım Fonu']
+        if not df_fon.empty:
+            fig_fon = px.pie(
+                df_fon, 
+                values='Değer', 
+                names='Hisse', 
+                hole=0.5,
+                color_discrete_sequence=renk_skalasi[::-1],
+                hover_data=['Adet', 'K/Z'],
+                title='📊 Yatırım Fonu Dağılımı',
+                labels={'Değer': 'Toplam Değer (₺)', 'Hisse': 'Fon'}
+            )
+            fig_fon.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color=t_sec['bg'], width=2)))
+            fig_fon.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color=t_sec['text']), margin=dict(t=50, b=30, l=30, r=30), legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5), title_x=0.5)
+            g2.plotly_chart(fig_fon, use_container_width=True)
+        else:
+            g2.info("Yatırım Fonu için grafik oluşturulacak varlık yok.")
+
     else:
         st.info("Grafik oluşturulabilmesi için varlıklarınızın değerinin 0'dan büyük olması gerekmektedir.")
 else:
     st.info("Grafik oluşturulabilmesi için portföye varlık eklemelisiniz.")
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
-st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
+st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste ve TEFAS Fon Verileri Aktif.")
+
+
 
 
 
