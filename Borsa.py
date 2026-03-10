@@ -296,8 +296,9 @@ if st.session_state.portfoy or st.session_state.ipo_liste:
     # --- HALKA ARZLAR ---
     with tab_ipo:
         # Önceki kodda eklediğimiz silme butonlu yapı korunmuştur.
-        st.subheader("🚀 Halka Arz Takip")
-        for idx, ipo in enumerate(st.session_state.ipo_liste):
+            st.subheader("🚀 Halka Arz Takip")
+            for idx, ipo in 
+        enumerate(st.session_state.ipo_liste):
             col1, col2 = st.columns([4, 1])
             col1.write(f"**{ipo['Isim']}** - {ipo['Adet']} Adet")
             if col2.button("🗑️ Sil", key=f"ipo_rm_{idx}"):
