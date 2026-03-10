@@ -271,6 +271,19 @@ if st.session_state.portfoy:
                         save_data(st.session_state.portfoy)
                         st.rerun()
             # -------------------------------
+
+            # --- MALİYET GÜNCELLEME EKLENDİ ---
+            with st.expander("💸 MALİYET GÜNCELLE"):
+                for idx, r in df.iterrows():
+                    mc1, mc2, mc3 = st.columns([2, 2, 2])
+                    mc1.markdown(f"<div style='margin-top:8px;'><b>{r['Hisse']}</b> (Mevcut: {tr_format(r['Maliyet'])})</div>", unsafe_allow_html=True)
+                    yeni_maliyet = mc2.number_input("Yeni Maliyet", min_value=0.0, value=float(r['Maliyet']), step=0.1, key=f"upd_cost_inp_{r['id']}", label_visibility="collapsed")
+                    if mc3.button("🔄 Güncelle", key=f"upd_cost_btn_{r['id']}"):
+                        st.session_state.portfoy[r['id']]['Maliyet'] = float(yeni_maliyet)
+                        save_data(st.session_state.portfoy)
+                        st.rerun()
+
+
             
             # --- GELİŞTİRİLMİŞ DAİRESEL GRAFİK ---
             st.markdown("<br>", unsafe_allow_html=True)
