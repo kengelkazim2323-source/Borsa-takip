@@ -274,10 +274,10 @@ def portfoy_goster(piyasa_turu, tab_container, data_list):
                 y_maliyet = c3.number_input("Yeni Maliyet", value=float(r['Maliyet']), key=f"m_{r['id']}")
                 bc = c4.columns(2)
 
-                if bc[0].button("💾", key=f"s_{r['id']}"):
+                if bc[1].button("💾", key=f"s_{r['id']}"):
                     st.session_state.portfoy[r['id']]['Adet'], st.session_state.portfoy[r['id']]['Maliyet'] = y_adet, y_maliyet
                     save_data(st.session_state.portfoy); st.rerun()
-                if bc[1].button("❌", key=f"d_{r['id']}"):
+                if bc[2].button("❌", key=f"d_{r['id']}"):
                     st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
 
 portfoy_goster("Türk Borsası", tab_tr, full_data)
