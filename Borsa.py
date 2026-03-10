@@ -246,7 +246,7 @@ table_html = """
         text-align: center; /* Tüm hücreleri ortalar */
     }
     .kral-table th, .kral-table td {
-        padding: 10px;
+        padding: 20px;
         overflow: hidden;
         text-overflow: ellipsis; /* Uzun veriler sığmazsa üç nokta koyar */
         white-space: nowrap;
