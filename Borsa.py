@@ -359,8 +359,6 @@ st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
             fig.update_layout(showlegend=False, margin=dict(t=0, b=0, l=0, r=0), paper_bgcolor="rgba(0,0,0,0)")
             st.plotly_chart(fig, use_container_width=True)
 
-    portfoy_goster("Türk Borsası", tab_tr, full_data)
-    portfoy_goster("Yatırım Fonu", tab_fon, full_data)
-
+ 
 
 
