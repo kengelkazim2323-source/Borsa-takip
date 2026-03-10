@@ -311,7 +311,7 @@ with tab_ipo:
         with st.container():
             c1, c2, c3 = st.columns([2, 3, 1])
             maliyet = ipo['Adet'] * ipo['Fiyat']
-            c1.markdown(f"### {ipo['Isim']}")
+            c1.markdown(f"# {ipo['Isim']}")
             c2.write(f"Maliyet: **{tr_format(maliyet)} ₺**")
             if c3.button("🗑️", key=f"rm_{idx}"):
                 st.session_state.ipo_liste.pop(idx); st.rerun()
@@ -320,7 +320,7 @@ with tab_ipo:
                 p = ipo['Fiyat']
                 for g in range(1, 11):
                     p *= 1.10
-                    tavan_list.append({"Gün": g, "Fiyat": tr_format(p), "Kar": tr_format((p * ipo['Adet']) - maliyet)})
+                    tavan_list.append({"Gün": g, "Fiyat(₺)": tr_format(p), "Kar(₺)": tr_format((p * ipo['Adet']) - maliyet)})
                 st.table(pd.DataFrame(tavan_list))
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
