@@ -294,6 +294,10 @@ if st.session_state.portfoy or st.session_state.ipo_liste:
         else: st.info("Temettü geliri bulunmuyor.")
 
     # --- YENİ HALKA ARZLAR ---
+    # Başlangıçta listeleri tanımlıyoruz ki hata vermesin
+    if "portfoy" not in st.session_state: st.session_state.portfoy = []
+    if "ipo_liste" not in st.session_state: st.session_state.ipo_liste = []
+
     with tab_ipo:
         st.subheader("🚀 Halka Arz Takip")
         
