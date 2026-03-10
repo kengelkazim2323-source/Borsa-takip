@@ -293,16 +293,38 @@ if st.session_state.portfoy or st.session_state.ipo_liste:
                 st.write(f"**{r['Hisse']}**: {tr_format(r['NetTemettu'])} ₺")
         else: st.info("Temettü geliri bulunmuyor.")
 
-    # --- HALKA ARZLAR ---
+    # --- YENİ HALKA ARZLAR ---
     with tab_ipo:
-        # Önceki kodda eklediğimiz silme butonlu yapı korunmuştur.
-            st.subheader("🚀 Halka Arz Takip")
-            for idx, ipo in 
-        enumerate(st.session_state.ipo_liste):
-            col1, col2 = st.columns([4, 1])
-            col1.write(f"**{ipo['Isim']}** - {ipo['Adet']} Adet")
-            if col2.button("🗑️ Sil", key=f"ipo_rm_{idx}"):
-                st.session_state.ipo_liste.pop(idx); st.rerun()
+        st.subheader("🚀 Halka Arz Takip")
+        
+        # Giriş Formu
+        with st.form("ipo_form_yeni", clear_on_submit=True):
+            ic1, ic2, ic3 = st.columns(3)
+            ipo_isim = ic1.text_input("Arz Adı")
+            ipo_fiyat = ic2.number_input("Fiyat", min_value=0.0)
+            ipo_adet = ic3.number_input("Adet", min_value=0)
+            if st.form_submit_button("➕ Listeye Ekle"):
+                if ipo_isim:
+                    st.session_state.ipo_liste.append({"Isim": ipo_isim.upper(), "Fiyat": ipo_fiyat, "Adet": ipo_adet})
+                    st.rerun()
+
+        st.divider()
+        
+        # Liste Gösterimi ve Silme (Hata veren kısım burasıydı, artık güvenli)
+        if st.session_state.ipo_liste:
+            for idx, ipo in enumerate(st.session_state.ipo_liste):
+                col1, col2, col3 = st.columns([3, 2, 1])
+                toplam_tutar = ipo['Adet'] * ipo['Fiyat']
+                col1.write(f"**{ipo['Isim']}**")
+                col2.write(f"{ipo['Adet']} Adet x {tr_format(ipo['Fiyat'])} ₺ = **{tr_format(toplam_tutar)} ₺**")
+                if col3.button("🗑️", key=f"ipo_rm_{idx}"):
+                    st.session_state.ipo_liste.pop(idx)
+                    st.rerun()
+        else:
+            st.info("Henüz eklenmiş bir halka arz bulunmuyor.")
+
+
+
 
     
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
