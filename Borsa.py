@@ -317,8 +317,3 @@ else:
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
 
-
-
-
-tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
-st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
