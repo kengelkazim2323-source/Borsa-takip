@@ -263,24 +263,25 @@ if st.session_state.portfoy:
 
             
 # --- ADET GÜNCELLEME EKLENDI ---
-with st. expander ("ADET GUNCELLE") :
-for idx, r in
+with st.expander ("✏️ ADET GUNCELLE") :
+               for idx, r in
 df.iterrows () :
-ucl, uc2, uc3 =
-st. columns ( [2, 2, 21])
+               ucl, uc2, uc3 =
+st. columns ( [2, 2, 2])
 uc1. markdown (f"<div
-style='margin-top:8px;'×b>{r[ 'Hisse' 1}</b>
-(Mevcut: {r['Adet' ]})</div>"
+style='margin-top:8px;'><b>{r[ 'Hisse' ]}</b>
+(Mevcut: {r['Adet']})</div>",
 unsafe_allow_html=True)
 yeni_adet =
-uc2 number_input ("Yeni Adet"
-min_value=0.0, value=float (r['Adet' 1), step=1.0, key=f"upd_inp_frl'id'1}",
-label visibility="collapsed" )
-if uc3.button("
-Güncelle", key=f"upd_btn_fr['id'1}"):
-st. session state portfoyll'id'|||'Adet' ] =
+uc2.number_input ("Yeni Adet",
+min_value=0.0, value=float (r['Adet']), step=1.0, key=f"upd_inp_{r['id']}",
+label_visibility="collapsed" )
+if uc3.button("🔄 
+Güncelle", 
+key=f"upd_btn_{r['id']}"):
+st.session state portfoy[r[l'id']]['Adet'] =
 float (yeni_adet)
-save_data (st. session _state.portfoy)
+save_data (st.session _state.portfoy)
 st. rerun ()
 
 
