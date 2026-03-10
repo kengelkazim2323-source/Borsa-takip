@@ -15,10 +15,8 @@ from streamlit_autorefresh import st_autorefresh
 
 PORTFOY_DOSYASI = "portfoy_kayitlari.json"
 def load_data():
-
     if not os.path.exists(PORTFOY_DOSYASI): return []
     try:
-
         with open(PORTFOY_DOSYASI, "r", encoding="utf-8") as f:
             data = json.load(f)
             return data if isinstance(data, list) else []
@@ -42,7 +40,6 @@ def fetch_stock_data(symbol):
         if hist.empty: return None
         divs = tk.dividends
         if not divs.empty:
-
             divs.index = divs.index.tz_localize(None)
             son_1_yil = datetime.now() - timedelta(days=365)
             yillik_temettu = divs[divs.index >= son_1_yil].sum()
@@ -55,6 +52,7 @@ def tr_format(val):
         if val is None or pd.isna(val): return "0,00"
         return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     except: return "0,00"
+
 def get_signal(hist_data):
     try:
         if len(hist_data) < 20: return "VERİ YETERSİZ"
@@ -68,7 +66,6 @@ def get_signal(hist_data):
         if rsi < 40 and last_price > ma20: return "🟢 AL"
         elif rsi > 70 or last_price < ma20: return "🔴 SAT"
         else: return "🟡 TUT"
-            
     except: return "---"
 
 # ==========================================
@@ -87,9 +84,7 @@ with st.sidebar:
         "Gece Yarısı", "Safir Gece", "Çöl Fırtınası", "Kızıl Elmas"
     ])
 
-
 tema_renkleri = {
-
     "Premium Koyu": {"bg": "#121212", "text": "#ffffff", "box": "#4c4c4c", "accent": "#BB86FC"},
     "Galaksi (VIP)": {"bg": "#0B0E14", "text": "#E0E0E0", "box": "#161B22", "accent": "#00D4FF"},
     "Altın Vuruş": {"bg": "#0F0F0F", "text": "#F5F5F5", "box": "#1A1A1A", "accent": "#D4AF37"},
@@ -121,7 +116,6 @@ st.markdown(f"""
         border-radius: 12px !important;
         border: 1px solid {t_sec['accent']} !important;
         text-align: center;
-
     }}
 
     .kral-table {{
@@ -140,7 +134,6 @@ st.markdown(f"""
         font-weight: 700;
         font-size: 14px;
         border-bottom: 2px solid {t_sec['accent']}44;
-
     }}
 
     .kral-table td {{
@@ -148,7 +141,6 @@ st.markdown(f"""
         border-bottom: 1px solid {t_sec['accent']}11;
         font-size: 14px;
         color: {t_sec['text']};
-
     }}
 
     .ticker-wrapper {{ width: 100%; overflow: hidden; background: {t_sec['box']}; border-radius: 8px; margin-bottom: 30px; padding: 15px 0; border: 1px solid {t_sec['accent']}44; }}
@@ -168,13 +160,10 @@ clock_html = f"""
 </div>
 <script>
 function updateClock() {{
-
     const trTime = new Date(new Date().toLocaleString("en-US", {{timeZone: "Europe/Istanbul"}}));
     document.getElementById('digital-clock').innerText = trTime.toLocaleTimeString('tr-TR', {{hour12: false}});
     document.getElementById('date-display').innerText = trTime.toLocaleDateString('tr-TR', {{day: '2-digit', month: 'long', year: 'numeric', weekday: 'long'}}).toUpperCase();
-
 }}
-
 setInterval(updateClock, 1000); updateClock();
 </script>
 """
@@ -189,16 +178,13 @@ piyasa_izleme = { "BIST 100": "XU100.IS", "ONS ALTIN": "GC=F", "ONS GÜMÜŞ": "
 
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
 for isim, sembol in piyasa_izleme.items():
-
     d = fetch_stock_data(sembol)
     if d:
-
         last = d['hist']['Close'].iloc[-1]; prev = d['hist']['Close'].iloc[-2]
         deg = ((last - prev) / prev) * 100
         ticker_content += f'<div style="text-align:center;"><div>{isim}</div><div style="font-weight:bold;">{tr_format(last)}</div><div class="{"up" if deg>=0 else "down"}">{deg:+.2f}%</div></div>'
 
 st.markdown(ticker_content + '</div></div>', unsafe_allow_html=True)
-
 
 # ==========================================
 # 4. HİSSE LİSTELERİ VE EKLEME
@@ -210,10 +196,8 @@ FON_LIST = sorted(["TTE.IS", "AES.IS", "AFO.IS", "AYA.IS", "KPH.IS", "KPA.IS", "
 with st.expander("➕ PORTFÖYE VARLIK EKLE"):
     piyasa_sec = st.radio("Piyasa", ["Türk Borsası", "Yatırım Fonu"], horizontal=True)
     with st.form("hisse_ekle_form", clear_on_submit=True):
-
         f1, f2, f3 = st.columns(3)
         if piyasa_sec == "Türk Borsası": hisse_sec = f1.selectbox("Hisse Seç", BIST_FULL)
-
         else:
             hisse_sec = f1.selectbox("Fon Seç", FON_LIST + ["DİĞER"])
             if hisse_sec == "DİĞER": hisse_sec = f1.text_input("Fon Kodu (Örn: IPJ.IS)").upper()
@@ -224,7 +208,7 @@ with st.expander("➕ PORTFÖYE VARLIK EKLE"):
             if hisse_sec and adet_sec > 0:
                 st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": float(adet_sec), "Maliyet": float(maliyet_sec)})
                 save_data(st.session_state.portfoy); st.rerun()
-                
+
 # ==========================================
 # 5. TABLO VE SEKME YÖNETİMİ
 # ==========================================
@@ -233,21 +217,26 @@ tab_tr, tab_fon, tab_div, tab_ipo = st.tabs(["🇹🇷 TÜRK BORSASI", "📊 YAT
 full_data = []
 for i, item in enumerate(st.session_state.portfoy):
     d = fetch_stock_data(item['Hisse'])
-
+    
     if d:
         c = d['hist']['Close'].iloc[-1]; pc = d['hist']['Close'].iloc[-2]
-        full_data.append({
+        sinyal = get_signal(d['hist'])
+        temettu = d['temettu']
+    else:
+        # Yatırım fonlarından veya geçersiz hisselerden veri çekilemezse patlamaması için fallback (Kurtarıcı Halka)
+        c = item['Maliyet']; pc = item['Maliyet']
+        sinyal = "VERİ YOK"
+        temettu = 0.0
 
-            "id": i, "Piyasa": item.get("Piyasa", "Türk Borsası"), "Hisse": item['Hisse'], 
-            "Sinyal": get_signal(d['hist']), "Adet": item['Adet'], "Maliyet": item['Maliyet'], 
-            "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'], 
-            "Değer": c * item['Adet'], "Temettu": d['temettu'], 
-            "NetTemettu": d['temettu'] * item['Adet'], "DailyDiff": (c - pc) * item['Adet']
-
-        })
+    full_data.append({
+        "id": i, "Piyasa": item.get("Piyasa", "Türk Borsası"), "Hisse": item['Hisse'], 
+        "Sinyal": sinyal, "Adet": item['Adet'], "Maliyet": item['Maliyet'], 
+        "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'], 
+        "Değer": c * item['Adet'], "Temettu": temettu, 
+        "NetTemettu": temettu * item['Adet'], "DailyDiff": (c - pc) * item['Adet']
+    })
 
 def portfoy_goster(piyasa_turu, tab_container, data_list):
-
     with tab_container:
         df = pd.DataFrame([x for x in data_list if x['Piyasa'] == piyasa_turu])
         if df.empty: st.info(f"{piyasa_turu} için henüz varlık yok."); return
@@ -260,20 +249,21 @@ def portfoy_goster(piyasa_turu, tab_container, data_list):
 
         table_html = "<table class='kral-table'><thead><tr><th>VARLIK</th><th>SİNYAL</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr></thead><tbody>"
         for _, r in df.iterrows():
-
             kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
             table_html += f"<tr><td><b>{r['Hisse']}</b></td><td>{r['Sinyal']}</td><td>{r['Adet']}</td><td>{tr_format(r['Maliyet'])} ₺</td><td>{tr_format(r['Güncel'])} ₺</td><td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])} ₺</td><td><b>{tr_format(r['Değer'])} ₺</b></td></tr>"
         st.markdown(table_html + "</tbody></table>", unsafe_allow_html=True)
 
         with st.expander("🛠️ VARLIK YÖNETİMİ"):
-
             for idx, r in df.iterrows():
                 c1, c2, c3, c4 = st.columns([1.5, 2, 2, 1])
                 c1.markdown(f"<div style='margin-top:25px;'><b>{r['Hisse']}</b></div>", unsafe_allow_html=True)
                 y_adet = c2.number_input("Yeni Adet", value=int(r['Adet']), key=f"a_{r['id']}")
                 y_maliyet = c3.number_input("Yeni Maliyet", value=float(r['Maliyet']), key=f"m_{r['id']}")
+                
+                # Butonları hizalamak için c4 sütununa üstten boşluk ekliyoruz
+                c4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
                 bc = c4.columns(2)
-
+                
                 if bc[0].button("💾", key=f"s_{r['id']}"):
                     st.session_state.portfoy[r['id']]['Adet'], st.session_state.portfoy[r['id']]['Maliyet'] = y_adet, y_maliyet
                     save_data(st.session_state.portfoy); st.rerun()
@@ -300,7 +290,6 @@ with tab_div:
 with tab_ipo:
     st.subheader("🚀 Halka Arz Takip & Tavan Simülasyonu")
     with st.form("ipo_form_yeni", clear_on_submit=True):
-
         ic1, ic2, ic3 = st.columns(3)
         ipo_isim = ic1.text_input("Arz Adı")
         ipo_fiyat = ic2.number_input("Fiyat", min_value=0.0)
@@ -322,17 +311,14 @@ with tab_ipo:
                     st.session_state.ipo_liste.pop(idx); st.rerun()
 
                 # 10 Günlük Tavan Tablosu
-
                 with st.expander(f"📈 {ipo['Isim']} 10 Günlük Tavan Serisi"):
                     tavan_data = []
                     current_price = ipo['Fiyat']
                     for gun in range(1, 11):
-
                         current_price *= 1.10
                         gunluk_deger = current_price * ipo['Adet']
                         gunluk_kar = gunluk_deger - toplam_maliyet
                         tavan_data.append({
-
                             "Gün": f"{gun}. Gün",
                             "Hisse Fiyatı": f"{tr_format(current_price)} ₺",
                             "Toplam Değer": f"{tr_format(gunluk_deger)} ₺",
@@ -343,6 +329,55 @@ with tab_ipo:
             st.divider()
     else: st.info("Henüz eklenmiş bir halka arz bulunmuyor.")
 
+# ==========================================
+# 7. GÖRSEL ANALİZ (DAİRESEL GRAFİK)
+# ==========================================
+st.divider()
+st.markdown(f"<h3 style='text-align:center; color:{t_sec['accent']};'>📊 Portföy Dağılım Analizi</h3>", unsafe_allow_html=True)
+
+if full_data:
+    df_chart = pd.DataFrame(full_data)
+    
+    # Sadece değeri 0'dan büyük olanları grafiğe dahil et (veri çekilemeyenlerin grafiği bozmaması için)
+    df_chart = df_chart[df_chart['Değer'] > 0]
+    
+    if not df_chart.empty:
+        # Grafik Renk Paleti (Temaya Uygun)
+        renk_skalasi = [t_sec['accent'], "#00D4FF", "#9D4EDD", "#FF00FF", "#00E676", "#FFB300", "#FF4D4D", "#F72585", "#24D1FF", "#A5FFD6"]
+        
+        fig = px.pie(
+            df_chart, 
+            values='Değer', 
+            names='Hisse', 
+            hole=0.5,
+            color_discrete_sequence=renk_skalasi,
+            hover_data=['Adet', 'K/Z'],
+            labels={'Değer': 'Toplam Değer (₺)', 'Hisse': 'Varlık'}
+        )
+        
+        fig.update_traces(
+            textposition='inside', 
+            textinfo='percent+label',
+            marker=dict(line=dict(color=t_sec['bg'], width=2))
+        )
+        
+        fig.update_layout(
+            showlegend=True,
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color=t_sec['text']),
+            margin=dict(t=30, b=30, l=30, r=30),
+            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Grafik oluşturulabilmesi için varlıklarınızın değerinin 0'dan büyük olması gerekmektedir.")
+else:
+    st.info("Grafik oluşturulabilmesi için portföye varlık eklemelisiniz.")
+
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
+
+
 
