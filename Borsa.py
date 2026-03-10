@@ -350,23 +350,7 @@ with tab_ipo:
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
 
-# --- GELİŞTİRİLMİŞ VARLIK YÖNETİMİ ---
-            st.markdown("<br>", unsafe_allow_html=True)
-            with st.expander("🛠️ VARLIK YÖNETİMİ (GÜNCELLE & SİL)"):
-                for idx, r in df.iterrows():
-                    c1, c2, c3, c4 = st.columns([1.5, 2, 2, 1])
-                    c1.markdown(f"<div style='margin-top:25px;'><b>{r['Hisse']}</b></div>", unsafe_allow_html=True)
-                    y_adet = c2.number_input("Yeni Adet", value=float(r['Adet']), key=f"a_{r['id']}")
-                    y_maliyet = c3.number_input("Yeni Maliyet", value=float(r['Maliyet']), key=f"m_{r['id']}")
-                    
-                    # Güncelleme ve Silme butonları yan yana
-                    btn_cols = c4.columns(2)
-                    if btn_cols[0].button("💾", key=f"save_{r['id']}", help="Güncelle"):
-                        st.session_state.portfoy[r['id']]['Adet'] = y_adet
-                        st.session_state.portfoy[r['id']]['Maliyet'] = y_maliyet
-                        save_data(st.session_state.portfoy); st.rerun()
-                    if btn_cols[1].button("❌", key=f"del_{r['id']}", help="Sil"):
-                        st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
+
 
             # --- GELİŞTİRİLMİŞ DAİRESEL GRAFİK ---
             st.markdown("<br>", unsafe_allow_html=True)
