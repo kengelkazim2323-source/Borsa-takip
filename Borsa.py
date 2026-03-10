@@ -270,7 +270,7 @@ def portfoy_goster(piyasa_turu, tab_container, data_list):
             for idx, r in df.iterrows():
                 c1, c2, c3, c4 = st.columns([1.5, 2, 2, 1])
                 c1.markdown(f"<div style='margin-top:25px;'><b>{r['Hisse']}</b></div>", unsafe_allow_html=True)
-                y_adet = c2.number_input("Yeni Adet", value=float(r['Adet']), key=f"a_{r['id']}")
+                y_adet = c2.number_input("Yeni Adet", value=int(r['Adet']), key=f"a_{r['id']}")
                 y_maliyet = c3.number_input("Yeni Maliyet", value=float(r['Maliyet']), key=f"m_{r['id']}")
                 bc = c4.columns(2)
 
