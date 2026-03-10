@@ -303,7 +303,7 @@ with tab_ipo:
 
         ic1, ic2, ic3 = st.columns(3)
         ipo_isim = ic1.text_input("Arz Adı")
-        ipo_fiyat = ic2number_input("Fiyat", min_value=0.0)
+        ipo_fiyat = ic2.number_input("Fiyat", min_value=0.0)
         ipo_adet = ic3.number_input("Adet", min_value=0)
 
         if st.form_submit_button("➕ Listeye Ekle"):
