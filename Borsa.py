@@ -183,29 +183,31 @@ st.markdown(ticker_content + '</div></div>', unsafe_allow_html=True)
 # ==========================================
 # 4. HİSSE VE FON LİSTELERİ
 # ==========================================
+
+
+# ==========================================
+# 4. HİSSE VE VARLIK EKLEME (GÜNCEL)
+# ==========================================
 BIST_FULL = sorted(["A1CAP.IS", "ACSEL.IS", "ADEL.IS", "ADESE.IS", "AEFES.IS", "AFYON.IS", "AGESA.IS", "AGHOL.IS", "AGROT.IS", "AHGAZ.IS", "AKBNK.IS", "AKCNS.IS", "AKENR.IS", "AKFGY.IS", "AKFYE.IS", "AKGRT.IS", "AKMGY.IS", "AKSA.IS", "AKSEN.IS", "ALARK.IS", "ALBRK.IS", "ALFAS.IS", "ALGYO.IS", "ALKA.IS", "ALKIM.IS", "ALMAD.IS", "ANELE.IS", "ANGEN.IS", "ANHYT.IS", "ANSGR.IS", "ARCLK.IS", "ARDYZ.IS", "ARENA.IS", "ARSAN.IS", "ASGYO.IS", "ASELS.IS", "ASTOR.IS", "ASUZU.IS", "ATAKP.IS", "ATEKS.IS", "ATGRP.IS", "ATLAS.IS", "ATSYH.IS", "AVHOL.IS", "AVOD.IS", "AVPGY.IS", "AYDEM.IS", "AYEN.IS", "AYGAZ.IS", "AZTEK.IS", "BAGFS.IS", "BAKAB.IS", "BALAT.IS", "BANVT.IS", "BARMA.IS", "BASGZ.IS", "BAYRK.IS", "BEGYO.IS", "BERA.IS", "BEYAZ.IS", "BFREN.IS", "BIENP.IS", "BIGCH.IS", "BIMAS.IS", "BINHO.IS", "BIOEN.IS", "BIZIM.IS", "BJKAS.IS", "BLCYT.IS", "BMSCH.IS", "BMSTL.IS", "BNTAS.IS", "BOBET.IS", "BORLS.IS", "BORSK.IS", "BOSSA.IS", "BRISA.IS", "BRKO.IS", "BRKSN.IS", "BRKVY.IS", "BRLSM.IS", "BRMEN.IS", "BRYAT.IS", "BSOKE.IS", "BTCIM.IS", "BUCIM.IS", "BURCE.IS", "BURVA.IS", "BVSAN.IS", "BYDNR.IS", "CANTE.IS", "CASA.IS", "CATES.IS", "CCOLA.IS", "CELHA.IS", "CEMAS.IS", "CEMTS.IS", "CEVNY.IS", "CIMSA.IS", "CLEBI.IS", "CMBTN.IS", "CMENT.IS", "CONSE.IS", "COSMO.IS", "CRDFA.IS", "CRFSA.IS", "CUSAN.IS", "CVKMD.IS", "CWENE.IS", "DAGHL.IS", "DAGI.IS", "DAPGM.IS", "DARDL.IS", "DENGE.IS", "DERAS.IS", "DERIM.IS", "DESA.IS", "DESPC.IS", "DEVA.IS", "DGGYO.IS", "DGNMO.IS", "DIRIT.IS", "DITAS.IS", "DMSAS.IS", "DOAS.IS", "DOCO.IS", "DOGUB.IS", "DOHOL.IS", "DOKTA.IS", "DURDO.IS", "DYOBY.IS", "DZGYO.IS", "EBEBK.IS", "ECILC.IS", "ECZYT.IS", "EDATA.IS", "EDIP.IS", "EGEEN.IS", "EGEPO.IS", "EGGUB.IS", "EGPRO.IS", "EGSER.IS", "EKGYO.IS", "EKIZ.IS", "EKOS.IS", "EKSUN.IS", "ELITE.IS", "EMKEL.IS", "ENERY.IS", "ENJSA.IS", "ENKAI.IS", "ERBOS.IS", "EREGL.IS", "ERSU.IS", "ESCOM.IS", "ESEN.IS", "ETILER.IS", "EUPWR.IS", "EUREN.IS", "EYGYO.IS", "FMIZP.IS", "FONET.IS", "FORMT.IS", "FORTE.IS", "FRIGO.IS", "FROTO.IS", "FZLGY.IS", "GARAN.IS", "GBUFG.IS", "GENTS.IS", "GEREL.IS", "GESAN.IS", "GIPTA.IS", "GLBMD.IS", "GLCVY.IS", "GLRYH.IS", "GLYHO.IS", "GMTAS.IS", "GOKNR.IS", "GOLTS.IS", "GOODY.IS", "GOZDE.IS", "GRNYO.IS", "GRSEL.IS", "GSDDE.IS", "GSDHO.IS", "GUBRF.IS", "GWIND.IS", "GZNMI.IS", "HALKB.IS", "HATEK.IS", "HATSN.IS", "HEDEF.IS", "HEKTS.IS", "HKTM.IS", "HLGYO.IS", "HTTBT.IS", "HUBVC.IS", "HUNER.IS", "HURGZ.IS", "ICBCT.IS", "IDAS.IS", "IDEAS.IS", "IDGYO.IS", "IEYHO.IS", "IHEVA.IS", "IHGZT.IS", "IHLAS.IS", "IHLGM.IS", "IHYAY.IS", "IMASM.IS", "INDES.IS", "INFO.IS", "INGRM.IS", "INTEM.IS", "IPEKE.IS", "ISATR.IS", "ISBTR.IS", "ISCTR.IS", "ISDMR.IS", "ISFIN.IS", "ISGSY.IS", "ISGYO.IS", "ISMEN.IS", "ISSEN.IS", "ISYAT.IS", "ITTFH.IS", "IZENR.IS", "IZFAS.IS", "IZINV.IS", "IZMDC.IS", "JANTS.IS", "KAPLM.IS", "KAREL.IS", "KARSN.IS", "KARTN.IS", "KARYE.IS", "KATMR.IS", "KAYSE.IS", "KBCOR.IS", "KCAER.IS", "KCHOL.IS", "KFEIN.IS", "KGYO.IS", "KIMMR.IS", "KLGYO.IS", "KLMSN.IS", "KLNMA.IS", "KLKIM.IS", "KLRHO.IS", "KLSYN.IS", "KLYAS.IS", "KMEPU.IS", "KMPUR.IS", "KNFRT.IS", "KONTR.IS", "KONYA.IS", "KORDS.IS", "KOZAA.IS", "KOZAL.IS", "KRDMA.IS", "KRDMB.IS", "KRDMD.IS", "KRGYO.IS", "KRONT.IS", "KRPLS.IS", "KRSTL.IS", "KRTEK.IS", "KRVGD.IS", "KSTUR.IS", "KUTPO.IS", "KUVVA.IS", "KUYAS.IS", "KZBGY.IS", "KZGYO.IS", "LIDER.IS", "LIDFA.IS", "LINK.IS", "LMKDC.IS", "LOGAS.IS", "LOGO.IS", "LRSHO.IS", "LUKSK.IS", "MAALT.IS", "MACKO.IS", "MAGEN.IS", "MAKIM.IS", "MAKTK.IS", "MANAS.IS", "MARKA.IS", "MARTI.IS", "MAVI.IS", "MEDTR.IS", "MEGAP.IS", "MEKAG.IS", "MEPET.IS", "MERCN.IS", "MERKO.IS", "METRO.IS", "METUR.IS", "MHRGY.IS", "MIATK.IS", "MIPAZ.IS", "MNDRS.IS", "MNDTR.IS", "MOBTL.IS", "MPARK.IS", "MRGYO.IS", "MRSHL.IS", "MSGYO.IS", "MTRKS.IS", "MUDO.IS", "MZHLD.IS", "NATEN.IS", "NETAS.IS", "NIBAS.IS", "NTGAZ.IS", "NTHOL.IS", "NUGYO.IS", "NUHCM.IS", "OBAMS.IS", "OBASE.IS", "ODAS.IS", "ONCSM.IS", "ORCAY.IS", "ORGE.IS", "ORMA.IS", "OSMEN.IS", "OSTIM.IS", "OTKAR.IS", "OYAKC.IS", "OYAYO.IS", "OYLUM.IS", "OYYAT.IS", "OZGYO.IS", "OZKGY.IS", "OZRDN.IS", "OZSUB.IS", "PAGYO.IS", "PAMEL.IS", "PAPIL.IS", "PARSN.IS", "PASEU.IS", "PATEK.IS", "PCILT.IS", "PEGYO.IS", "PEKGY.IS", "PENTA.IS", "PETKM.IS", "PETUN.IS", "PGSUS.IS", "PINSU.IS", "PKART.IS", "PKENT.IS", "PNLSN.IS", "PNSUT.IS", "POLHO.IS", "POLTK.IS", "PRKAB.IS", "PRKME.IS", "PRZMA.IS", "PSDTC.IS", "PSGYO.IS", "QNBFB.IS", "QNBFL.IS", "QUAGR.IS", "RALYH.IS", "RAYYS.IS", "REEDR.IS", "RNPOL.IS", "RODRG.IS", "ROYAL.IS", "RTALB.IS", "RUBNS.IS", "RYGYO.IS", "RYSAS.IS", "SAHOL.IS", "SAMAT.IS", "SANEL.IS", "SANFO.IS", "SANIC.IS", "SARKY.IS", "SASA.IS", "SAYAS.IS", "SDTTR.IS", "SEGYO.IS", "SEKFK.IS", "SEKOK.IS", "SELEC.IS", "SELGD.IS", "SERVE.IS", "SEYKM.IS", "SILVR.IS", "SISE.IS", "SKBNK.IS", "SKTAS.IS", "SKYMD.IS", "SKYLP.IS", "SMART.IS", "SMRTG.IS", "SNGYO.IS", "SNICA.IS", "SNKPA.IS", "SOKM.IS", "SONME.IS", "SRVGY.IS", "SUMAS.IS", "SUNTK.IS", "SURGY.IS", "SUWEN.IS", "TABGD.IS", "TAPDI.IS", "TARKM.IS", "TATEN.IS", "TATGD.IS", "TAVHL.IS", "TBORG.IS", "TCELL.IS", "TDGYO.IS", "TEKTU.IS", "TERA.IS", "TETMT.IS", "TEZOL.IS", "TGSAS.IS", "THYAO.IS", "TIRE.IS", "TKFEN.IS", "TKNSA.IS", "TMSN.IS", "TOASO.IS", "TRCAS.IS", "TRGYO.IS", "TRILC.IS", "TSKB.IS", "TSPOR.IS", "TTKOM.IS", "TTRAK.IS", "TUCLK.IS", "TUKAS.IS", "TUPRS.IS", "TURSG.IS", "UFUK.IS", "ULAS.IS", "ULKER.IS", "ULUFA.IS", "ULUSE.IS", "VAKBN.IS", "VAKFN.IS", "VAKKO.IS", "VANGD.IS", "VBTYM.IS", "VERTU.IS", "VERUS.IS", "VESBE.IS", "VESTL.IS", "VKGYO.IS", "VKING.IS", "VRGYO.IS", "YAPRK.IS", "YATAS.IS", "YAYLA.IS", "YEOTK.IS", "YESIL.IS", "YGGYO.IS", "YGYO.IS", "YKBNK.IS", "YONGA.IS", "YOTAS.IS", "YUNSA.IS", "YYLGD.IS", "ZEDUR.IS", "ZOREN.IS", "ZRGYO.IS"])
-FON_LIST = sorted(["ZGD.IS", "TTE.IS", "AES.IS", "AFO.IS", "ZRE.IS", "YZG.IS", "TAU.IS", "MAC.IS", "OPB.IS", "NNF.IS"]) # Örnek popüler fonlar
-US_LIST = sorted(["AAPL", "TSLA", "NVDA", "AMZN", "MSFT", "GOOGL", "META", "AMD", "NFLX", "COIN"]) # Örnek popüler ABD hisseleri
 
 with st.expander("➕ PORTFÖYE VARLIK EKLE"):
-    piyasa_sec = st.radio("Piyasa", ["Türk Borsası", "Amerikan Borsası", "Yatırım Fonu"], horizontal=True)
+    piyasa_sec = st.radio("Piyasa", ["Türk Borsası", "Yatırım Fonu"], horizontal=True)
     with st.form("hisse_ekle_form", clear_on_submit=True):
         f1, f2, f3 = st.columns(3)
         
-        # Dinamik Seçim Kutusu
-        if piyasa_sec == "Türk Borsası": hisse_sec = f1.selectbox("Hisse Seç", BIST_FULL)
-        elif piyasa_sec == "Yatırım Fonu": hisse_sec = f1.selectbox("Fon Seç (Veya kod yaz)", FON_LIST + ["DİĞER"])
-        else: hisse_sec = f1.selectbox("Sembol Seç", US_LIST + ["DİĞER"])
+        # Yatırım fonuna da BIST listesini ekledim kral
+        if piyasa_sec == "Türk Borsası": 
+            hisse_sec = f1.selectbox("Hisse Seç", BIST_FULL)
+        else: 
+            hisse_sec = f1.selectbox("Varlık Seç (BIST + Fonlar)", BIST_FULL + ["DİĞER"])
         
-        # Eğer listede yoksa manuel giriş alanı
         if hisse_sec == "DİĞER":
-            hisse_sec = f1.text_input("Varlık Kodunu Girin").upper()
+            hisse_sec = f1.text_input("Kod Gir (Örn: TTE.IS)").upper()
 
-        adet_sec = f2.number_input("Adet", min_value=0.0, format="%.4f")
-        maliyet_sec = f3.number_input("Maliyet", min_value=0.0, format="%.4f")
+        adet_sec = f2.number_input("Adet", min_value=0.0, step=1.0)
+        maliyet_sec = f3.number_input("Maliyet", min_value=0.0, step=0.1)
         
-        submit = st.form_submit_button("🚀 EKLE")
-        if submit:
+        if st.form_submit_button("🚀 EKLE"):
             if hisse_sec and adet_sec > 0:
                 st.session_state.portfoy.append({
                     "Piyasa": piyasa_sec, 
@@ -216,11 +218,6 @@ with st.expander("➕ PORTFÖYE VARLIK EKLE"):
                 save_data(st.session_state.portfoy)
                 st.success(f"{hisse_sec} başarıyla eklendi!")
                 st.rerun()
-            else:
-                st.error("Lütfen geçerli bir kod ve adet girin.")
-
-
-
 
 # ==========================================
 # 5. LİSTELEME VE TEMETTÜ
@@ -228,7 +225,8 @@ with st.expander("➕ PORTFÖYE VARLIK EKLE"):
 if "ipo_liste" not in st.session_state: st.session_state.ipo_liste = []
 
 if st.session_state.portfoy or st.session_state.ipo_liste:
-    tab_tr, tab_us, tab_fon, tab_div, tab_ipo = st.tabs(["🇹🇷 TÜRK BORSASI", "🇺🇸 AMERİKAN BORSASI", "📊 YATIRIM FONLARI", "💰 TEMETTÜ GELİRİ", "🚀 YENİ HALKA ARZLAR"])
+    # Amerikan Borsası sekmesini kaldırdım
+    tab_tr, tab_fon, tab_div, tab_ipo = st.tabs(["🇹🇷 TÜRK BORSASI", "📊 YATIRIM FONLARI", "💰 TEMETTÜ GELİRİ", "🚀 YENİ HALKA ARZLAR"])
     
     full_data = []
     for i, item in enumerate(st.session_state.portfoy):
@@ -243,163 +241,79 @@ if st.session_state.portfoy or st.session_state.ipo_liste:
                 "NetTemettu": d['temettu'] * item['Adet'], "DailyDiff": (c - pc) * item['Adet']
             })
 
+    # Portföy Gösterme Fonksiyonu (TR ve Fon İçin)
     def portfoy_goster(piyasa_turu, tab_container, data_list):
         with tab_container:
             df = pd.DataFrame([x for x in data_list if x['Piyasa'] == piyasa_turu])
             if df.empty: st.info("Henüz varlık yok."); return
-                
-            # --- SIRALAMA EKLE (Hisse Adına Göre Alfabetik) ---
-            df = df.sort_values(by="Hisse")
             
-            birim = "₺" if piyasa_turu in ["Türk Borsası", "Yatırım Fonu"] else "$"
-             
+            df = df.sort_values(by="Hisse")
+            birim = "₺"
+            
             st.markdown("<br>", unsafe_allow_html=True)
             m1, m2, m3 = st.columns(3)
             m1.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} {birim}")
             m2.metric("TOPLAM K/Z", f"{tr_format(df['K/Z'].sum())} {birim}")
             m3.metric("GÜNLÜK FARK", f"{tr_format(df['DailyDiff'].sum())} {birim}")
 
-            st.markdown("<br>", unsafe_allow_html=True)
-        
-            # --- YATAY SATIR VE SÜTUNLU TABLO ---
-            
-            table_html = "<table class='kral-table'><thead><tr>"
-            table_html += "<th>VARLIK</th><th>SİNYAL</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th>"
-            table_html += "</tr></thead><tbody>"
+            table_html = "<table class='kral-table'><thead><tr><th>VARLIK</th><th>SİNYAL</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr></thead><tbody>"
             for _, r in df.iterrows():
                 kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
-                table_html += "<tr>"
-                table_html += f"<td><b>{r['Hisse']}</b></td>"
-                table_html += f"<td>{r['Sinyal']}</td>"
-                table_html += f"<td>{r['Adet']}</td>"
-                table_html += f"<td>{tr_format(r['Maliyet'])} {birim}</td>"
-                table_html += f"<td>{tr_format(r['Güncel'])} {birim}</td>"
-                table_html += f"<td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])} {birim}</td>"
-                table_html += f"<td><b>{tr_format(r['Değer'])} {birim}</b></td>"
-                table_html += "</tr>"
+                table_html += f"<tr><td><b>{r['Hisse']}</b></td><td>{r['Sinyal']}</td><td>{r['Adet']}</td><td>{tr_format(r['Maliyet'])} {birim}</td><td>{tr_format(r['Güncel'])} {birim}</td><td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])} {birim}</td><td><b>{tr_format(r['Değer'])} {birim}</b></td></tr>"
             table_html += "</tbody></table>"
-            
             st.markdown(table_html, unsafe_allow_html=True)
 
-            # Silme Butonları (Tablo yapısını bozmamak için expander içine alındı)
-            st.markdown("<br>", unsafe_allow_html=True)
-            with st.expander("⚙️ VARLIK SİL"):
-                cols = st.columns(4)
+            with st.expander("⚙️ VARLIK YÖNETİMİ"):
                 for idx, r in df.iterrows():
-                    if cols[idx % 4].button(f"❌ {r['Hisse']} Sil", key=f"del_{r['id']}"):
+                    uc1, uc2, uc3 = st.columns([3, 2, 1])
+                    uc1.write(f"**{r['Hisse']}**")
+                    if uc3.button("❌ Sil", key=f"del_{r['id']}"):
                         st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
 
-            # --- ADET GÜNCELLEME EKLENDİ ---
-            with st.expander("✏️ ADET GÜNCELLE"):
-                for idx, r in df.iterrows():
-                    uc1, uc2, uc3 = st.columns([2, 2, 2])
-                    uc1.markdown(f"<div style='margin-top:8px;'><b>{r['Hisse']}</b> (Mevcut: {r['Adet']})</div>", unsafe_allow_html=True)
-                    yeni_adet = uc2.number_input("Yeni Adet", min_value=0.0, value=float(r['Adet']), step=1.0, key=f"upd_inp_{r['id']}", label_visibility="collapsed")
-                    if uc3.button("🔄 Güncelle", key=f"upd_btn_{r['id']}"):
-                        st.session_state.portfoy[r['id']]['Adet'] = float(yeni_adet)
-                        save_data(st.session_state.portfoy)
-                        st.rerun()
-
-            # --- MALİYET GÜNCELLEME EKLENDİ ---
-            with st.expander("💸 MALİYET GÜNCELLE"):
-                for idx, r in df.iterrows():
-                    mc1, mc2, mc3 = st.columns([2, 2, 2])
-                    mc1.markdown(f"<div style='margin-top:8px;'><b>{r['Hisse']}</b> (Mevcut: {tr_format(r['Maliyet'])})</div>", unsafe_allow_html=True)
-                    yeni_maliyet = mc2.number_input("Yeni Maliyet", min_value=0.0, value=float(r['Maliyet']), step=0.1, key=f"upd_cost_inp_{r['id']}", label_visibility="collapsed")
-                    if mc3.button("🔄 Güncelle", key=f"upd_cost_btn_{r['id']}"):
-                        st.session_state.portfoy[r['id']]['Maliyet'] = float(yeni_maliyet)
-                        save_data(st.session_state.portfoy)
-                        st.rerun()
-
-            # --- GELİŞTİRİLMİŞ DAİRESEL GRAFİK ---
-            st.markdown("<br>", unsafe_allow_html=True)
-            fig = px.pie(df, values='Değer', names='Hisse', hole=0.45, color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig.update_traces(textposition='inside', textinfo='percent+label', textfont_size=14, marker=dict(line=dict(color='#000000', width=1)))
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font=dict(color=t_sec['text']), showlegend=False, margin=dict(t=20, b=20, l=0, r=0))
-            st.plotly_chart(fig, use_container_width=True)
-
-    # Sekmeleri Çalıştırıyoruz
     portfoy_goster("Türk Borsası", tab_tr, full_data)
-    portfoy_goster("Amerikan Borsası", tab_us, full_data)
     portfoy_goster("Yatırım Fonu", tab_fon, full_data)
 
-    # --- TEMETTÜ GELİRİ ---
+    # --- TEMETTÜ GELİRİ (Amerikan Borsası Kaldırıldı) ---
     with tab_div:
         df_div = pd.DataFrame(full_data)
         if not df_div.empty:
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.subheader("💰 Yıllık Beklenen Nakit Akışı")
-            
             tr_total = df_div[df_div['Piyasa'] == "Türk Borsası"]['NetTemettu'].sum()
-            us_total = df_div[df_div['Piyasa'] == "Amerikan Borsası"]['NetTemettu'].sum()
             fon_total = df_div[df_div['Piyasa'] == "Yatırım Fonu"]['NetTemettu'].sum()
             
-            c1, c2, c3 = st.columns(3)
+            c1, c2 = st.columns(2)
             c1.metric("TOPLAM (BIST)", f"{tr_format(tr_total)} ₺")
-            c2.metric("TOPLAM (ABD)", f"{tr_format(us_total)} $")
-            c3.metric("TOPLAM (FON)", f"{tr_format(fon_total)} ₺")
+            c2.metric("TOPLAM (FON)", f"{tr_format(fon_total)} ₺")
             
-            st.markdown("---")
-            h_cols = st.columns([2, 1, 1, 1.5])
-            for col, txt in zip(h_cols, ["VARLIK", "ADET", "HİSSE/FON BAŞI", "YILLIK NET GELİR"]): col.markdown(f"**{txt}**")
             st.divider()
-            
             for _, r in df_div.sort_values(by="NetTemettu", ascending=False).iterrows():
                 if r['Temettu'] > 0:
-                    birim = "₺" if r['Piyasa'] in ["Türk Borsası", "Yatırım Fonu"] else "$"   
-                    
-                    cc1, cc2, cc3, cc4 = st.columns([2, 1, 1, 1.5])
+                    cc1, cc2, cc3 = st.columns([2, 1, 2])
                     cc1.write(f"**{r['Hisse']}**")
-                    cc2.write(f"{r['Adet']}")
-                    cc3.write(f"{tr_format(r['Temettu'])} {birim}")
-                    cc4.write(f"**{tr_format(r['NetTemettu'])} {birim}**")
-                    st.divider()
-        else: st.info("Temettü veren varlık bulunamadı.")
+                    cc2.write(f"{r['Adet']} Adet")
+                    cc3.write(f"**{tr_format(r['NetTemettu'])} ₺**")
+        else: st.info("Temettü verisi bulunamadı.")
 
-    # --- YENİ HALKA ARZLAR ---
+    # --- YENİ HALKA ARZLAR (Silme Butonu Dahil) ---
     with tab_ipo:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.subheader("🚀 Halka Arz Takip & Tavan Hesaplayıcı")
-        
-        with st.form("ipo_form", clear_on_submit=True):
+        st.subheader("🚀 Halka Arz Takip")
+        with st.form("ipo_form"):
             ic1, ic2, ic3 = st.columns(3)
-            ipo_isim = ic1.text_input("Arz Adı (Örn: MEKAG)")
-            ipo_fiyat = ic2.number_input("Halka Arz Fiyatı (₺)", min_value=0.0, value=0.0, step=0.1)
-            ipo_adet = ic3.number_input("Dağıtılan Adet", min_value=0, value=0, step=1)
-            
-            if st.form_submit_button("➕ Arz Ekle"):
-                if ipo_isim and ipo_fiyat > 0 and ipo_adet > 0:
-                    st.session_state.ipo_liste.append({"Isim": ipo_isim.upper(), "Fiyat": ipo_fiyat, "Adet": ipo_adet})
-                    st.rerun()
+            ipo_isim = ic1.text_input("Arz Adı")
+            ipo_fiyat = ic2.number_input("Fiyat", min_value=0.0)
+            ipo_adet = ic3.number_input("Adet", min_value=0)
+            if st.form_submit_button("➕ Ekle"):
+                st.session_state.ipo_liste.append({"Isim": ipo_isim.upper(), "Fiyat": ipo_fiyat, "Adet": ipo_adet}); st.rerun()
 
-        if st.session_state.ipo_liste:
-            for idx, ipo in enumerate(st.session_state.ipo_liste):
-                maliyet = ipo['Fiyat'] * ipo['Adet']
-                col_a, col_b = st.columns([4, 1])
-                col_a.markdown(f"#### {ipo['Isim']} - Toplam Maliyet: {tr_format(maliyet)} ₺")
-                if col_b.button("🗑️ Arzı Sil", key=f"del_ipo_{idx}"):
-                    st.session_state.ipo_liste.pop(idx)
-                    st.rerun()
-                
-                tavan_data = []
-                g_fiyat = ipo['Fiyat']
-                for i in range(1, 11):
-                    g_fiyat = g_fiyat * 1.10
-                    kar = (g_fiyat - ipo['Fiyat']) * ipo['Adet']
-                    toplam = g_fiyat * ipo['Adet']
-                    tavan_data.append({
-                        "Gün": f"{i}. Tavan",
-                        "Fiyat": tr_format(g_fiyat),
-                        "K/Z": tr_format(kar),
-                        "Toplam": tr_format(toplam)
-                    })
-                
-                ipo_html = "<table class='kral-table'><thead><tr><th>GÜN</th><th>FİYAT(₺)</th><th>NET KAR(₺)</th><th>TOPLAM(₺)</th></tr></thead><tbody>"
-                for r in tavan_data:
-                    ipo_html += f"<tr><td>{r['Gün']}</td><td>{r['Fiyat']}</td><td style='color:#00e676; font-weight:bold;'>{r['K/Z']}</td><td><b>{r['Toplam']}</b></td></tr>"
-                ipo_html += "</tbody></table><br>"
-                st.markdown(ipo_html, unsafe_allow_html=True)
-                st.markdown("---")
+        for idx, ipo in enumerate(st.session_state.ipo_liste):
+            col_a, col_b = st.columns([4, 1])
+            col_a.write(f"**{ipo['Isim']}** ({ipo['Adet']} Adet x {ipo['Fiyat']} ₺)")
+            if col_b.button("🗑️ Sil", key=f"ipo_del_{idx}"):
+                st.session_state.ipo_liste.pop(idx); st.rerun()
+
+
+
+
+
 
     # --- TOPLU SİLME ---
     st.markdown("<br>", unsafe_allow_html=True)
