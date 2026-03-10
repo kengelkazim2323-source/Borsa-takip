@@ -404,7 +404,7 @@ if st.session_state.portfoy or st.session_state.fon_portfoy:
                 st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🗑️ TÜM HİSRELERİ SİL"):
+    if st.button("🗑️ TÜM HİSSELERİ SİL"):
         st.session_state.portfoy = []; save_data([]); st.rerun()
 else:
     st.info("Portföy boş, lütfen ekleme yapınız.")
