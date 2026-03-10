@@ -242,7 +242,7 @@ if st.session_state.portfoy:
                 kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
                 table_html += "<tr>"
                 table_html += f"<td><b>{r['Hisse']}</b></td>"
-                table_html += f"<td>{r['Sinyal']}< /td>"
+                table_html += f"<td>{r['Sinyal']}</ td>"
                 table_html += f"<td>{r['Adet']}</td>"
                 table_html += f"<td>{tr_format(r['Maliyet'])}</td>"
                 table_html += f"<td>{tr_format(r['Güncel'])}</td>"
