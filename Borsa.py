@@ -357,6 +357,11 @@ if st.session_state.portfoy or st.session_state.fon_portfoy:
             ipo_html += "</tbody></table>"
             st.markdown(ipo_html, unsafe_allow_html=True)
 
+                if st.button("🗑️ Arzları Temizle"):
+                st.session_state.fon_portfoy = []
+                st.rerun()
+
+    
     # --- YATIRIM FONLARI ---
     with tab_fon:
         st.markdown("<br>", unsafe_allow_html=True)
