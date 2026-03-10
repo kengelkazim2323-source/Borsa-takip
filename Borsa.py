@@ -9,6 +9,7 @@ import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
 
+
 # ==========================================
 # 0. VERİ YÖNETİMİ
 # ==========================================
@@ -89,7 +90,6 @@ tema_renkleri = {
     "Siber Punk": {"bg": "#0D0221", "text": "#FFFFFF", "box": "#190033", "accent": "#FF00FF"},
     "Retro Kehribar": {"bg": "#0A0A0A", "text": "#FFB300", "box": "#1A1A1A", "accent": "#FF8F00"},
     "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"},
-    # --- YENİ EKLENEN 10 TEMA ---
     "Okyanus Derinliği": {"bg": "#001B2E", "text": "#ADB5BD", "box": "#003554", "accent": "#24D1FF"},
     "Lav Akışı": {"bg": "#1A0F0F", "text": "#F8F9FA", "box": "#2D1B1B", "accent": "#FF4D4D"},
     "Kuzey Işıkları": {"bg": "#0B101B", "text": "#E9ECEF", "box": "#1B263B", "accent": "#A5FFD6"},
@@ -260,25 +260,17 @@ if st.session_state.portfoy:
                     if cols[idx % 4].button(f"❌ {r['Hisse']} Sil", key=f"del_{r['id']}"):
                         st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
 
-
-            
-
-# --- ADET GÜNCELLEME EKLENDİ ---
-
-with st.expander("✏️ ADET GÜNCELLE"):
-    for idx, r in df.iterrows():
-        uc1, uc2, uc3 = st.columns([2, 2, 2])
-        uc1.markdown(f"<div style='margin-top:8px;'><b>{r['Hisse']}</b> (Mevcut: {r['Adet']})</div>", unsafe_allow_html=True)
-        yeni_adet = uc2.number_input("Yeni Adet", min_value=0.0, value=float(r['Adet']), step=1.0, key=f"upd_inp_{r['id']}", label_visibility="collapsed")
-        if uc3.button("🔄 Güncelle", key=f"upd_btn_{r['id']}"):
-            st.session_state.portfoy[r['id']]['Adet'] = float(yeni_adet)
-            save_data(st.session_state.portfoy)
-            st.rerun()
-
-
-
-
-
+            # --- ADET GÜNCELLEME EKLENDİ ---
+            with st.expander("✏️ ADET GÜNCELLE"):
+                for idx, r in df.iterrows():
+                    uc1, uc2, uc3 = st.columns([2, 2, 2])
+                    uc1.markdown(f"<div style='margin-top:8px;'><b>{r['Hisse']}</b> (Mevcut: {r['Adet']})</div>", unsafe_allow_html=True)
+                    yeni_adet = uc2.number_input("Yeni Adet", min_value=0.0, value=float(r['Adet']), step=1.0, key=f"upd_inp_{r['id']}", label_visibility="collapsed")
+                    if uc3.button("🔄 Güncelle", key=f"upd_btn_{r['id']}"):
+                        st.session_state.portfoy[r['id']]['Adet'] = float(yeni_adet)
+                        save_data(st.session_state.portfoy)
+                        st.rerun()
+            # -------------------------------
             
             # --- GELİŞTİRİLMİŞ DAİRESEL GRAFİK ---
             st.markdown("<br>", unsafe_allow_html=True)
@@ -321,6 +313,12 @@ with st.expander("✏️ ADET GÜNCELLE"):
 else:
     st.info("Portföy boş, lütfen ekleme yapınız.")
     
+
+tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
+st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
+
+
+
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
