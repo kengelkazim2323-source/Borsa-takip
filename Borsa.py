@@ -337,7 +337,6 @@ with tab_ipo:
                             "Hisse Fiyatı": f"{tr_format(current_price)} ₺"
                             "Toplam Değer": f"{tr_format(gunluk_deger)} ₺"
                             "Toplam Kar": f"{tr_format(gunluk_kar)} ₺"
-
                         })
 
                     st.table(pd.DataFrame(tavan_data))
