@@ -246,9 +246,9 @@ text-align: center;
 * Her şeyi
 ortalar, simetri sağlar */
 {
-.kral-table th, .kral-table ta { border-bottom: 1px solid #444; /*
+.kral-table th, .kral-table ta { border-bottom: 4px solid #444; /*
 Satırları ayırmak için ince çizgi */
-padding: 8px;
+padding: 10px;
 }
 </ style>
 
