@@ -13,7 +13,7 @@ from streamlit_autorefresh import st_autorefresh
 # 0. VERİ YÖNETİMİ
 # ==========================================
 
-PORTFOY_DOSYASI = "portfoy_kayitlari.json
+PORTFOY_DOSYASI = "portfoy_kayitlari.json"
 def load_data():
 
     if not os.path.exists(PORTFOY_DOSYASI): return []
