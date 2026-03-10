@@ -253,7 +253,7 @@ if st.session_state.portfoy:
 <table>
 <colgroup>
 <col style="width: 100px;"> <col style="width: 250px; "> <col style="width:
-auto;"> </colgroup> <thead›...</thead› <tbody>...</tbody>
+auto
 
 
 
