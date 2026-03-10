@@ -251,11 +251,7 @@ def portfoy_goster(piyasa_turu, tab_container, data_list):
                 if bc[1].button("❌", key=f"d_{r['id']}"):
                     st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
 
-    portfoy_goster("Türk Borsası", tab_tr, full_data)
-    portfoy_goster("Yatırım Fonu", tab_fon, full_data)
-
-
-# --- GELİŞTİRİLMİŞ DAİRESEL GRAFİK ---
+    # --- GELİŞTİRİLMİŞ DAİRESEL GRAFİK ---
             st.markdown("<br>", unsafe_allow_html=True)
             fig = px.pie(df, values='Değer', names='Hisse', hole=0.5, color_discrete_sequence=px.colors.qualitative.Bold)
             fig.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#000000', width=1)))
