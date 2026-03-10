@@ -335,7 +335,7 @@ with tab_ipo:
 
                             "Gün": f"{gun}. Gün",
                             "Hisse Fiyatı": f"{tr_format(current_price)} ₺"
-                            "Toplam Değer": f"{tr_format(gunluk_deger)} ₺",
+                            "Toplam Değer": f"{tr_format(gunluk_deger)} ₺"
                             "Toplam Kar": f"{tr_format(gunluk_kar)} ₺"
 
                         })
