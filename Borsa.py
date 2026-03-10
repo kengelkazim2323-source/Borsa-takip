@@ -194,8 +194,8 @@ with st.expander("➕ PORTFÖYE VARLIK EKLE"):
     with st.form("hisse_ekle_form", clear_on_submit=True):
         f1, f2, f3 = st.columns(3)
         if piyasa_sec == "Türk Borsası": hisse_sec = f1.selectbox("Hisse Seç", BIST_FULL)
-        elif piyasa_sec == "Yatırım Fonu": hisse_sec = f1.text_input("Fon Kodu (örn: ZGD.IS)").upper()
-        else: hisse_sec = f1.text_input("Sembol").upper()
+        else piyasa_sec == "Yatırım Fonu": hisse_sec = f1.text_input("Fon Kodu (örn: ZGD.IS)").upper()
+        else: hisse_sec = f1.text_input("Sembol (örn:TSLA)").upper()
         
         adet_sec = f2.number_input("Adet", min_value=0.0) # Fonlar küsuratlı olabilsin diye float yapıldı
         maliyet_sec = f3.number_input("Maliyet", min_value=0.0)
