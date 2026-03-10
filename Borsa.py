@@ -264,9 +264,12 @@ if st.session_state.portfoy:
             
 # --- ADET GÜNCELLEME EKLENDI ---
 with st.expander ("✏️ ADET GUNCELLE") :
-               for idx, r in df.iterrows():
-               ucl, uc2, uc3 =
+
+ucl, uc2, uc3 =
 st.columns ( [2, 2, 2])
+
+      for idx, r in df.iterrows():
+               
 uc1.markdown (f"<div
 style='margin-top:8px;'><b>{r[ 'Hisse' ]}</b>
 (Mevcut: {r['Adet']})</div>",
