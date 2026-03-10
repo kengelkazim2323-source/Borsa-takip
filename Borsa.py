@@ -55,8 +55,8 @@ def get_signal(hist_data):
     try:
         if len(hist_data) < 20: return "VERİ YETERSİZ"
         delta = hist_data['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        gain = (delta.where(delta > 0, 0)).rolling(window=15).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=15).mean()
         rs = gain / loss
         rsi = 100 - (100 / (1 + rs)).iloc[-1]
         ma20 = hist_data['Close'].rolling(window=20).mean().iloc[-1]
