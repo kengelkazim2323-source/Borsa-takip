@@ -235,29 +235,6 @@ if st.session_state.portfoy:
             st.markdown("<br>", unsafe_allow_html=True)
         
             # --- YATAY SATIR VE SÜTUNLU TABLO ---
-
-            table html = """
-<style>
-.kral-table { 
-width: 100%;
-table-layout: fixed; /* Sütunları
-eşit genişliğe zorlar */
-text-align: center;
-* Her şeyi
-ortalar, simetri sağlar */
-{
-.kral-table th, .kral-table ta { border-bottom: 4px solid #444; /*
-Satırları ayırmak için ince çizgi */
-padding: 10px;
-}
-</ style>
-
-
-
-
-
-
-
             
             table_html = "<table class='kral-table'><thead><tr>"
             table_html += "<th>HİSSE</th><th>SİNYAL</th><th>ADET</th><th>MALİYET(₺)</th><th>GÜNCEL(₺)</th><th>K/Z(₺)</th><th>TOPLAM(₺)</th>"
