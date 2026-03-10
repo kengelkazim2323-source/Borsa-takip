@@ -200,8 +200,14 @@ with st.expander("➕ PORTFÖYE VARLIK EKLE"):
 # ==========================================
 # 5. LİSTELEME VE TEMETTÜ
 # ==========================================
-if st.session_state.portfoy:
-    tab_tr, tab_us, tab_div = st.tabs(["🇹🇷 TÜRK BORSASI", "🇺🇸 AMERİKAN BORSASI", "💰 TEMETTÜ GELİRİ"])
+
+# ==========================================
+# 5. LİSTELEME VE TEMETTÜ
+# ==========================================
+if "fon_portfoy" not in st.session_state: st.session_state.fon_portfoy = []
+
+if st.session_state.portfoy or st.session_state.fon_portfoy:
+    tab_tr, tab_us, tab_div, tab_ipo, tab_fon = st.tabs(["🇹🇷 TÜRK BORSASI", "🇺🇸 AMERİKAN BORSASI", "💰 TEMETTÜ GELİRİ", "🚀 YENİ HALKA ARZLAR", "📊 YATIRIM FONLARI"])
     
     full_data = []
     for i, item in enumerate(st.session_state.portfoy):
@@ -272,7 +278,6 @@ if st.session_state.portfoy:
                         st.session_state.portfoy[r['id']]['Adet'] = int(yeni_adet)
                         save_data(st.session_state.portfoy)
                         st.rerun()
-            # -------------------------------
 
             # --- MALİYET GÜNCELLEME EKLENDİ ---
             with st.expander("💸 MALİYET GÜNCELLE"):
@@ -285,8 +290,6 @@ if st.session_state.portfoy:
                         save_data(st.session_state.portfoy)
                         st.rerun()
 
-
-            
             # --- GELİŞTİRİLMİŞ DAİRESEL GRAFİK ---
             st.markdown("<br>", unsafe_allow_html=True)
             fig = px.pie(df, values='Değer', names='Hisse', hole=0.45, color_discrete_sequence=px.colors.qualitative.Pastel)
@@ -323,7 +326,85 @@ if st.session_state.portfoy:
                     st.divider()
         else: st.info("Temettü veren hisse bulunamadı.")
 
-    if st.button("🗑️ TÜMÜNÜ SİL"):
+    # --- YENİ HALKA ARZLAR ---
+    with tab_ipo:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.subheader("🚀 Halka Arz Tavan Hesaplayıcı")
+        c1, c2 = st.columns(2)
+        ipo_fiyat = c1.number_input("Halka Arz Fiyatı (₺)", min_value=0.0, value=0.0, step=0.1)
+        ipo_adet = c2.number_input("Dağıtılan Adet", min_value=0, value=0, step=1)
+        
+        if ipo_fiyat > 0 and ipo_adet > 0:
+            maliyet = ipo_fiyat * ipo_adet
+            st.success(f"**Toplam Maliyet:** {tr_format(maliyet)} ₺")
+            
+            tavan_data = []
+            g_fiyat = ipo_fiyat
+            for i in range(1, 11):
+                g_fiyat = g_fiyat * 1.10
+                kar = (g_fiyat - ipo_fiyat) * ipo_adet
+                toplam = g_fiyat * ipo_adet
+                tavan_data.append({
+                    "Gün": f"{i}. Tavan",
+                    "Fiyat": tr_format(g_fiyat),
+                    "K/Z": tr_format(kar),
+                    "Toplam": tr_format(toplam)
+                })
+            
+            ipo_html = "<table class='kral-table'><thead><tr><th>GÜN</th><th>FİYAT(₺)</th><th>NET KAR(₺)</th><th>TOPLAM(₺)</th></tr></thead><tbody>"
+            for r in tavan_data:
+                ipo_html += f"<tr><td>{r['Gün']}</td><td>{r['Fiyat']}</td><td style='color:#00e676; font-weight:bold;'>{r['K/Z']}</td><td><b>{r['Toplam']}</b></td></tr>"
+            ipo_html += "</tbody></table>"
+            st.markdown(ipo_html, unsafe_allow_html=True)
+
+    # --- YATIRIM FONLARI ---
+    with tab_fon:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.subheader("📊 Yatırım Fonu Portföyü")
+        
+        with st.form("fon_form", clear_on_submit=True):
+            fc1, fc2, fc3, fc4, fc5 = st.columns(5)
+            f_isim = fc1.text_input("Fon Kodu")
+            f_adet = fc2.number_input("Adet", min_value=0.0, step=1.0)
+            f_maliyet = fc3.number_input("Maliyet", min_value=0.0, step=0.01)
+            f_guncel = fc4.number_input("Güncel Fiyat", min_value=0.0, step=0.01)
+            f_temettu = fc5.number_input("Temettü Getirisi", min_value=0.0, step=0.01)
+            
+            if st.form_submit_button("➕ Fon Ekle"):
+                if f_isim:
+                    st.session_state.fon_portfoy.append({
+                        "Fon": f_isim.upper(), "Adet": f_adet, "Maliyet": f_maliyet, 
+                        "Güncel": f_guncel, "Temettu": f_temettu
+                    })
+                    st.rerun()
+
+        if st.session_state.fon_portfoy:
+            fon_html = "<table class='kral-table'><thead><tr><th>FON KODU</th><th>ADET</th><th>MALİYET(₺)</th><th>GÜNCEL(₺)</th><th>TEMETTÜ(₺)</th><th>K/Z(₺)</th><th>TOPLAM(₺)</th></tr></thead><tbody>"
+            for r in st.session_state.fon_portfoy:
+                kz = (r['Güncel'] - r['Maliyet']) * r['Adet']
+                toplam = r['Güncel'] * r['Adet']
+                temettu_toplam = r['Temettu'] * r['Adet']
+                kz_color = "#00e676" if kz >= 0 else "#ff1744"
+                
+                fon_html += "<tr>"
+                fon_html += f"<td><b>{r['Fon']}</b></td>"
+                fon_html += f"<td>{r['Adet']}</td>"
+                fon_html += f"<td>{tr_format(r['Maliyet'])}</td>"
+                fon_html += f"<td>{tr_format(r['Güncel'])}</td>"
+                fon_html += f"<td>{tr_format(temettu_toplam)}</td>"
+                fon_html += f"<td style='color:{kz_color}; font-weight:bold;'>{tr_format(kz)}</td>"
+                fon_html += f"<td><b>{tr_format(toplam)}</b></td>"
+                fon_html += "</tr>"
+            fon_html += "</tbody></table>"
+            st.markdown(fon_html, unsafe_allow_html=True)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("🗑️ Fonları Temizle"):
+                st.session_state.fon_portfoy = []
+                st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("🗑️ TÜM HİSRELERİ SİL"):
         st.session_state.portfoy = []; save_data([]); st.rerun()
 else:
     st.info("Portföy boş, lütfen ekleme yapınız.")
@@ -331,4 +412,10 @@ else:
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
+
+
+
+
+
+
 
