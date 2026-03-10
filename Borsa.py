@@ -244,6 +244,8 @@ if st.session_state.portfoy:
                 table_html += f"<td><b>{r['Hisse']}</b></td>"
                 table_html += f"<td>{r['Sinyal']}</td>"
                 table_html += f"<td>{r['Adet']}</td>"
+                f4 = st.columns(1)
+                adet.arttır = f4.number_input("Adet", min_value = 0),
                 table_html += f"<td>{tr_format(r['Maliyet'])}</td>"
                 table_html += f"<td>{tr_format(r['Güncel'])}</td>"
                 table_html += f"<td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])}</td>"
