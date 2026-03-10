@@ -235,23 +235,47 @@ if st.session_state.portfoy:
             st.markdown("<br>", unsafe_allow_html=True)
         
             # --- YATAY SATIR VE SÜTUNLU TABLO ---
-            table_html = "<table class='kral-table'><thead><tr>"
-            table_html += "<th>HİSSE</th><th>SİNYAL</th><th>ADET</th><th>MALİYET(₺)</th><th>GÜNCEL(₺)</th><th>K/Z(₺)</th><th>TOPLAM(₺)</th>"
-            table_html += "</tr></thead><tbody>"
-            for _, r in df.iterrows():
-                kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
-                table_html += "<tr>"
-                table_html += f"<td><b>{r['Hisse']}</b></td>"
-                table_html += f"<td>{r['Sinyal']}</td>"
-                table_html += f"<td>{r['Adet']}</td>"
-                table_html += f"<td>{tr_format(r['Maliyet'])}</td>"
-                table_html += f"<td>{tr_format(r['Güncel'])}</td>"
-                table_html += f"<td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])}</td>"
-                table_html += f"<td><b>{tr_format(r['Değer'])}</td>"
-                table_html += "</tr>"
-            table_html += "</tbody></table>"
+
+# Genişliği sabitleyen ve metni ortalayan CSS eklenmiş hali
+table_html = """
+<style>
+    .kral-table {
+        width: 100%;
+        table-layout: fixed; /* Sütun genişliklerini eşitler */
+        border-collapse: collapse;
+        text-align: center; /* Tüm hücreleri ortalar */
+    }
+    .kral-table th, .kral-table td {
+        padding: 10px;
+        overflow: hidden;
+        text-overflow: ellipsis; /* Uzun veriler sığmazsa üç nokta koyar */
+        white-space: nowrap;
+    }
+</style>
+<table class='kral-table'><thead><tr>"""
+
+table_html += "<th>HİSSE</th><th>SİNYAL</th><th>ADET</th><th>MALİYET(₺)</th><th>GÜNCEL(₺)</th><th>K/Z(₺)</th><th>TOPLAM(₺)</th>"
+table_html += "</tr></thead><tbody>"
+
+for _, r in df.iterrows():
+    kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
+    table_html += "<tr>"
+    table_html += f"<td><b>{r['Hisse']}</b></td>"
+    table_html += f"<td>{r['Sinyal']}</td>"
+    table_html += f"<td>{r['Adet']}</td>"
+    table_html += f"<td>{tr_format(r['Maliyet'])}</td>"
+    table_html += f"<td>{tr_format(r['Güncel'])}</td>"
+    table_html += f"<td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])}</td>"
+    # Kapatılmamış <b> etiketini de burada düzelttim:
+    table_html += f"<td><b>{tr_format(r['Değer'])}</b></td>" 
+    table_html += "</tr>"
+
+table_html += "</tbody></table>"
+
+st.markdown(table_html, unsafe_allow_html=True)
+
             
-            st.markdown(table_html, unsafe_allow_html=True)
+            
 
             # Silme Butonları (Tablo yapısını bozmamak için expander içine alındı)
             st.markdown("<br>", unsafe_allow_html=True)
