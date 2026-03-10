@@ -259,6 +259,33 @@ if st.session_state.portfoy:
                 for idx, r in df.iterrows():
                     if cols[idx % 4].button(f"❌ {r['Hisse']} Sil", key=f"del_{r['id']}"):
                         st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
+
+
+            
+# --- ADET GÜNCELLEME EKLENDI ---
+with st. expander ("ADET GUNCELLE") :
+for idx, r in
+df.iterrows () :
+ucl, uc2, uc3 =
+st. columns ( [2, 2, 21)
+uc1. markdown (f"<div
+style='margin-top:8px;'×b>{r[ 'Hisse' 1}</b>
+(Mevcut: {r['Adet' ]})</div>"
+unsafe_allow_html=True)
+yeni_adet =
+uc2 number_input ("Yeni Adet"
+min_value=0.0, value=float (r['Adet' 1), step=1.0, key=f"upd_inp_frl'id'1}",
+label visibility="collapsed" )
+if uc3.button("
+Güncelle", key=f"upd_btn_fr['id'1}"):
+st. session state portfoyll'id'|||'Adet' ] =
+float (yeni_adet)
+save_data (st. session _state.portfoy)
+st. rerun ()
+
+
+
+
             
             # --- GELİŞTİRİLMİŞ DAİRESEL GRAFİK ---
             st.markdown("<br>", unsafe_allow_html=True)
