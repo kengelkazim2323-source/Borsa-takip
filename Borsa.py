@@ -412,7 +412,7 @@ if full_data:
                 labels={'Değer': 'Toplam Değer (₺)', 'Hisse': 'Fon'}
             )
             fig_fon.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color=t_sec['bg'], width=2)))
-            fig_fon.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color=t_sec['text']), margin=dict(t=50, b=30, l=30, r=30), legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5), title_x=-0.2)
+            fig_fon.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color=t_sec['text']), margin=dict(t=50, b=30, l=30, r=30), legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5), title_x=0.5)
             g2.plotly_chart(fig_fon, use_container_width=True)
         else:
             g2.info("Yatırım Fonu için grafik oluşturulacak varlık yok.")
