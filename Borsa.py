@@ -265,7 +265,7 @@ if st.session_state.portfoy:
                 for idx, r in df.iterrows():
                     uc1, uc2, uc3 = st.columns([2, 2, 2])
                     uc1.markdown(f"<div style='margin-top:8px;'><b>{r['Hisse']}</b> (Mevcut: {r['Adet']})</div>", unsafe_allow_html=True)
-                    yeni_adet = uc2.number_input("Yeni Adet", min_value=0, value=int(r['Adet']), step=1.0, key=f"upd_inp_{r['id']}", label_visibility="collapsed")
+                    yeni_adet = uc2.number_input("Yeni Adet", min_value=0, value=int(r['Adet']), step=0, key=f"upd_inp_{r['id']}", label_visibility="collapsed")
                     if uc3.button("🔄 Güncelle", key=f"upd_btn_{r['id']}"):
                         st.session_state.portfoy[r['id']]['Adet'] = int(yeni_adet)
                         save_data(st.session_state.portfoy)
