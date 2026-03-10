@@ -10,29 +10,40 @@ from streamlit_autorefresh import st_autorefresh
 import urllib.request
 import re
 
-
+import streamlit as st
+import yfinance as yf
+import pandas as pd
+import json
+import os
+import pytz
+from datetime import datetime, timedelta
+import plotly.express as px
+from streamlit_autorefresh import st_autorefresh
+import urllib.request
+import re
 
 # ==========================================
-# 0. VERİ YÖNETİMİ
+# 0. VERİ YÖNETİMİ (GÜÇLENDİRİLDİ)
 # ==========================================
-
 PORTFOY_DOSYASI = "portfoy_kayitlari.json"
-def load_data():
-    if not os.path.exists(PORTFOY_DOSYASI): return []
+IPO_DOSYASI = "halka_arz_kayitlari.json"
+
+def load_json(dosya_adi):
+    if not os.path.exists(dosya_adi): return []
     try:
-        with open(PORTFOY_DOSYASI, "r", encoding="utf-8") as f:
+        with open(dosya_adi, "r", encoding="utf-8") as f:
             data = json.load(f)
             return data if isinstance(data, list) else []
     except: return []
 
-def save_data(data):
-    with open(PORTFOY_DOSYASI, "w", encoding="utf-8") as f:
+def save_json(dosya_adi, data):
+    with open(dosya_adi, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 if 'portfoy' not in st.session_state:
-    st.session_state.portfoy = load_data()
+    st.session_state.portfoy = load_json(PORTFOY_DOSYASI)
 if 'ipo_liste' not in st.session_state:
-    st.session_state.ipo_liste = []
+    st.session_state.ipo_liste = load_json(IPO_DOSYASI)
 
 @st.cache_data(ttl=300)
 def fetch_stock_data(symbol):
@@ -88,10 +99,10 @@ def get_signal(hist_data):
     except: return "---"
 
 # ==========================================
-# 1. 20 FARKLI TEMA SEÇENEĞİ
+# 1. TEMA VE CSS
 # ==========================================
-st.set_page_config(page_title="Borsa Takip", page_icon="📈", layout="wide")
-st_autorefresh(interval=1000, key="datarefresh")
+st.set_page_config(page_title="Borsa Takip PRO", page_icon="📈", layout="wide")
+st_autorefresh(interval=1000, key="datarefresh") # 1 dakikada bir yenileme yeterli
 
 with st.sidebar:
     st.header("🎨 Tema Galerisi")
@@ -131,7 +142,7 @@ st.markdown(f"""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@700&display=swap');
     .stApp {{ background-color: {t_sec['bg']}; color: {t_sec['text']}; font-family: 'Inter', sans-serif; }}
     [data-testid="stMetric"] {{ background: {t_sec['box']}; padding: 20px !important; border-radius: 12px !important; border: 1px solid {t_sec['accent']} !important; text-align: center; }}
-    .kral-table {{ width: 100%; border-collapse: collapse; background: {t_sec['box']}22; margin-top: 10px; border: 1px solid {t_sec['accent']}33; }}
+    .kral-table {{ width: 100%; border-collapse: collapse; background: {t_sec['box']}22; margin-top: 10px; border: 1px solid {t_sec['accent']}33; border-radius: 10px; overflow: hidden; }}
     .kral-table th {{ padding: 12px; text-align: left; background: {t_sec['accent']}22; color: {t_sec['accent']}; font-weight: 700; border-bottom: 2px solid {t_sec['accent']}44; }}
     .kral-table td {{ padding: 12px; border-bottom: 1px solid {t_sec['accent']}11; color: {t_sec['text']}; }}
     .ticker-wrapper {{ width: 100%; overflow: hidden; background: {t_sec['box']}; border-radius: 8px; margin-bottom: 30px; padding: 15px 0; border: 1px solid {t_sec['accent']}44; }}
@@ -142,28 +153,23 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. SAAT VE TARİH
+# 2. ÜST BİLGİ VE PİYASA
 # ==========================================
 clock_html = f"""
 <div style="position: fixed; top: 10px; right: 10px; background: {t_sec['box']}; padding: 10px 25px; border-radius: 15px; z-index: 99999; border: 1px solid {t_sec['accent']};">
     <div id="digital-clock" style="font-size: 20px; font-weight: bold; font-family: 'JetBrains Mono', monospace; color: {t_sec['accent']};"></div>
-    <div id="date-display" style="font-size: 11px; color: {t_sec['text']}; opacity: 0.8;"></div>
 </div>
 <script>
 function updateClock() {{
     const trTime = new Date(new Date().toLocaleString("en-US", {{timeZone: "Europe/Istanbul"}}));
     document.getElementById('digital-clock').innerText = trTime.toLocaleTimeString('tr-TR', {{hour12: false}});
-    document.getElementById('date-display').innerText = trTime.toLocaleDateString('tr-TR', {{day: '2-digit', month: 'long', year: 'numeric'}}).toUpperCase();
 }}
 setInterval(updateClock, 1000); updateClock();
 </script>
 """
-st.components.v1.html(clock_html, height=80)
+st.components.v1.html(clock_html, height=60)
 
-# ==========================================
-# 3. CANLI PİYASA
-# ==========================================
-st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']};'>🚀 Borsa Takip</h2>", unsafe_allow_html=True)
+st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']};'>🚀 Borsa Takip Terminali</h2>", unsafe_allow_html=True)
 piyasa_izleme = { "BIST 100": "XU100.IS", "ONS ALTIN": "GC=F", "ONS GÜMÜŞ": "SI=F", "USD/TRY": "USDTRY=X", "BTC": "BTC-USD"}
 
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
@@ -176,51 +182,26 @@ for isim, sembol in piyasa_izleme.items():
 st.markdown(ticker_content + '</div></div>', unsafe_allow_html=True)
 
 # ==========================================
-# 4. HİSSE LİSTELERİ
+# 3. VERİ HAZIRLAMA
 # ==========================================
 BIST_FULL = sorted(["A1CAP.IS", "ADEL.IS", "AGROT.IS", "AKBNK.IS", "AKSA.IS", "ALARK.IS", "ALFAS.IS", "ARCLK.IS", "ASELS.IS", "ASTOR.IS", "BIMAS.IS", "BRISA.IS", "CANTE.IS", "CCOLA.IS", "CIMSA.IS", "CWENE.IS", "DOAS.IS", "DOHOL.IS", "EKGYO.IS", "ENJSA.IS", "ENKAI.IS", "EREGL.IS", "EUPWR.IS", "FROTO.IS", "GARAN.IS", "GESan.IS", "GUBRF.IS", "HALKB.IS", "HEKTS.IS", "ISCTR.IS", "KCHOL.IS", "KLKIM.IS", "KONTR.IS", "KOZAL.IS", "KRDMD.IS", "MIATK.IS", "ODAS.IS", "OTKAR.IS", "OYAKC.IS", "PETKM.IS", "PGSUS.IS", "REEDR.IS", "SAHOL.IS", "SASA.IS", "SISE.IS", "SOKM.IS", "TCELL.IS", "THYAO.IS", "TOASO.IS", "TUPRS.IS", "YKBNK.IS"])
 FON_LIST = sorted(["TTE.IS", "AES.IS", "AFO.IS", "AYA.IS", "KPH.IS", "KPA.IS", "ZGD.IS", "ZRE.IS", "TAU.IS", "MAC.IS", "YZG.IS", "OPB.IS", "NNF.IS", "IDH.IS", "GSP.IS", "IHY.IS"])
 
-with st.expander("➕ PORTFÖYE VARLIK EKLE"):
-    piyasa_sec = st.radio("Piyasa", ["Türk Borsası", "Yatırım Fonu"], horizontal=True)
-    with st.form("hisse_ekle_form", clear_on_submit=True):
-        f1, f2, f3 = st.columns(3)
-        if piyasa_sec == "Türk Borsası": hisse_sec = f1.selectbox("Hisse Seç", BIST_FULL)
-        else:
-            hisse_sec = f1.selectbox("Fon Seç", FON_LIST + ["DİĞER"])
-            if hisse_sec == "DİĞER": hisse_sec = f1.text_input("Fon Kodu (Örn: IPJ.IS)").upper()
-        adet_sec = f2.number_input("Adet", min_value=0.0, step=1.0, format="%.4f")
-        maliyet_sec = f3.number_input("Maliyet", min_value=0.0, step=0.01, format="%.4f")
-        if st.form_submit_button("🚀 EKLE"):
-            if hisse_sec and adet_sec > 0:
-                st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": float(adet_sec), "Maliyet": float(maliyet_sec)})
-                save_data(st.session_state.portfoy); st.rerun()
-
-# ==========================================
-# 5. TABLO VE SEKME YÖNETİMİ
-# ==========================================
-tab_tr, tab_fon, tab_div, tab_ipo = st.tabs(["🇹🇷 TÜRK BORSASI", "📊 YATIRIM FONLARI", "💰 TEMETTÜ GELİRİ", "🚀 YENİ HALKA ARZLAR"])
-
 full_data = []
 for i, item in enumerate(st.session_state.portfoy):
     piyasa_durumu = item.get("Piyasa", "Türk Borsası")
-    
-    # Her iki tür için de önce Yahoo Finance deniyoruz (Teknik analiz için geçmiş veri lazım)
     d = fetch_stock_data(item['Hisse'])
     
     if piyasa_durumu == "Yatırım Fonu":
-        # Canlı Fiyatı TEFAS'tan çek (Daha güncel)
         canli_fon_fiyati = fetch_tefas_price(item['Hisse'])
         if canli_fon_fiyati:
             c = canli_fon_fiyati
-            # Eğer Yahoo'da veri varsa sinyali oradan al
             sinyal = get_signal(d['hist']) if d else "VERİ YOK"
             pc = d['hist']['Close'].iloc[-2] if d else c
-            temettu = 0.0
         else:
-            c = item['Maliyet']; pc = c; sinyal = "VERİ YOK"; temettu = 0.0
+            c = item['Maliyet']; pc = c; sinyal = "VERİ YOK"
+        temettu = 0.0
     else:
-        # Hisse senedi verileri
         if d:
             c = d['hist']['Close'].iloc[-1]; pc = d['hist']['Close'].iloc[-2]
             sinyal = get_signal(d['hist']); temettu = d['temettu']
@@ -235,98 +216,109 @@ for i, item in enumerate(st.session_state.portfoy):
         "NetTemettu": temettu * item['Adet'], "DailyDiff": (c - pc) * item['Adet']
     })
 
-def portfoy_goster(piyasa_turu, tab_container, data_list):
-    with tab_container:
-        df = pd.DataFrame([x for x in data_list if x['Piyasa'] == piyasa_turu])
-        if df.empty: st.info(f"{piyasa_turu} için henüz varlık yok."); return
-        df = df.sort_values(by="Hisse")
+# ==========================================
+# 4. TABLAR VE İÇERİK
+# ==========================================
+tab_tr, tab_fon, tab_div, tab_ipo = st.tabs(["🇹🇷 TÜRK BORSASI", "📊 YATIRIM FONLARI", "💰 TEMETTÜ GELİRİ", "🚀 HALKA ARZ TAKİP"])
 
-        m1, m2, m3 = st.columns(3)
-        m1.metric("TOPLAM DEĞER", f"{tr_format(df['Değer'].sum())} ₺")
-        m2.metric("TOPLAM K/Z", f"{tr_format(df['K/Z'].sum())} ₺")
-        m3.metric("GÜNLÜK FARK", f"{tr_format(df['DailyDiff'].sum())} ₺")
+# --- PORTFÖY EKLEME (GENEL) ---
+with st.sidebar:
+    st.divider()
+    st.subheader("➕ Yeni Varlık")
+    piyasa_sec = st.radio("Piyasa", ["Türk Borsası", "Yatırım Fonu"], horizontal=True)
+    if piyasa_sec == "Türk Borsası": hisse_sec = st.selectbox("Hisse Seç", BIST_FULL)
+    else: hisse_sec = st.selectbox("Fon Seç", FON_LIST + ["DİĞER"])
+    if hisse_sec == "DİĞER": hisse_sec = st.text_input("Fon Kodu").upper()
+    adet_sec = st.number_input("Adet", min_value=0.0)
+    maliyet_sec = st.number_input("Maliyet", min_value=0.0)
+    if st.button("🚀 Portföye Ekle"):
+        st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": float(adet_sec), "Maliyet": float(maliyet_sec)})
+        save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
 
-        table_html = "<table class='kral-table'><thead><tr><th>VARLIK</th><th>SİNYAL</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr></thead><tbody>"
-        for _, r in df.iterrows():
-            kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
-            table_html += f"<tr><td><b>{r['Hisse']}</b></td><td>{r['Sinyal']}</td><td>{r['Adet']}</td><td>{tr_format(r['Maliyet'])} ₺</td><td>{tr_format(r['Güncel'])} ₺</td><td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])} ₺</td><td><b>{tr_format(r['Değer'])} ₺</b></td></tr>"
-        st.markdown(table_html + "</tbody></table>", unsafe_allow_html=True)
+# --- TABLO FONKSİYONU ---
+def render_kral_table(df):
+    table_html = "<table class='kral-table'><thead><tr><th>VARLIK</th><th>SİNYAL</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr></thead><tbody>"
+    for _, r in df.iterrows():
+        kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
+        table_html += f"<tr><td><b>{r['Hisse']}</b></td><td>{r['Sinyal']}</td><td>{r['Adet']}</td><td>{tr_format(r['Maliyet'])} ₺</td><td>{tr_format(r['Güncel'])} ₺</td><td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])} ₺</td><td><b>{tr_format(r['Değer'])} ₺</b></td></tr>"
+    return table_html + "</tbody></table>"
 
-        with st.expander("🛠️ VARLIK YÖNETİMİ"):
-            for idx, r in df.iterrows():
-                c1, c2, c3, c4 = st.columns([1.5, 2, 2, 1])
-                c1.markdown(f"<div style='margin-top:25px;'><b>{r['Hisse']}</b></div>", unsafe_allow_html=True)
-                y_adet = c2.number_input("Adet", value=float(r['Adet']), key=f"a_{r['id']}")
-                y_maliyet = c3.number_input("Maliyet", value=float(r['Maliyet']), key=f"m_{r['id']}")
-                c4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
-                bc = c4.columns(2)
-                if bc[0].button("💾", key=f"s_{r['id']}"):
-                    st.session_state.portfoy[r['id']]['Adet'], st.session_state.portfoy[r['id']]['Maliyet'] = y_adet, y_maliyet
-                    save_data(st.session_state.portfoy); st.rerun()
-                if bc[1].button("❌", key=f"d_{r['id']}"):
-                    st.session_state.portfoy.pop(r['id']); save_data(st.session_state.portfoy); st.rerun()
-
-# Borsa Sekmesi ve Grafiği
-portfoy_goster("Türk Borsası", tab_tr, full_data)
+# --- TÜRK BORSASI ---
 with tab_tr:
-    df_chart_bist = pd.DataFrame([x for x in full_data if x['Piyasa'] == 'Türk Borsası' and x['Değer'] > 0])
-    if not df_chart_bist.empty:
-        st.divider()
-        fig_bist = px.pie(df_chart_bist, values='Değer', names='Hisse', hole=0.5, color_discrete_sequence=px.colors.qualitative.Pastel, hover_data=['Adet', 'K/Z', 'Güncel'])
-        fig_bist.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color=t_sec['text']))
-        st.plotly_chart(fig_bist, use_container_width=True)
+    df_bist = pd.DataFrame([x for x in full_data if x['Piyasa'] == 'Türk Borsası'])
+    if not df_bist.empty:
+        m1, m2, m3 = st.columns(3)
+        m1.metric("PORTFÖY DEĞERİ", f"{tr_format(df_bist['Değer'].sum())} ₺")
+        m2.metric("TOPLAM K/Z", f"{tr_format(df_bist['K/Z'].sum())} ₺")
+        m3.metric("GÜNLÜK DEĞİŞİM", f"{tr_format(df_bist['DailyDiff'].sum())} ₺")
+        st.markdown(render_kral_table(df_bist), unsafe_allow_html=True)
+    else: st.info("Hisse senedi bulunamadı.")
 
-# Fon Sekmesi ve Grafiği
-portfoy_goster("Yatırım Fonu", tab_fon, full_data)
+# --- YATIRIM FONLARI ---
 with tab_fon:
-    df_chart_fon = pd.DataFrame([x for x in full_data if x['Piyasa'] == 'Yatırım Fonu' and x['Değer'] > 0])
-    if not df_chart_fon.empty:
-        st.divider()
-        fig_fon = px.pie(df_chart_fon, values='Değer', names='Hisse', hole=0.5, color_discrete_sequence=px.colors.qualitative.Bold, hover_data=['Adet', 'K/Z', 'Güncel'])
-        fig_fon.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color=t_sec['text']))
-        st.plotly_chart(fig_fon, use_container_width=True)
+    df_fon = pd.DataFrame([x for x in full_data if x['Piyasa'] == 'Yatırım Fonu'])
+    if not df_fon.empty:
+        st.markdown(render_kral_table(df_fon), unsafe_allow_html=True)
+    else: st.info("Fon bulunamadı.")
 
-# Temettü Sekmesi
+# --- TEMETTÜ GELİRİ (DÜZENLENDİ) ---
 with tab_div:
-    df_div = pd.DataFrame(full_data)
-    if not df_div.empty and df_div['NetTemettu'].sum() > 0:
-        st.metric("YILLIK TOPLAM TEMETTÜ", f"{tr_format(df_div['NetTemettu'].sum())} ₺")
-        st.table(df_div[df_div['NetTemettu'] > 0][['Hisse', 'NetTemettu']])
-    else: st.info("Temettü verisi bulunamadı.")
+    st.markdown(f"### 💰 Yıllık Projeksiyon")
+    df_div = pd.DataFrame([x for x in full_data if x['Temettu'] > 0])
+    if not df_div.empty:
+        toplam_temettu = df_div['NetTemettu'].sum()
+        st.metric("TAHMİNİ YILLIK NAKİT AKIŞI", f"{tr_format(toplam_temettu)} ₺", delta=f"Aylık: {tr_format(toplam_temettu/12)} ₺")
+        
+        div_table = "<table class='kral-table'><thead><tr><th>HİSSE</th><th>ADET</th><th>HİSSE BAŞI</th><th>YILLIK TOPLAM</th><th>VERİM (%)</th></tr></thead><tbody>"
+        for _, r in df_div.iterrows():
+            verim = (r['Temettu'] / r['Güncel']) * 100 if r['Güncel'] > 0 else 0
+            div_table += f"<tr><td><b>{r['Hisse']}</b></td><td>{r['Adet']}</td><td>{tr_format(r['Temettu'])} ₺</td><td><b>{tr_format(r['NetTemettu'])} ₺</b></td><td>%{verim:.2f}</td></tr>"
+        st.markdown(div_table + "</tbody></table>", unsafe_allow_html=True)
+    else:
+        st.warning("Portföyünüzdeki hisselerin son 1 yıllık temettu verisi bulunamadı veya henüz veri çekilemedi.")
 
-# Halka Arz Sekmesi
+# --- HALKA ARZ (HAFIZA + TABLO EKLENDİ) ---
 with tab_ipo:
-    st.subheader("🚀 Halka Arz Takip & Tavan Simülasyonu")
+    st.subheader("🚀 Yeni Halka Arz Ekle")
     with st.form("ipo_form", clear_on_submit=True):
         ic1, ic2, ic3 = st.columns(3)
-        ipo_isim = ic1.text_input("Arz Adı")
-        ipo_fiyat = ic2.number_input("Fiyat", min_value=0.0)
-        ipo_adet = ic3.number_input("Adet", min_value=0)
-        if st.form_submit_button("➕ Ekle"):
+        ipo_isim = ic1.text_input("Şirket Kodu (Örn: BINHO)")
+        ipo_fiyat = ic2.number_input("Halka Arz Fiyatı", min_value=0.0)
+        ipo_adet = ic3.number_input("Lot Sayısı", min_value=0)
+        if st.form_submit_button("➕ Listeye Ekle"):
             if ipo_isim:
                 st.session_state.ipo_liste.append({"Isim": ipo_isim.upper(), "Fiyat": ipo_fiyat, "Adet": ipo_adet})
-                st.rerun()
+                save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
 
-    for idx, ipo in enumerate(st.session_state.ipo_liste):
-        with st.container():
-            c1, c2, c3 = st.columns([2, 3, 1])
+    if st.session_state.ipo_liste:
+        st.markdown("### 📋 Takip Listesi")
+        ipo_table = "<table class='kral-table'><thead><tr><th>ŞİRKET</th><th>LOT</th><th>MALİYET</th><th>TAVAN SERİSİ</th><th>İŞLEM</th></tr></thead><tbody>"
+        for idx, ipo in enumerate(st.session_state.ipo_liste):
             maliyet = ipo['Adet'] * ipo['Fiyat']
-            c1.markdown(f"###### {ipo['Isim']}")
-            c2.write(f"Maliyet: **{tr_format(maliyet)} ₺**")
-            if c3.button("🗑️", key=f"rm_{idx}"):
-                st.session_state.ipo_liste.pop(idx); st.rerun()
-            with st.expander("📈 10 Günlük Tavan Serisi"):
+            ipo_table += f"<tr><td><b>{ipo['Isim']}</b></td><td>{ipo['Adet']}</td><td>{tr_format(maliyet)} ₺</td><td>(Aşağıdaki Detaya Bak)</td><td>Sil Butonu Yanda</td></tr>"
+        
+        # Daha interaktif bir görünüm için expander içine aldım
+        for idx, ipo in enumerate(st.session_state.ipo_liste):
+            with st.expander(f"📈 {ipo['Isim']} - Tavan Simülasyonu"):
+                col1, col2 = st.columns([4, 1])
+                maliyet = ipo['Adet'] * ipo['Fiyat']
                 tavan_list = []
                 p = ipo['Fiyat']
                 for g in range(1, 11):
                     p *= 1.10
-                    tavan_list.append({"Gün": g, "Fiyat(₺)": tr_format(p), "Kar(₺)": tr_format((p * ipo['Adet']) - maliyet)})
-                st.table(pd.DataFrame(tavan_list))
+                    tavan_list.append({"Gün": f"{g}. Tavan", "Fiyat": f"{tr_format(p)} ₺", "Toplam Kar": f"{tr_format((p * ipo['Adet']) - maliyet)} ₺"})
+                col1.table(pd.DataFrame(tavan_list))
+                if col2.button("❌ SİL", key=f"del_ipo_{idx}"):
+                    st.session_state.ipo_liste.pop(idx)
+                    save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
+    else:
+        st.info("Henüz halka arz eklenmemiş.")
+
+# --- FOOTER ---
+st.markdown("---")
+st.caption(f"🕒 Son Güncelleme: {datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')} | Veriler BIST 1dk gecikmelidir.")
+
+
 
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | TEFAS + Yahoo Verileri Aktif.")
-
-
-
-
-
