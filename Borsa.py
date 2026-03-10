@@ -10,17 +10,7 @@ from streamlit_autorefresh import st_autorefresh
 import urllib.request
 import re
 
-import streamlit as st
-import yfinance as yf
-import pandas as pd
-import json
-import os
-import pytz
-from datetime import datetime, timedelta
-import plotly.express as px
-from streamlit_autorefresh import st_autorefresh
-import urllib.request
-import re
+
 
 # ==========================================
 # 0. VERİ YÖNETİMİ (GÜÇLENDİRİLDİ)
