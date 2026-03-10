@@ -66,7 +66,7 @@ def get_signal(hist_data):
         ma20 = hist_data['Close'].rolling(window=20).mean().iloc[-1]
         last_price = hist_data['Close'].iloc[-1]
         if rsi < 40 and last_price > ma20: return "🟢 AL"
-        else rsi > 70 or last_price < ma20: return "🔴 SAT"
+        elif rsi > 70 or last_price < ma20: return "🔴 SAT"
         else: return "🟡 TUT"
             
     except: return "---"
