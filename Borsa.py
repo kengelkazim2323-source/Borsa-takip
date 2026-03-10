@@ -293,8 +293,6 @@ with tab_div:
             st.write(f"**{r['Hisse']}**: {tr_format(r['NetTemettu'])} ₺")
     else: st.info("Temettü geliri bulunmuyor.")
 
-
-
 # ==========================================
 # 6. HALKA ARZ VE 10 GÜN TAVAN HESABI
 # ==========================================
@@ -345,20 +343,6 @@ with tab_ipo:
             st.divider()
     else: st.info("Henüz eklenmiş bir halka arz bulunmuyor.")
 
-
-
 tr_saati = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')
 st.caption(f"🕒 Son Güncelleme: {tr_saati} | BIST Tam Liste Aktif.")
-
-
-
-            # --- GELİŞTİRİLMİŞ DAİRESEL GRAFİK ---
-            st.markdown("<br>", unsafe_allow_html=True)
-            fig = px.pie(df, values='Değer', names='Hisse', hole=0.5, color_discrete_sequence=px.colors.qualitative.Bold)
-            fig.update_traces(textposition='inside', textinfo='percent+label', marker=dict(line=dict(color='#000000', width=1)))
-            fig.update_layout(showlegend=False, margin=dict(t=0, b=0, l=0, r=0), paper_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(fig, use_container_width=True)
-
- 
-
 
