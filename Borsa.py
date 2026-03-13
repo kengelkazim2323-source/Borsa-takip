@@ -22,7 +22,7 @@ def load_json(dosya_adi):
     try:
         with open(dosya_adi, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return sorted(data, key=lambda x: x.get('Hisse', '')) if isinstance(data, list) else []
+            return data if isinstance(data, list) else []
     except: return []
 
 def save_json(dosya_adi, data):
@@ -38,23 +38,15 @@ if 'ipo_liste' not in st.session_state:
 def fetch_stock_data(symbol):
     try:
         tk = yf.Ticker(symbol)
-        hist = tk.history(period="1mo") # Grafik için 1 aylık veri çekiyoruz
+        hist = tk.history(period="35d")
         if hist.empty: return None
-        
-        # TEMETTÜ GÜNCELLEMESİ: Yıllık toplam yerine EN SON ödenen brüt rakamı alır.
         divs = tk.dividends
         if not divs.empty:
             divs.index = divs.index.tz_localize(None)
-            # En son ödenen brüt temettü miktarı
-            son_brut_temettu = divs.iloc[-1] 
-            # %10 Stopaj düşülerek Midas tarzı NET rakama ulaşılır (Örn: 12 TL -> 10.8 TL)
-            guncel_net_temettu = son_brut_temettu * 0.90 
-            son_tarih = divs.index[-1].strftime('%d.%m.%Y')
-        else: 
-            guncel_net_temettu = 0.0
-            son_tarih = "-"
-            
-        return {"hist": hist, "temettu": guncel_net_temettu, "tarih": son_tarih}
+            son_1_yil = datetime.now() - timedelta(days=365)
+            yillik_temettu = divs[divs.index >= son_1_yil].sum()
+        else: yillik_temettu = 0.0
+        return {"hist": hist, "temettu": yillik_temettu}
     except: return None
 
 @st.cache_data(ttl=300)
@@ -64,11 +56,11 @@ def fetch_tefas_price(symbol):
         url = f"https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod={code}"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         html = urllib.request.urlopen(req, timeout=5).read().decode('utf-8')
-        m = re.search(r'Son Fiyat \(TL\).*?<span>([\d.,]+)</span>', html, re.DOTALL)
-        if not m: m = re.search(r'top-list-right">([\d.,]+)</span>', html)
+        m = re.search(r'Son Fiyat \(TL\).*?<span>([\d,]+)</span>', html, re.DOTALL)
+        if not m:
+            m = re.search(r'top-list-right">([\d,]+)</span>', html)
         if m:
-            price_str = m.group(1).replace('.', '').replace(',', '.')
-            return float(price_str)
+            return float(m.group(1).replace(',', '.'))
     except: pass
     return None
 
@@ -99,12 +91,16 @@ def get_signal(hist_data):
 # 1. TEMA VE CSS
 # ==========================================
 st.set_page_config(page_title="Borsa Takip", page_icon="📈", layout="wide")
-st_autorefresh(interval=60000, key="datarefresh")
+st_autorefresh(interval=30000, key="datarefresh") # Refresh süresi 30 saniye yapıldı (optimizasyon)
 
-tema_isimleri = ["Galaksi (VIP)", "Siber Punk", "Matrix", "Altın Vuruş", "Zümrüt Yeşili", "Lav Akışı"]
 with st.sidebar:
-    st.header("🎨 Tema")
-    tema = st.selectbox("Görünüm", tema_isimleri)
+    st.header("🎨 Tema Galerisi")
+    tema = st.selectbox("Görünüm Seç", [
+        "Galaksi (VIP)", "Siber Punk", "Matrix", "Altın Vuruş", "Zümrüt Yeşili", 
+        "Lav Akışı", "Okyanus Derinliği", "Kuzey Işıkları", "Buzul (Dark)", "Mor Ötesi",
+        "Bakır Buharı", "Gece Yarısı", "Safir Gece", "Çöl Fırtınası", "Kızıl Elmas",
+        "Premium Koyu", "Retro Kehribar", "Derin Orman", "Antrasit VIP", "Neon Gecesi"
+    ])
 
 tema_renkleri = {
     "Galaksi (VIP)": {"bg": "#0B0E14", "text": "#E0E0E0", "box": "#161B22", "accent": "#00D4FF"},
@@ -112,156 +108,218 @@ tema_renkleri = {
     "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"},
     "Altın Vuruş": {"bg": "#0F0F0F", "text": "#F5F5F5", "box": "#1A1A1A", "accent": "#D4AF37"},
     "Zümrüt Yeşili": {"bg": "#06120B", "text": "#E8F5E9", "box": "#0D2114", "accent": "#00E676"},
-    "Lav Akışı": {"bg": "#1A0F0F", "text": "#F8F9FA", "box": "#2D1B1B", "accent": "#FF4D4D"}
+    "Lav Akışı": {"bg": "#1A0F0F", "text": "#F8F9FA", "box": "#2D1B1B", "accent": "#FF4D4D"},
+    "Okyanus Derinliği": {"bg": "#001B2E", "text": "#ADB5BD", "box": "#003554", "accent": "#24D1FF"},
+    "Kuzey Işıkları": {"bg": "#0B101B", "text": "#E9ECEF", "box": "#1B263B", "accent": "#A5FFD6"},
+    "Buzul (Dark)": {"bg": "#0D1117", "text": "#C9D1D9", "box": "#161B22", "accent": "#58A6FF"},
+    "Mor Ötesi": {"bg": "#120D1D", "text": "#E0D7FF", "box": "#1E1631", "accent": "#9D4EDD"},
+    "Bakır Buharı": {"bg": "#1B1510", "text": "#D4A373", "box": "#2C211A", "accent": "#E76F51"},
+    "Gece Yarısı": {"bg": "#050505", "text": "#FFFFFF", "box": "#121212", "accent": "#F72585"},
+    "Safir Gece": {"bg": "#03045E", "text": "#CAF0F8", "box": "#023E8A", "accent": "#00B4D8"},
+    "Çöl Fırtınası": {"bg": "#1C1917", "text": "#F5F5F4", "box": "#292524", "accent": "#EAB308"},
+    "Kızıl Elmas": {"bg": "#0F0202", "text": "#FFFFFF", "box": "#1F0505", "accent": "#D00000"},
+    "Premium Koyu": {"bg": "#121212", "text": "#ffffff", "box": "#4c4c4c", "accent": "#BB86FC"},
+    "Retro Kehribar": {"bg": "#0A0A0A", "text": "#FFB300", "box": "#1A1A1A", "accent": "#FF8F00"},
+    "Derin Orman": {"bg": "#081C15", "text": "#D8F3DC", "box": "#1B4332", "accent": "#95D5B2"},
+    "Antrasit VIP": {"bg": "#1B1B1B", "text": "#D1D1D1", "box": "#2D2D2D", "accent": "#E0E0E0"},
+    "Neon Gecesi": {"bg": "#000814", "text": "#FFFFFF", "box": "#001D3D", "accent": "#FFC300"}
 }
 
-t_sec = tema_renkleri.get(tema, tema_renkleri["Galaksi (VIP)"])
-
+t_sec = tema_renkleri[tema]
 st.markdown(f"""
     <style>
-    .stApp {{ background-color: {t_sec['bg']}; color: {t_sec['text']}; }}
-    [data-testid="stMetric"] {{ background: {t_sec['box']}; padding: 20px; border-radius: 12px; border: 1px solid {t_sec['accent']}; text-align: center; }}
-    .kral-table {{ width: 100%; border-collapse: collapse; background: {t_sec['box']}22; border: 1px solid {t_sec['accent']}33; border-radius: 10px; overflow: hidden; }}
-    .kral-table th {{ padding: 12px; text-align: left; background: {t_sec['accent']}22; color: {t_sec['accent']}; }}
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@700&display=swap');
+    .stApp {{ background-color: {t_sec['bg']}; color: {t_sec['text']}; font-family: 'Inter', sans-serif; }}
+    [data-testid="stMetric"] {{ background: {t_sec['box']}; padding: 20px !important; border-radius: 12px !important; border: 1px solid {t_sec['accent']} !important; text-align: center; }}
+    .kral-table {{ width: 100%; border-collapse: collapse; background: {t_sec['box']}22; margin-top: 10px; border: 1px solid {t_sec['accent']}33; border-radius: 10px; overflow: hidden; }}
+    .kral-table th {{ padding: 12px; text-align: left; background: {t_sec['accent']}22; color: {t_sec['accent']}; font-weight: 700; border-bottom: 2px solid {t_sec['accent']}44; }}
     .kral-table td {{ padding: 12px; border-bottom: 1px solid {t_sec['accent']}11; color: {t_sec['text']}; }}
+    .ticker-wrapper {{ width: 100%; overflow: hidden; background: {t_sec['box']}; border-radius: 8px; margin-bottom: 30px; padding: 15px 0; border: 1px solid {t_sec['accent']}44; }}
+    .ticker-content {{ display: flex; animation: ticker 40s linear infinite; white-space: nowrap; gap: 60px; }}
+    @keyframes ticker {{ 0% {{ transform: translateX(100%); }} 100% {{ transform: translateX(-100%); }} }}
+    .up {{ color: #00e676; font-weight: bold; }} .down {{ color: #ff1744; font-weight: bold; }}
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. ÜST BİLGİ
+# 2. ÜST BİLGİ VE PİYASA
 # ==========================================
+clock_html = f"""
+<div style="position: fixed; top: 10px; right: 10px; background: {t_sec['box']}; padding: 10px 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 99999; display: flex; flex-direction: column; align-items: flex-end; border: 1px solid {t_sec['accent']};">
+    <div id="digital-clock" style="font-size: 20px; font-weight: bold; font-family: 'JetBrains Mono', monospace; color: {t_sec['accent']};"></div>
+    <div id="date-display" style="font-size: 11px; font-weight: 600; color: {t_sec['text']}; opacity: 0.8; letter-spacing: 1px;"></div>
+</div>
+<script>
+function updateClock() {{
+    const trTime = new Date(new Date().toLocaleString("en-US", {{timeZone: "Europe/Istanbul"}}));
+    document.getElementById('digital-clock').innerText = trTime.toLocaleTimeString('tr-TR', {{hour12: false}});
+    document.getElementById('date-display').innerText = trTime.toLocaleDateString('tr-TR', {{day: '2-digit', month: 'long', year: 'numeric', weekday: 'long'}}).toUpperCase();
+}}
+setInterval(updateClock, 1000); updateClock();
+</script>
+"""
+st.components.v1.html(clock_html, height=80)
+
 st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']};'>🚀 Borsa Takip</h2>", unsafe_allow_html=True)
+piyasa_izleme = { "BIST 100": "XU100.IS", "ONS ALTIN": "GC=F", "ONS GÜMÜŞ": "SI=F", "USD/TRY": "USDTRY=X", "BTC": "BTC-USD"}
+
+ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
+for isim, sembol in piyasa_izleme.items():
+    d = fetch_stock_data(sembol)
+    if d:
+        last = d['hist']['Close'].iloc[-1]; prev = d['hist']['Close'].iloc[-2]
+        deg = ((last - prev) / prev) * 100
+        ticker_content += f'<div style="text-align:center;"><div>{isim}</div><div style="font-weight:bold;">{tr_format(last)}</div><div class="{"up" if deg>=0 else "down"}">{deg:+.2f}%</div></div>'
+st.markdown(ticker_content + '</div></div>', unsafe_allow_html=True)
 
 # ==========================================
-# 3. VERİ HAZIRLAMA VE PERFORMANS HESABI
+# 3. GENİŞLETİLMİŞ BIST LİSTESİ (TÜMÜ)
 # ==========================================
-BIST_FULL = sorted(["A1CAP.IS", "ADEL.IS", "AGROT.IS", "AKBNK.IS", "AKSA.IS", "ALARK.IS", "ALFAS.IS", "ARCLK.IS", "ASELS.IS", "ASTOR.IS", "BIMAS.IS", "BRISA.IS", "CANTE.IS", "CCOLA.IS", "CIMSA.IS", "CWENE.IS", "DOAS.IS", "DOHOL.IS", "EKGYO.IS", "ENJSA.IS", "ENKAI.IS", "EREGL.IS", "EUPWR.IS", "FROTO.IS", "GARAN.IS", "GESAN.IS", "GUBRF.IS", "HALKB.IS", "HEKTS.IS", "ISCTR.IS", "ISGYO.IS", "ISMEN.IS", "ISYAT.IS", "KCHOL.IS", "KLKIM.IS", "KONTR.IS", "KOZAL.IS", "KRDMD.IS", "MIATK.IS", "ODAS.IS", "OTKAR.IS", "OYAKC.IS", "PETKM.IS", "PGSUS.IS", "REEDR.IS", "SAHOL.IS", "SASA.IS", "SISE.IS", "SOKM.IS", "TCELL.IS", "THYAO.IS", "TOASO.IS", "TUPRS.IS", "YKBNK.IS"])
-FON_LIST = sorted(["TTE.IS", "AES.IS", "AFO.IS", "AYA.IS", "KPH.IS", "KPA.IS", "ZGD.IS", "ZRE.IS", "TAU.IS", "MAC.IS", "YZG.IS", "OPB.IS", "NNF.IS", "IDH.IS", "GSP.IS", "IHY.IS"])
+BIST_FULL = sorted([
+    "A1CAP.IS", "ACSEL.IS", "ADEL.IS", "ADESE.IS", "AEFES.IS", "AFYON.IS", "AGESA.IS", "AGHOL.IS", "AGROT.IS", "AHGAZ.IS", "AKBNK.IS", "AKCNS.IS", "AKENR.IS", "AKFGY.IS", "AKFYE.IS", "AKGRT.IS", "AKMGY.IS", "AKSA.IS", "AKSEN.IS", "AKSGY.IS", "AKSYG.IS", "AKZFE.IS", "ALARK.IS", "ALBRK.IS", "ALCTL.IS", "ALFAS.IS", "ALGYO.IS", "ALKA.IS", "ALKIM.IS", "ALMAD.IS", "ANELE.IS", "ANGEN.IS", "ANHYT.IS", "ANSGR.IS", "ARCLK.IS", "ARDYZ.IS", "ARENA.IS", "ARSAN.IS", "ASCEG.IS", "ASELS.IS", "ASTOR.IS", "ASUZU.IS", "ATAKP.IS", "ATATP.IS", "ATEKS.IS", "ATLAS.IS", "ATSYH.IS", "AVHOL.IS", "AVOD.IS", "AVPGY.IS", "AVTUR.IS", "AYDEM.IS", "AYEN.IS", "AYES.IS", "AYGAZ.IS", "AZTEK.IS", "BAGFS.IS", "BAKAB.IS", "BALAT.IS", "BANVT.IS", "BARMA.IS", "BASGZ.IS", "BAYRK.IS", "BEGYO.IS", "BERA.IS", "BEYAZ.IS", "BFREN.IS", "BIENP.IS", "BIGCH.IS", "BIMAS.IS", "BINHO.IS", "BIOEN.IS", "BIZIM.IS", "BJKAS.IS", "BLCYT.IS", "BMTLY.IS", "BNTAS.IS", "BOBET.IS", "BORLS.IS", "BORSK.IS", "BOSSA.IS", "BRISA.IS", "BRKO.IS", "BRKSN.IS", "BRKVY.IS", "BRLSM.IS", "BRMEN.IS", "BRYAT.IS", "BSOKE.IS", "BTCIM.IS", "BUCIM.IS", "BURCE.IS", "BURVA.IS", "BVSAN.IS", "BYDNR.IS", "CANTE.IS", "CASA.IS", "CATES.IS", "CCOLA.IS", "CELHA.IS", "CEMAS.IS", "CEMTS.IS", "CEVNY.IS", "CIMSA.IS", "CLEBI.IS", "CMBTN.IS", "CMENT.IS", "CONSE.IS", "COSMO.IS", "CRDFA.IS", "CVKMD.IS", "CWENE.IS", "DAGHL.IS", "DAGI.IS", "DAPGM.IS", "DARDL.IS", "DGATE.IS", "DGGYO.IS", "DGNMO.IS", "DIRIT.IS", "DITAS.IS", "DMSAS.IS", "DOAS.IS", "DOBUR.IS", "DOCO.IS", "DOGUB.IS", "DOHOL.IS", "DOKTA.IS", "DURDO.IS", "DYOBY.IS", "DZGYO.IS", "EDATA.IS", "EDIP.IS", "EGEEN.IS", "EGEPO.IS", "EGGUB.IS", "EGPRO.IS", "EGSER.IS", "EKGYO.IS", "EKIZ.IS", "EKOS.IS", "EKSUN.IS", "ELITE.IS", "EMKEL.IS", "ENERY.IS", "ENJSA.IS", "ENKAI.IS", "ENTEK.IS", "EPLAS.IS", "ERBOS.IS", "EREGL.IS", "ERSU.IS", "ESCAR.IS", "ESCOM.IS", "ESEN.IS", "ETILR.IS", "EUPWR.IS", "EUREN.IS", "EYGYO.IS", "FADE.IS", "FENER.IS", "FLAP.IS", "FMIZP.IS", "FONET.IS", "FORMT.IS", "FRIGO.IS", "FROTO.IS", "FZLGY.IS", "GARAN.IS", "GARFA.IS", "GEDIK.IS", "GEDZA.IS", "GENIL.IS", "GENTS.IS", "GEREL.IS", "GESAN.IS", "GIPTA.IS", "GLBMD.IS", "GLCVY.IS", "GLRYH.IS", "GLYHO.IS", "GMTAS.IS", "GOKNR.IS", "GOLTS.IS", "GOODY.IS", "GOZDE.IS", "GRNYO.IS", "GRSEL.IS", "GSDDE.IS", "GSDHO.IS", "GSRAY.IS", "GUBRF.IS", "GWIND.IS", "GZNMI.IS", "HALKB.IS", "HATEK.IS", "HATSN.IS", "HEDEF.IS", "HEKTS.IS", "HKTM.IS", "HLGYO.IS", "HTTBT.IS", "HUBVC.IS", "HUNER.IS", "HURGZ.IS", "ICBCT.IS", "IDEAS.IS", "IDGYO.IS", "IDH.IS", "IEYHO.IS", "IHEVA.IS", "IHGZT.IS", "IHLAS.IS", "IHLGM.IS", "IHYAY.IS", "IMASM.IS", "INDES.IS", "INFO.IS", "INGRM.IS", "INTEM.IS", "INVEO.IS", "INVES.IS", "IPEKE.IS", "ISATR.IS", "ISBTR.IS", "ISCTR.IS", "ISDMR.IS", "ISFIN.IS", "ISGSY.IS", "ISGYO.IS", "ISKPL.IS", "ISKUR.IS", "ISMEN.IS", "ISSEN.IS", "ISYAT.IS", "IZENR.IS", "IZFAS.IS", "IZINV.IS", "IZMDC.IS", "JANTS.IS", "KAPLM.IS", "KAREL.IS", "KARSN.IS", "KARTN.IS", "KARYE.IS", "KATMR.IS", "KAYSE.IS", "KCAER.IS", "KCHOL.IS", "KENT.IS", "KERVT.IS", "KFEIN.IS", "KGYO.IS", "KIMMR.IS", "KLGYO.IS", "KLKIM.IS", "KLMSN.IS", "KLRHO.IS", "KLSYN.IS", "KLYAS.IS", "KMPUR.IS", "KNFRT.IS", "Kocaer.IS", "KODAL.IS", "KONKA.IS", "KONTR.IS", "KONYA.IS", "KORDS.IS", "KOZAL.IS", "KOZAA.IS", "KRDMA.IS", "KRDMB.IS", "KRDMD.IS", "KRGYO.IS", "KRONT.IS", "KRPLS.IS", "KRSTL.IS", "KRTEK.IS", "KRVGD.IS", "KSTUR.IS", "KTLEV.IS", "KTSKR.IS", "KUTPO.IS", "KUVVA.IS", "KUYAS.IS", "KZBGY.IS", "KZGYO.IS", "LIDER.IS", "LIDFA.IS", "LINK.IS", "LMKDC.IS", "LOGAS.IS", "LOGO.IS", "LRSHO.IS", "LUKSK.IS", "MAALT.IS", "MACKO.IS", "MAGEN.IS", "MAKIM.IS", "MAKTK.IS", "MANAS.IS", "MARBL.IS", "MARKA.IS", "MARTI.IS", "MAVI.IS", "MEDTR.IS", "MEGAP.IS", "MEKAG.IS", "MEPET.IS", "MERCN.IS", "MERIT.IS", "MERKO.IS", "METRO.IS", "METUR.IS", "MHRGY.IS", "MIATK.IS", "MIPAZ.IS", "MMCAS.IS", "MNDRS.IS", "MNDTR.IS", "MOBTL.IS", "MPARK.IS", "MRGYO.IS", "MRSHL.IS", "MSGYO.IS", "MTRKS.IS", "MTRYO.IS", "MZHLD.IS", "NATEN.IS", "NETAS.IS", "NIBAS.IS", "NTGAZ.IS", "NTHOL.IS", "NUGYO.IS", "NUHCM.IS", "OBASE.IS", "OBAMS.IS", "ODAS.IS", "ONCSM.IS", "ORCAY.IS", "ORGE.IS", "ORMA.IS", "OSMEN.IS", "OSTIM.IS", "OTKAR.IS", "OYAKC.IS", "OYAYO.IS", "OYLUM.IS", "OYYAT.IS", "OZGYO.IS", "OZKGY.IS", "OZRDN.IS", "OZSUB.IS", "PAGYO.IS", "PAMEL.IS", "PAPIL.IS", "PARSN.IS", "PASEU.IS", "PATEK.IS", "PCILT.IS", "PEGYO.IS", "PEKGY.IS", "PENGD.IS", "PENTA.IS", "PETKM.IS", "PETUN.IS", "PGSUS.IS", "PINSU.IS", "PKART.IS", "PKENT.IS", "PLTUR.IS", "PNLSN.IS", "PNSUT.IS", "POLHO.IS", "POLTK.IS", "PRKAB.IS", "PRKME.IS", "PRZMA.IS", "PSDTC.IS", "PSGYO.IS", "QUAGR.IS", "RALYH.IS", "RAYSG.IS", "REEDR.IS", "RNPOL.IS", "RODRG.IS", "RORYA.IS", "RTALB.IS", "RUBNS.IS", "RYGYO.IS", "RYSAS.IS", "SAFKR.IS", "SAHOL.IS", "SAMAT.IS", "SANEL.IS", "SANFM.IS", "SANKO.IS", "SARKY.IS", "SASA.IS", "SAYAS.IS", "SDTTR.IS", "SEKFK.IS", "SEKUR.IS", "SELEC.IS", "SELGD.IS", "SELVA.IS", "SEYKM.IS", "SILVR.IS", "SISE.IS", "SKBNK.IS", "SKTAS.IS", "SKYMD.IS", "SMART.IS", "SMRTG.IS", "SNGYO.IS", "SNTRA.IS", "SOKM.IS", "SONME.IS", "SRVGY.IS", "SUMAS.IS", "SUNTC.IS", "SURGY.IS", "SUWEN.IS", "TABGD.IS", "TAPDI.IS", "TARAF.IS", "TATEN.IS", "TATGD.IS", "TAVHL.IS", "TCELL.IS", "TDGYO.IS", "TEKTU.IS", "TERA.IS", "TETMT.IS", "TGSAS.IS", "THYAO.IS", "TIRE.IS", "TKFEN.IS", "TKNSA.IS", "TMSN.IS", "TOASO.IS", "TRCAS.IS", "TRGYO.IS", "TRILC.IS", "TSKB.IS", "TSPOR.IS", "TTKOM.IS", "TTRAK.IS", "TUCLK.IS", "TUKAS.IS", "TUPRS.IS", "TUREX.IS", "TURGG.IS", "TURSG.IS", "UFUK.IS", "ULAS.IS", "ULKER.IS", "ULLY.IS", "ULUFA.IS", "ULUSE.IS", "ULUUN.IS", "UMPAS.IS", "UNLU.IS", "USAK.IS", "VAKBN.IS", "VAKFN.IS", "VAKKO.IS", "VANGD.IS", "VBTYM.IS", "VERTU.IS", "VERUS.IS", "VESBE.IS", "VESTL.IS", "VKGYO.IS", "VKING.IS", "VRGYO.IS", "YAPRK.IS", "YAYLA.IS", "YBTAS.IS", "YEOTK.IS", "YESIL.IS", "YGGYO.IS", "YGYO.IS", "YKBNK.IS", "YKSLN.IS", "YONGA.IS", "YOTAS.IS", "YUNSA.IS", "YYAPI.IS", "YYLGD.IS", "ZEDUR.IS", "ZOREN.IS", "ZRGYO.IS"
+])
 
+# ==========================================
+# 4. VERİ HAZIRLAMA VE SEKMELER
+# ==========================================
 full_data = []
-history_dfs = [] # Aylık grafik için
-
 for i, item in enumerate(st.session_state.portfoy):
     piyasa_durumu = item.get("Piyasa", "Türk Borsası")
     d = fetch_stock_data(item['Hisse'])
     
     if piyasa_durumu == "Yatırım Fonu":
-        c = fetch_tefas_price(item['Hisse']) or item['Maliyet']
-        sinyal = "VERİ YOK"; temettu = 0.0; tarih = "-"
+        canli_fon_fiyati = fetch_tefas_price(item['Hisse'])
+        if canli_fon_fiyati:
+            c = canli_fon_fiyati
+            sinyal = "FON VERİSİ"
+            pc = d['hist']['Close'].iloc[-2] if d else c
+        else:
+            c = item['Maliyet']; pc = c; sinyal = "VERİ YOK"
+        temettu = 0.0
     else:
         if d:
-            c = d['hist']['Close'].iloc[-1]
-            sinyal = get_signal(d['hist'])
-            temettu = d['temettu']
-            tarih = d['tarih']
-            # Grafik verisi için hisse adetiyle çarpılmış fiyatları sakla
-            temp_h = d['hist'][['Close']].copy()
-            temp_h['TotalValue'] = temp_h['Close'] * int(item['Adet'])
-            history_dfs.append(temp_h[['TotalValue']])
+            c = d['hist']['Close'].iloc[-1]; pc = d['hist']['Close'].iloc[-2]
+            sinyal = get_signal(d['hist']); temettu = d['temettu']
         else:
-            c = item['Maliyet']; sinyal = "VERİ YOK"; temettu = 0.0; tarih = "-"
+            c = item['Maliyet']; pc = c; sinyal = "VERİ YOK"; temettu = 0.0
 
-    adet_int = int(item['Adet'])
     full_data.append({
         "id": i, "Piyasa": piyasa_durumu, "Hisse": item['Hisse'], 
-        "Sinyal": sinyal, "Adet": adet_int, "Maliyet": item['Maliyet'], 
-        "Güncel": c, "K/Z": (c - item['Maliyet']) * adet_int, 
-        "Değer": c * adet_int, "Temettu": temettu, 
-        "NetTemettu": temettu * adet_int, "Tarih": tarih
+        "Sinyal": sinyal, "Adet": item['Adet'], "Maliyet": item['Maliyet'], 
+        "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'], 
+        "Değer": c * item['Adet'], "Temettu": temettu, 
+        "NetTemettu": temettu * item['Adet'], "DailyDiff": (c - pc) * item['Adet']
     })
 
-# ==========================================
-# 4. TABLAR
-# ==========================================
 tab_tr, tab_fon, tab_div, tab_ipo = st.tabs(["🇹🇷 TÜRK BORSASI", "📊 YATIRIM FONLARI", "💰 TEMETTÜ GELİRİ", "🚀 HALKA ARZ TAKİP"])
 
 with st.sidebar:
     st.divider()
     st.subheader("➕ Yeni Varlık")
     piyasa_sec = st.radio("Piyasa", ["Türk Borsası", "Yatırım Fonu"], horizontal=True)
-    hisse_sec = st.selectbox("Hisse/Fon Seç", BIST_FULL if piyasa_sec=="Türk Borsası" else FON_LIST)
-    adet_sec = st.number_input("Adet", min_value=0, step=1)
-    maliyet_sec = st.number_input("Maliyet", min_value=0.0)
+    if piyasa_sec == "Türk Borsası": hisse_sec = st.selectbox("Hisse Seç", BIST_FULL)
+    else: hisse_sec = st.text_input("Fon Kodu (Örn: TTE)").upper()
+    
+    adet_sec = st.number_input("Adet", min_value=0.0, step=1.0)
+    maliyet_sec = st.number_input("Maliyet", min_value=0.0, step=0.01)
     if st.button("🚀 Portföye Ekle"):
-        st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": int(adet_sec), "Maliyet": float(maliyet_sec)})
-        save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
+        if hisse_sec:
+            st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": float(adet_sec), "Maliyet": float(maliyet_sec)})
+            save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
+
+def render_kral_table(df_local):
+    table_html = "<table class='kral-table'><thead><tr><th>VARLIK</th><th>SİNYAL</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr></thead><tbody>"
+    for _, r in df_local.iterrows():
+        kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
+        table_html += f"<tr><td><b>{r['Hisse']}</b></td><td>{r['Sinyal']}</td><td>{r['Adet']}</td><td>{tr_format(r['Maliyet'])} ₺</td><td>{tr_format(r['Güncel'])} ₺</td><td style='color:{kz_color}; font-weight:bold;'>{tr_format(r['K/Z'])} ₺</td><td><b>{tr_format(r['Değer'])} ₺</b></td></tr>"
+    return table_html + "</tbody></table>"
+
+def varlik_yonetimi_render(df_local):
+    with st.expander("🛠️ VARLIK YÖNETİMİ (Düzenle / Sil)"):
+        for _, r in df_local.iterrows():
+            c1, c2, c3, c4 = st.columns([1.5, 2, 2, 1.2])
+            c1.markdown(f"<div style='margin-top:25px;'><b>{r['Hisse']}</b></div>", unsafe_allow_html=True)
+            y_adet = c2.number_input("Adet", value=float(r['Adet']), key=f"a_{r['id']}")
+            y_maliyet = c3.number_input("Maliyet", value=float(r['Maliyet']), key=f"m_{r['id']}")
+            bc = c4.columns(2)
+            if bc[0].button("💾", key=f"s_{r['id']}", help="Güncelle"):
+                st.session_state.portfoy[r['id']]['Adet'] = y_adet
+                st.session_state.portfoy[r['id']]['Maliyet'] = y_maliyet
+                save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
+            if bc[1].button("❌", key=f"d_{r['id']}", help="Sil"):
+                st.session_state.portfoy.pop(r['id'])
+                save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
 
 # --- TÜRK BORSASI ---
 with tab_tr:
     df_bist = pd.DataFrame([x for x in full_data if x['Piyasa'] == 'Türk Borsası'])
     if not df_bist.empty:
-        st.metric("PORTFÖY DEĞERİ", f"{tr_format(df_bist['Değer'].sum())} ₺")
-        st.write("---")
-        for _, r in df_bist.iterrows():
-            c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
-            c1.write(f"**{r['Hisse']}** ({r['Sinyal']})")
-            c2.write(f"{r['Adet']} Adet @ {tr_format(r['Maliyet'])} ₺")
-            kz_color = "green" if r['K/Z'] >= 0 else "red"
-            c3.markdown(f":{kz_color}[{tr_format(r['K/Z'])} ₺]")
-            if c4.button("❌", key=f"del_tr_{r['id']}"):
-                st.session_state.portfoy.pop(r['id']); save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
-        
-        # PERFORMANS GRAFİĞİ (AYLIK)
-        if history_dfs:
-            st.divider()
-            st.subheader("📈 Portföy Performansı (Son 30 Gün)")
-            combined_hist = pd.concat(history_dfs, axis=1).sum(axis=1)
-            fig = px.line(combined_hist, labels={'value': 'Toplam Değer (₺)', 'Date': 'Tarih'})
-            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color=t_sec['text'], showlegend=False)
-            fig.update_traces(line_color=t_sec['accent'])
+        m1, m2, m3 = st.columns(3)
+        m1.metric("PORTFÖY DEĞERİ", f"{tr_format(df_bist['Değer'].sum())} ₺")
+        m2.metric("TOPLAM K/Z", f"{tr_format(df_bist['K/Z'].sum())} ₺")
+        m3.metric("GÜNLÜK DEĞİŞİM", f"{tr_format(df_bist['DailyDiff'].sum())} ₺")
+        st.markdown(render_kral_table(df_bist), unsafe_allow_html=True)
+        varlik_yonetimi_render(df_bist)
+        df_chart = df_bist[df_bist['Değer'] > 0]
+        if not df_chart.empty:
+            fig = px.pie(df_chart, values='Değer', names='Hisse', hole=0.5, title="Hisse Dağılımı")
+            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color=t_sec['text']))
             st.plotly_chart(fig, use_container_width=True)
-    else: st.info("Hisse bulunamadı.")
+    else: st.info("Hisse senedi bulunamadı.")
 
-# --- FONLAR ---
+# --- YATIRIM FONLARI ---
 with tab_fon:
     df_fon = pd.DataFrame([x for x in full_data if x['Piyasa'] == 'Yatırım Fonu'])
     if not df_fon.empty:
-        for _, r in df_fon.iterrows():
-            c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
-            c1.write(f"**{r['Hisse']}**")
-            c2.write(f"{r['Adet']} Adet")
-            c3.write(f"Değer: {tr_format(r['Değer'])} ₺")
-            if c4.button("❌", key=f"del_fon_{r['id']}"):
-                st.session_state.portfoy.pop(r['id']); save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
+        st.markdown(render_kral_table(df_fon), unsafe_allow_html=True)
+        varlik_yonetimi_render(df_fon)
+        df_chart_f = df_fon[df_fon['Değer'] > 0]
+        if not df_chart_f.empty:
+            fig_f = px.pie(df_chart_f, values='Değer', names='Hisse', hole=0.5, title="Fon Dağılımı")
+            fig_f.update_layout(paper_bgcolor='rgba(0,0,0,0)', font=dict(color=t_sec['text']))
+            st.plotly_chart(fig_f, use_container_width=True)
+    else: st.info("Fon bulunamadı.")
 
-# --- TEMETTÜ ---
+# --- TEMETTÜ GELİRİ ---
 with tab_div:
     df_div = pd.DataFrame([x for x in full_data if x['Temettu'] > 0])
     if not df_div.empty:
-        st.metric("TAHMİNİ NET NAKİT AKIŞI", f"{tr_format(df_div['NetTemettu'].sum())} ₺")
-        table_html = "<table class='kral-table'><thead><tr><th>HİSSE</th><th>TARİH</th><th>ADET</th><th>NET HİSSE BAŞI</th><th>TOPLAM NET</th></tr></thead><tbody>"
+        toplam_temettu = df_div['NetTemettu'].sum()
+        st.metric("TAHMİNİ YILLIK NAKİT AKIŞI", f"{tr_format(toplam_temettu)} ₺", delta=f"Aylık: {tr_format(toplam_temettu/12)} ₺")
+        div_table = "<table class='kral-table'><thead><tr><th>HİSSE</th><th>ADET</th><th>HİSSE BAŞI</th><th>YILLIK TOPLAM</th><th>VERİM (%)</th></tr></thead><tbody>"
         for _, r in df_div.iterrows():
-            table_html += f"<tr><td>{r['Hisse']}</td><td>{r['Tarih']}</td><td>{r['Adet']}</td><td>{tr_format(r['Temettu'])} ₺</td><td><b>{tr_format(r['NetTemettu'])} ₺</b></td></tr>"
-        st.markdown(table_html + "</tbody></table>", unsafe_allow_html=True)
+            verim = (r['Temettu'] / r['Güncel']) * 100 if r['Güncel'] > 0 else 0
+            div_table += f"<tr><td><b>{r['Hisse']}</b></td><td>{r['Adet']}</td><td>{tr_format(r['Temettu'])} ₺</td><td><b>{tr_format(r['NetTemettu'])} ₺</b></td><td>%{verim:.2f}</td></tr>"
+        st.markdown(div_table + "</tbody></table>", unsafe_allow_html=True)
+    else: st.warning("Temettü verisi bulunamadı.")
 
 # --- HALKA ARZ ---
 with tab_ipo:
+    st.subheader("🚀 Yeni Halka Arz Ekle")
     with st.form("ipo_form", clear_on_submit=True):
         ic1, ic2, ic3 = st.columns(3)
-        ipo_isim = ic1.text_input("Şirket Kodu")
-        ipo_fiyat = ic2.number_input("Fiyat", min_value=0.0)
-        ipo_adet = ic3.number_input("Lot", min_value=0, step=1)
-        if st.form_submit_button("➕ Ekle"):
-            st.session_state.ipo_liste.append({"Isim": ipo_isim.upper(), "Fiyat": ipo_fiyat, "Adet": int(ipo_adet)})
-            save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
+        ipo_isim = ic1.text_input("Şirket Kodu (Örn: BINHO)")
+        ipo_fiyat = ic2.number_input("Halka Arz Fiyatı", min_value=0.0)
+        ipo_adet = ic3.number_input("Lot Sayısı", min_value=0)
+        if st.form_submit_button("➕ Listeye Ekle"):
+            if ipo_isim:
+                st.session_state.ipo_liste.append({"Isim": ipo_isim.upper(), "Fiyat": ipo_fiyat, "Adet": ipo_adet})
+                save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
 
     if st.session_state.ipo_liste:
         for idx, ipo in enumerate(st.session_state.ipo_liste):
-            # SİLME SEKMESİNİ SATIRA HİZALAMA
-            col_exp, col_del = st.columns([0.9, 0.1])
-            with col_exp:
-                with st.expander(f"📈 {ipo['Isim']} ({ipo['Adet']} Lot)"):
-                    p = ipo['Fiyat']
-                    maliyet = ipo['Adet'] * p
-                    t_html = "<table class='kral-table'><thead><tr><th>GÜN</th><th>FİYAT</th><th>KAR</th></tr></thead><tbody>"
-                    for g in range(1, 11):
-                        p *= 1.10
-                        t_html += f"<tr><td>{g}. Tavan</td><td>{tr_format(p)} ₺</td><td>{tr_format((p*ipo['Adet'])-maliyet)} ₺</td></tr>"
-                    st.markdown(t_html + "</tbody></table>", unsafe_allow_html=True)
-            with col_del:
-                st.write("") # Boşluk hizalama için
-                if st.button("❌", key=f"del_ipo_{idx}"):
-                    st.session_state.ipo_liste.pop(idx); save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
+            with st.expander(f"📈 {ipo['Isim']} - Tavan Simülasyonu"):
+                col1, col2 = st.columns([4, 1])
+                maliyet = ipo['Adet'] * ipo['Fiyat']
+                tavan_list = []
+                p = ipo['Fiyat']
+                for g in range(1, 11):
+                    p *= 1.10
+                    tavan_list.append({"Gün": f"{g}. Tavan", "Fiyat": f"{tr_format(p)} ₺", "Toplam Kar": f"{tr_format((p * ipo['Adet']) - maliyet)} ₺"})
+                col1.table(pd.DataFrame(tavan_list))
+                if col2.button("❌ SİL", key=f"del_ipo_{idx}"):
+                    st.session_state.ipo_liste.pop(idx)
+                    save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
 
-st.caption(f"🕒 Güncelleme: {datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')}")
-
+st.markdown("---")
+st.caption(f"🕒 Son Güncelleme: {datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')}")
