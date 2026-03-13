@@ -339,19 +339,33 @@ with tab_fon:
     else: st.info("Fon bulunamadı.")
 
 # --- TEMETTÜ GELİRİ ---
-with tab_div:
-    st.markdown(f"### 💰 Yıllık Projeksiyon (Net Değerler)")
-    df_div = pd.DataFrame([x for x in full_data if x['Temettu'] > 0])
-    if not df_div.empty:
-        toplam_temettu = df_div['NetTemettu'].sum()
-        st.metric("TAHMİNİ YILLIK NAKİT AKIŞI", f"{tr_format(toplam_temettu)} ₺", delta=f"Aylık: {tr_format(toplam_temettu/12)} ₺")
+@st.cache_data(ttl=300)
+def fetch_stock_data(symbol):
+    try:
+        tk = yf.Ticker(symbol)
+        hist = tk.history(period="35d")
+        if hist.empty: return None
         
-        div_table = "<table class='kral-table'><thead><tr><th>HİSSE</th><th>SON DAĞITIM TARİHİ</th><th>ADET</th><th>NET HİSSE BAŞI</th><th>YILLIK TOPLAM (NET)</th><th>VERİM (%)</th></tr></thead><tbody>"
-        for _, r in df_div.iterrows():
-            verim = (r['Temettu'] / r['Güncel']) * 100 if r['Güncel'] > 0 else 0
-            div_table += f"<tr><td><b>{r['Hisse']}</b></td><td>{r['Tarih']}</td><td>{r['Adet']}</td><td>{tr_format(r['Temettu'])} ₺</td><td><b style='color:#00e676;'>{tr_format(r['NetTemettu'])} ₺</b></td><td>%{verim:.2f}</td></tr>"
-        st.markdown(div_table + "</tbody></table>", unsafe_allow_html=True)
-    else: st.warning("Temettü verisi bulunamadı.")
+        divs = tk.dividends
+        if not divs.empty:
+            # Zaman dilimi bilgisini temizleyip son 1 yılı alıyoruz
+            divs.index = divs.index.tz_localize(None)
+            son_1_yil = datetime.now() - timedelta(days=365)
+            yillik_divs = divs[divs.index >= son_1_yil]
+            
+            # BIST için %10 stopaj kesintisi ile NET temettü hesabı
+            yillik_brut = yillik_divs.sum()
+            yillik_net_temettu = yillik_brut * 0.90 
+            
+            # En son ödeme yapılan tarihi al
+            son_tarih = divs.index[-1].strftime('%d.%m.%Y')
+        else: 
+            yillik_net_temettu = 0.0
+            son_tarih = "Ödeme Yok"
+            
+        return {"hist": hist, "temettu": yillik_net_temettu, "tarih": son_tarih}
+    except: return None
+
 
 # --- HALKA ARZ ---
 with tab_ipo:
@@ -370,7 +384,7 @@ with tab_ipo:
     if st.session_state.ipo_liste:
         for idx, ipo in enumerate(st.session_state.ipo_liste):
             with st.expander(f"📈 {ipo['Isim']} - Tavan Simülasyonu"):
-                col1, col2 = st.columns([6, 1])
+                col1, col2 = st.columns([6, 4])
                 
                 maliyet = ipo['Adet'] * ipo['Fiyat']
                 tavan_html = "<table class='kral-table' style='text-align:center;'><thead><tr><th style='text-align:center;'>GÜN</th><th style='text-align:center;'>FİYAT</th><th style='text-align:center;'>TOPLAM KAR</th></tr></thead><tbody>"
