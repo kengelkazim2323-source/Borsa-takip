@@ -402,7 +402,13 @@ st.markdown(ticker_content + '</div></div>', unsafe_allow_html=True)
 # 3. PARALEL VERİ HAZIRLAMA
 # ==========================================
 BIST_FULL = sorted([
-    "A1CAP.IS", "ACSEL.IS", "ADEL.IS", "ADESE.IS", "AEFES.IS", "AFYON.IS", "AGESA.IS", "AGHOL.IS", "AGROT.IS", "AHGAZ.IS", "AKBNK.IS", "AKCNS.IS", "AKENR.IS", "AKFGY.IS", "AKFYE.IS", "AKGRT.IS", "AKMGY.IS", "AKSA.IS", "AKSEN.IS", "ALARK.IS", "ALBRK.IS", "ALFAS.IS", "ALGYO.IS", "ALKA.IS", "ALKIM.IS", "ALMAD.IS", "ANELE.IS", "ANGEN.IS", "ANHYT.IS", "ANSGR.IS", "ARCLK.IS", "ARDYZ.IS", "ARENA.IS", "ARSAN.IS", "ASGYO.IS", "ASELS.IS", "ASTOR.IS", "ASUZU.IS", "ATAKP.IS", "ATEKS.IS", "ATGRP.IS", "ATLAS.IS", "ATSYH.IS", "AVHOL.IS", "AVOD.IS", "AVPGY.IS", "AYDEM.IS", "AYEN.IS", "AYGAZ.IS", "AZTEK.IS", "BAGFS.IS", "BAKAB.IS", "BALAT.IS", "BANVT.IS", "BARMA.IS", "BASGZ.IS", "BAYRK.IS", "BEGYO.IS", "BERA.IS", "BEYAZ.IS", "BFREN.IS", "BIENP.IS", "BIGCH.IS", "BIMAS.IS", "BINHO.IS", "BIOEN.IS", "BIZIM.IS", "BJKAS.IS", "BLCYT.IS", "BMSCH.IS", "BMSTL.IS", "BNTAS.IS", "BOBET.IS", "BORLS.IS", "BORSK.IS", "BOSSA.IS", "BRISA.IS", "BRKO.IS", "BRKSN.IS", "BRKVY.IS", "BRLSM.IS", "BRMEN.IS", "BRYAT.IS", "BSOKE.IS", "BTCIM.IS", "BUCIM.IS", "BURCE.IS", "BURVA.IS", "BVSAN.IS", "BYDNR.IS", "CANTE.IS", "CASA.IS", "CATES.IS", "CCOLA.IS", "CELHA.IS", "CEMAS.IS", "CEMTS.IS", "CEVNY.IS", "CIMSA.IS", "CLEBI.IS", "CMBTN.IS", "CMENT.IS", "CONSE.IS", "COSMO.IS", "CRDFA.IS", "CRFSA.IS", "CUSAN.IS", "CVKMD.IS", "CWENE.IS", "DAGHL.IS", "DAGI.IS", "DAPGM.IS", "DARDL.IS", "DENGE.IS", "DERAS.IS", "DERIM.IS", "DESA.IS", "DESPC.IS", "DEVA.IS", "DGGYO.IS", "DGNMO.IS", "DIRIT.IS", "DITAS.IS", "DMSAS.IS", "DOAS.IS", "DOCO.IS", "DOGUB.IS", "DOHOL.IS", "DOKTA.IS", "DURDO.IS", "DYOBY.IS", "DZGYO.IS", "EBEBK.IS", "ECILC.IS", "ECZYT.IS", "EDATA.IS", "EDIP.IS", "EGEEN.IS", "EGEPO.IS", "EGGUB.IS", "EGPRO.IS", "EGSER.IS", "EKGYO.IS", "EKIZ.IS", "EKOS.IS", "EKSUN.IS", "ELITE.IS", "EMKEL.IS", "ENERY.IS", "ENJSA.IS", "ENKAI.IS", "ERBOS.IS", "EREGL.IS", "ERSU.IS", "ESCOM.IS", "ESEN.IS", "ETILER.IS", "EUPWR.IS", "EUREN.IS", "EYGYO.IS", "FMIZP.IS", "FONET.IS", "FORMT.IS", "FORTE.IS", "FRIGO.IS", "FROTO.IS", "FZLGY.IS", "GARAN.IS", "GBUFG.IS", "GENTS.IS", "GEREL.IS", "GESAN.IS", "GIPTA.IS", "GLBMD.IS", "GLCVY.IS", "GLRYH.IS", "GLYHO.IS", "GMTAS.IS", "GOKNR.IS", "GOLTS.IS", "GOODY.IS", "GOZDE.IS", "GRNYO.IS", "GRSEL.IS", "GSDDE.IS", "GSDHO.IS", "GUBRF.IS", "GWIND.IS", "GZNMI.IS", "HALKB.IS", "HATEK.IS", "HATSN.IS", "HEDEF.IS", "HEKTS.IS", "HKTM.IS", "HLGYO.IS", "HTTBT.IS", "HUBVC.IS", "HUNER.IS", "HURGZ.IS", "ICBCT.IS", "IDAS.IS", "IDEAS.IS", "IDGYO.IS", "IEYHO.IS", "IHEVA.IS", "IHGZT.IS", "IHLAS.IS", "IHLGM.IS", "IHYAY.IS", "IMASM.IS", "INDES.IS", "INFO.IS", "INGRM.IS", "INTEM.IS", "IPEKE.IS", "ISATR.IS", "ISBTR.IS", "ISCTR.IS", "ISDMR.IS", "ISFIN.IS", "ISGSY.IS", "ISGYO.IS", "ISMEN.IS", "ISSEN.IS", "ISYAT.IS", "ITTFH.IS", "IZENR.IS", "IZFAS.IS", "IZINV.IS", "IZMDC.IS", "JANTS.IS", "KAPLM.IS", "KAREL.IS", "KARSN.IS", "KARTN.IS", "KARYE.IS", "KATMR.IS", "KAYSE.IS", "KBCOR.IS", "KCAER.IS", "KCHOL.IS", "KFEIN.IS", "KGYO.IS", "KIMMR.IS", "KLGYO.IS", "KLMSN.IS", "KLNMA.IS", "KLKIM.IS", "KLRHO.IS", "KLSYN.IS", "KLYAS.IS", "KMEPU.IS", "KMPUR.IS", "KNFRT.IS", "KONTR.IS", "KONYA.IS", "KORDS.IS", "KOZAA.IS", "KOZAL.IS", "KRDMA.IS", "KRDMB.IS", "KRDMD.IS", "KRGYO.IS", "KRONT.IS", "KRPLS.IS", "KRSTL.IS", "KRTEK.IS", "KRVGD.IS", "KSTUR.IS", "KUTPO.IS", "KUVVA.IS", "KUYAS.IS", "KZBGY.IS", "KZGYO.IS", "LIDER.IS", "LIDFA.IS", "LINK.IS", "LMKDC.IS", "LOGAS.IS", "LOGO.IS", "LRSHO.IS", "LUKSK.IS", "MAALT.IS", "MACKO.IS", "MAGEN.IS", "MAKIM.IS", "MAKTK.IS", "MANAS.IS", "MARKA.IS", "MARTI.IS", "MAVI.IS", "MEDTR.IS", "MEGAP.IS", "MEKAG.IS", "MEPET.IS", "MERCN.IS", "MERKO.IS", "METRO.IS", "METUR.IS", "MHRGY.IS", "MIATK.IS", "MIPAZ.IS", "MNDRS.IS", "MNDTR.IS", "MOBTL.IS", "MPARK.IS", "MRGYO.IS", "MRSHL.IS", "MSGYO.IS", "MTRKS.IS", "MUDO.IS", "MZHLD.IS", "NATEN.IS", "NETAS.IS", "NIBAS.IS", "NTGAZ.IS", "NTHOL.IS", "NUGYO.IS", "NUHCM.IS", "OBAMS.IS", "OBASE.IS", "ODAS.IS", "ONCSM.IS", "ORCAY.IS", "ORGE.IS", "ORMA.IS", "OSMEN.IS", "OSTIM.IS", "OTKAR.IS", "OYAKC.IS", "OYAYO.IS", "OYLUM.IS", "OYYAT.IS", "OZGYO.IS", "OZKGY.IS", "OZRDN.IS", "OZSUB.IS", "PAGYO.IS", "PAMEL.IS", "PAPIL.IS", "PARSN.IS", "PASEU.IS", "PATEK.IS", "PCILT.IS", "PEGYO.IS", "PEKGY.IS", "PENTA.IS", "PETKM.IS", "PETUN.IS", "PGSUS.IS", "PINSU.IS", "PKART.IS", "PKENT.IS", "PNLSN.IS", "PNSUT.IS", "POLHO.IS", "POLTK.IS", "PRKAB.IS", "PRKME.IS", "PRZMA.IS", "PSDTC.IS", "PSGYO.IS", "QNBFB.IS", "QNBFL.IS", "QUAGR.IS", "RALYH.IS", "RAYYS.IS", "REEDR.IS", "RNPOL.IS", "RODRG.IS", "ROYAL.IS", "RTALB.IS", "RUBNS.IS", "RYGYO.IS", "RYSAS.IS", "SAHOL.IS", "SAMAT.IS", "SANEL.IS", "SANFO.IS", "SANIC.IS", "SARKY.IS", "SASA.IS", "SAYAS.IS", "SDTTR.IS", "SEGYO.IS", "SEKFK.IS", "SEKOK.IS", "SELEC.IS", "SELGD.IS", "SERVE.IS", "SEYKM.IS", "SILVR.IS", "SISE.IS", "SKBNK.IS", "SKTAS.IS", "SKYMD.IS", "SKYLP.IS", "SMART.IS", "SMRTG.IS", "SNGYO.IS", "SNICA.IS", "SNKPA.IS", "SOKM.IS", "SONME.IS", "SRVGY.IS", "SUMAS.IS", "SUNTK.IS", "SURGY.IS", "SUWEN.IS", "TABGD.IS", "TAPDI.IS", "TARKM.IS", "TATEN.IS", "TATGD.IS", "TAVHL.IS", "TBORG.IS", "TCELL.IS", "TDGYO.IS", "TEKTU.IS", "TERA.IS", "TETMT.IS", "TEZOL.IS", "TGSAS.IS", "THYAO.IS", "TIRE.IS", "TKFEN.IS", "TKNSA.IS", "TMSN.IS", "TOASO.IS", "TRCAS.IS", "TRGYO.IS", "TRILC.IS", "TSKB.IS", "TSPOR.IS", "TTKOM.IS", "TTRAK.IS", "TUCLK.IS", "TUKAS.IS", "TUPRS.IS", "TURSG.IS", "UFUK.IS", "ULAS.IS", "ULKER.IS", "ULUFA.IS", "ULUSE.IS", "VAKBN.IS", "VAKFN.IS", "VAKKO.IS", "VANGD.IS", "VBTYM.IS", "VERTU.IS", "VERUS.IS", "VESBE.IS", "VESTL.IS", "VKGYO.IS", "VKING.IS", "VRGYO.IS", "YAPRK.IS", "YATAS.IS", "YAYLA.IS", "YEOTK.IS", "YESIL.IS", "YGGYO.IS", "YGYO.IS", "YKBNK.IS", "YONGA.IS", "YOTAS.IS", "YUNSA.IS", "YYLGD.IS", "ZEDUR.IS", "ZOREN.IS", "ZRGYO.IS"
+    "A1CAP.IS","ADEL.IS","AGROT.IS","AKBNK.IS","AKSA.IS","ALARK.IS","ALFAS.IS","ARCLK.IS",
+    "ASELS.IS","ASTOR.IS","BIMAS.IS","BRISA.IS","CANTE.IS","CCOLA.IS","CIMSA.IS","CWENE.IS",
+    "DOAS.IS","DOHOL.IS","EKGYO.IS","ENJSA.IS","ENKAI.IS","EREGL.IS","EUPWR.IS","FROTO.IS",
+    "GARAN.IS","GESAN.IS","GUBRF.IS","HALKB.IS","HEKTS.IS","ISCTR.IS","ISGYO.IS","ISMEN.IS",
+    "ISYAT.IS","KCHOL.IS","KLKIM.IS","KONTR.IS","KOZAL.IS","KRDMD.IS","MIATK.IS","ODAS.IS",
+    "OTKAR.IS","OYAKC.IS","PETKM.IS","PGSUS.IS","REEDR.IS","SAHOL.IS","SASA.IS","SISE.IS",
+    "SOKM.IS","TCELL.IS","THYAO.IS","TOASO.IS","TUPRS.IS","YKBNK.IS"
 ])
 FON_LIST = sorted([
     "TTE.IS","AES.IS","AFO.IS","AYA.IS","KPH.IS","KPA.IS","ZGD.IS","ZRE.IS",
@@ -456,7 +462,47 @@ tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm = st.tabs([
 
 with st.sidebar:
     st.divider()
-    st.subheader("➕ Yeni Varlık")
+
+    # --- MİNİ PORTFÖY ÖZETİ ---
+    if full_data:
+        _deger   = sum(x['Değer']     for x in full_data)
+        _kz      = sum(x['K/Z']       for x in full_data)
+        _gunluk  = sum(x['DailyDiff'] for x in full_data)
+        _pozisyon = len(full_data)
+        _kz_color = "#00e676" if _kz     >= 0 else "#ff1744"
+        _gd_color = "#00e676" if _gunluk >= 0 else "#ff1744"
+        _box  = t_sec['box']
+        _acc  = t_sec['accent']
+        _txt  = t_sec['text']
+        st.markdown(f"""
+        <div style='background:{_box};border:1px solid {_acc}55;border-radius:12px;padding:14px 16px;margin-bottom:4px;'>
+            <div style='color:{_acc};font-weight:700;font-size:11px;letter-spacing:1.5px;margin-bottom:10px;'>
+                📊 PORTFÖY ÖZETİ
+            </div>
+            <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;'>
+                <span style='color:{_txt};opacity:0.6;font-size:11px;'>Toplam Değer</span>
+                <span style='color:{_txt};font-weight:600;font-size:12px;'>{tr_format(_deger)} ₺</span>
+            </div>
+            <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;'>
+                <span style='color:{_txt};opacity:0.6;font-size:11px;'>Toplam K/Z</span>
+                <span style='color:{_kz_color};font-weight:700;font-size:12px;'>{tr_format(_kz)} ₺</span>
+            </div>
+            <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;'>
+                <span style='color:{_txt};opacity:0.6;font-size:11px;'>Günlük</span>
+                <span style='color:{_gd_color};font-weight:700;font-size:12px;'>{tr_format(_gunluk)} ₺</span>
+            </div>
+            <div style='border-top:1px solid {_acc}22;margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;'>
+                <span style='color:{_txt};opacity:0.5;font-size:10px;'>Pozisyon</span>
+                <span style='color:{_acc};font-size:10px;font-weight:600;'>{_pozisyon} adet</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.divider()
+
+    # --- YENİ VARLIK EKLE ---
+    _acc2 = t_sec['accent']
+    st.markdown(f"<div style='color:{_acc2};font-weight:700;font-size:13px;letter-spacing:1px;margin-bottom:8px;'>➕ YENİ VARLIK EKLE</div>", unsafe_allow_html=True)
     piyasa_sec = st.radio("Piyasa", ["Türk Borsası", "Yatırım Fonu"], horizontal=True)
     if piyasa_sec == "Türk Borsası":
         hisse_sec = st.selectbox("Hisse Seç", BIST_FULL)
@@ -464,9 +510,12 @@ with st.sidebar:
         hisse_sec = st.selectbox("Fon Seç", FON_LIST + ["DİĞER"])
     if hisse_sec == "DİĞER":
         hisse_sec = st.text_input("Fon Kodu").upper()
-    adet_sec    = st.number_input("Adet",    min_value=0,   step=1)
-    maliyet_sec = st.number_input("Maliyet", min_value=0.000)
-    if st.button("🚀 Portföye Ekle"):
+
+    _col_a, _col_b = st.columns(2)
+    adet_sec    = _col_a.number_input("Adet",    min_value=0,   step=1,  label_visibility="visible")
+    maliyet_sec = _col_b.number_input("Maliyet (₺)", min_value=0.0, format="%.3f", label_visibility="visible")
+
+    if st.button("🚀 Portföye Ekle", use_container_width=True):
         st.session_state.portfoy.append({
             "Piyasa": piyasa_sec, "Hisse": hisse_sec,
             "Adet": int(adet_sec), "Maliyet": float(maliyet_sec)
@@ -710,9 +759,41 @@ with tab_ipo:
 
     if st.session_state.ipo_liste:
         for idx, ipo in enumerate(st.session_state.ipo_liste):
-            with st.expander(f"📈 {ipo['Isim']} - Tavan Simülasyonu"):
-                col1, col2 = st.columns([6, 1])
-                maliyet   = ipo['Adet'] * ipo['Fiyat']
+            maliyet = ipo['Adet'] * ipo['Fiyat']
+            baslik  = f"📈 {ipo['Isim']}  |  {tr_format(ipo['Fiyat'])} ₺  |  {ipo['Adet']} Lot"
+            with st.expander(baslik):
+                # Özet satır → lot, fiyat, maliyet, SİL butonu hizalı
+                ri1, ri2, ri3, ri4 = st.columns([2, 2, 2, 1])
+                ri1.markdown(
+                    f"<div style='padding:8px 0;'>"
+                    f"<div style='font-size:10px;opacity:0.55;'>HALKA ARZ FİYATI</div>"
+                    f"<div style='font-weight:700;font-size:14px;color:{t_sec['accent']};'>{tr_format(ipo['Fiyat'])} ₺</div>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+                ri2.markdown(
+                    f"<div style='padding:8px 0;'>"
+                    f"<div style='font-size:10px;opacity:0.55;'>LOT SAYISI</div>"
+                    f"<div style='font-weight:700;font-size:14px;'>{ipo['Adet']} Lot</div>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+                ri3.markdown(
+                    f"<div style='padding:8px 0;'>"
+                    f"<div style='font-size:10px;opacity:0.55;'>TOPLAM MALİYET</div>"
+                    f"<div style='font-weight:700;font-size:14px;'>{tr_format(maliyet)} ₺</div>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+                ri4.markdown("<div style='padding-top:18px;'></div>", unsafe_allow_html=True)
+                if ri4.button("❌ SİL", key=f"del_ipo_{idx}", use_container_width=True):
+                    st.session_state.ipo_liste.pop(idx)
+                    save_json(IPO_DOSYASI, st.session_state.ipo_liste)
+                    st.rerun()
+
+                st.divider()
+
+                # Tavan simülasyon tablosu
                 tavan_html = (
                     "<table class='kral-table' style='text-align:center;'>"
                     "<thead><tr>"
@@ -731,12 +812,7 @@ with tab_ipo:
                         f"<td style='color:#00e676;font-weight:bold;'>+{tr_format(kar)} ₺</td></tr>"
                     )
                 tavan_html += "</tbody></table>"
-                col1.markdown(tavan_html, unsafe_allow_html=True)
-
-                if col2.button("❌ LİSTEDEN SİL", key=f"del_ipo_{idx}"):
-                    st.session_state.ipo_liste.pop(idx)
-                    save_json(IPO_DOSYASI, st.session_state.ipo_liste)
-                    st.rerun()
+                st.markdown(tavan_html, unsafe_allow_html=True)
 
 # ==========================================
 # FİYAT ALARMLARI TABU — YENİ
