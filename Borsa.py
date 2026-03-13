@@ -387,5 +387,3 @@ with tab_ipo:
                     st.session_state.ipo_liste.pop(idx)
                     save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
 
-st.markdown("---")
-st.caption(f"🕒 Son Güncelleme: {datetime.now(pytz.timezone('Europe/Istanbul')).
