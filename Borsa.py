@@ -11,7 +11,6 @@ import urllib.request
 import re
 
 
-
 # ==========================================
 # 0. VERİ YÖNETİMİ
 # ==========================================
@@ -45,7 +44,7 @@ def fetch_stock_data(symbol):
         if not divs.empty:
             divs.index = divs.index.tz_localize(None)
             son_1_yil = datetime.now() - timedelta(days=365)
-            # Yfinance brüt verir. Türkiye için %10 stopaj kesintisi uygulanarak NET temettü hesaplanır.
+            # Son 1 yıl içindeki brüt temettüleri toplar, %10 stopaj düşerek NET temettüyü hesaplar.
             yillik_brut_temettu = divs[divs.index >= son_1_yil].sum()
             yillik_net_temettu = yillik_brut_temettu * 0.90 
             son_tarih = divs.index[-1].strftime('%d.%m.%Y')
@@ -59,15 +58,16 @@ def fetch_stock_data(symbol):
 def fetch_tefas_price(symbol):
     try:
         code = symbol.replace(".IS", "").upper()
-        # TEFAS, Türkiye'deki tüm fonların (Midas dahil) tek resmi ve anlık veri kaynağıdır.
+        # TEFAS formatındaki 1.234,56 gibi sayıları doğru çözümlemek için regex güncellendi.
         url = f"https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod={code}"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         html = urllib.request.urlopen(req, timeout=5).read().decode('utf-8')
-        m = re.search(r'Son Fiyat \(TL\).*?<span>([\d,]+)</span>', html, re.DOTALL)
+        m = re.search(r'Son Fiyat \(TL\).*?<span>([\d.,]+)</span>', html, re.DOTALL)
         if not m:
-            m = re.search(r'top-list-right">([\d,]+)</span>', html)
+            m = re.search(r'top-list-right">([\d.,]+)</span>', html)
         if m:
-            return float(m.group(1).replace(',', '.'))
+            price_str = m.group(1).replace('.', '').replace(',', '.')
+            return float(price_str)
     except: pass
     return None
 
@@ -98,7 +98,7 @@ def get_signal(hist_data):
 # 1. TEMA VE CSS
 # ==========================================
 st.set_page_config(page_title="Borsa Takip", page_icon="📈", layout="wide")
-st_autorefresh(interval=60000, key="datarefresh") # API yorulmasın diye 60 saniyeye çektim.
+st_autorefresh(interval=60000, key="datarefresh")
 
 tema_isimleri = [
     "Siyah-Beyaz (Klasik)", "Siyah-Beyaz (Koyu)", "Galaksi (VIP)", "Siber Punk", "Matrix", "Altın Vuruş", 
@@ -245,12 +245,15 @@ for i, item in enumerate(st.session_state.portfoy):
         else:
             c = item['Maliyet']; pc = c; sinyal = "VERİ YOK"; temettu = 0.0; tarih = "-"
 
+    # Adet değerini integer'a zorlayarak hata riskini ortadan kaldırıyoruz
+    adet_int = int(item['Adet'])
+    
     full_data.append({
         "id": i, "Piyasa": piyasa_durumu, "Hisse": item['Hisse'], 
-        "Sinyal": sinyal, "Adet": item['Adet'], "Maliyet": item['Maliyet'], 
-        "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'], 
-        "Değer": c * item['Adet'], "Temettu": temettu, 
-        "NetTemettu": temettu * item['Adet'], "DailyDiff": (c - pc) * item['Adet'],
+        "Sinyal": sinyal, "Adet": adet_int, "Maliyet": item['Maliyet'], 
+        "Güncel": c, "K/Z": (c - item['Maliyet']) * adet_int, 
+        "Değer": c * adet_int, "Temettu": temettu, 
+        "NetTemettu": temettu * adet_int, "DailyDiff": (c - pc) * adet_int,
         "Tarih": tarih
     })
 
@@ -266,11 +269,11 @@ with st.sidebar:
     if piyasa_sec == "Türk Borsası": hisse_sec = st.selectbox("Hisse Seç", BIST_FULL)
     else: hisse_sec = st.selectbox("Fon Seç", FON_LIST + ["DİĞER"])
     if hisse_sec == "DİĞER": hisse_sec = st.text_input("Fon Kodu").upper()
-    adet_sec = st.number_input("Adet", min_value=0.0)
+    # Adet girdisi Integer (tam sayı) yapıldı
+    adet_sec = st.number_input("Adet", min_value=0, step=1)
     maliyet_sec = st.number_input("Maliyet", min_value=0.0)
     if st.button("🚀 Portföye Ekle"):
-        st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": float(adet_sec), "Maliyet": float(maliyet_sec)})
-        # Eklendikten sonra listeyi harf sırasına sokar
+        st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": int(adet_sec), "Maliyet": float(maliyet_sec)})
         st.session_state.portfoy = sorted(st.session_state.portfoy, key=lambda x: x['Hisse'])
         save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
 
@@ -280,12 +283,12 @@ def varlik_yonetimi_render(df_local):
         for _, r in df_local.iterrows():
             c1, c2, c3, c4 = st.columns([1.5, 2, 2, 1])
             c1.markdown(f"<div style='margin-top:25px;'><b>{r['Hisse']}</b></div>", unsafe_allow_html=True)
-            y_adet = c2.number_input("Adet", value=float(r['Adet']), key=f"a_{r['id']}")
+            # Yönetim panelinde de Adet girdisi Integer (tam sayı) yapıldı
+            y_adet = c2.number_input("Adet", value=int(r['Adet']), step=1, key=f"a_{r['id']}")
             y_maliyet = c3.number_input("Maliyet", value=float(r['Maliyet']), key=f"m_{r['id']}")
             c4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
             bc = c4.columns(2)
             if bc[0].button("💾", key=f"s_{r['id']}"):
-                # İlgili id üzerinden güncellemeyi yap
                 st.session_state.portfoy[r['id']]['Adet'] = y_adet
                 st.session_state.portfoy[r['id']]['Maliyet'] = y_maliyet
                 st.session_state.portfoy = sorted(st.session_state.portfoy, key=lambda x: x['Hisse'])
@@ -312,7 +315,6 @@ with tab_tr:
         st.markdown(render_kral_table(df_bist), unsafe_allow_html=True)
         varlik_yonetimi_render(df_bist)
         
-        # Grafik
         df_chart = df_bist[df_bist['Değer'] > 0]
         if not df_chart.empty:
             st.divider()
@@ -328,7 +330,6 @@ with tab_fon:
         st.markdown(render_kral_table(df_fon), unsafe_allow_html=True)
         varlik_yonetimi_render(df_fon)
         
-        # Grafik
         df_chart_f = df_fon[df_fon['Değer'] > 0]
         if not df_chart_f.empty:
             st.divider()
@@ -345,7 +346,6 @@ with tab_div:
         toplam_temettu = df_div['NetTemettu'].sum()
         st.metric("TAHMİNİ YILLIK NAKİT AKIŞI", f"{tr_format(toplam_temettu)} ₺", delta=f"Aylık: {tr_format(toplam_temettu/12)} ₺")
         
-        # Tarih Sütunu Eklendi
         div_table = "<table class='kral-table'><thead><tr><th>HİSSE</th><th>SON DAĞITIM TARİHİ</th><th>ADET</th><th>NET HİSSE BAŞI</th><th>YILLIK TOPLAM (NET)</th><th>VERİM (%)</th></tr></thead><tbody>"
         for _, r in df_div.iterrows():
             verim = (r['Temettu'] / r['Güncel']) * 100 if r['Güncel'] > 0 else 0
@@ -360,10 +360,11 @@ with tab_ipo:
         ic1, ic2, ic3 = st.columns(3)
         ipo_isim = ic1.text_input("Şirket Kodu (Örn: BINHO)")
         ipo_fiyat = ic2.number_input("Halka Arz Fiyatı", min_value=0.0)
-        ipo_adet = ic3.number_input("Lot Sayısı", min_value=0)
+        # Halka arz formu Lot sayısı Integer yapıldı
+        ipo_adet = ic3.number_input("Lot Sayısı", min_value=0, step=1)
         if st.form_submit_button("➕ Listeye Ekle"):
             if ipo_isim:
-                st.session_state.ipo_liste.append({"Isim": ipo_isim.upper(), "Fiyat": ipo_fiyat, "Adet": ipo_adet})
+                st.session_state.ipo_liste.append({"Isim": ipo_isim.upper(), "Fiyat": ipo_fiyat, "Adet": int(ipo_adet)})
                 save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
 
     if st.session_state.ipo_liste:
@@ -371,7 +372,6 @@ with tab_ipo:
             with st.expander(f"📈 {ipo['Isim']} - Tavan Simülasyonu"):
                 col1, col2 = st.columns([6, 1])
                 
-                # Simetrik ve şık tablo yapısı
                 maliyet = ipo['Adet'] * ipo['Fiyat']
                 tavan_html = "<table class='kral-table' style='text-align:center;'><thead><tr><th style='text-align:center;'>GÜN</th><th style='text-align:center;'>FİYAT</th><th style='text-align:center;'>TOPLAM KAR</th></tr></thead><tbody>"
                 
@@ -390,5 +390,6 @@ with tab_ipo:
 
 st.markdown("---")
 st.caption(f"🕒 Son Güncelleme: {datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')}")
+
 
 
