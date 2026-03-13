@@ -11,7 +11,6 @@ import urllib.request
 import re
 
 
-
 # ==========================================
 # 0. VERİ YÖNETİMİ
 # ==========================================
@@ -39,23 +38,23 @@ if 'ipo_liste' not in st.session_state:
 def fetch_stock_data(symbol):
     try:
         tk = yf.Ticker(symbol)
-        hist = tk.history(period="35d")
+        hist = tk.history(period="1mo") # Grafik için 1 aylık veri çekiyoruz
         if hist.empty: return None
         
-        # TEMETTÜ GÜNCELLEMESİ: Son 1 yılın toplamı yerine "En Son Dağıtılan" net miktarı alır.
+        # TEMETTÜ GÜNCELLEMESİ: Yıllık toplam yerine EN SON ödenen brüt rakamı alır.
         divs = tk.dividends
         if not divs.empty:
             divs.index = divs.index.tz_localize(None)
-            # En güncel (sonuncu) temettü kaydını alıyoruz
+            # En son ödenen brüt temettü miktarı
             son_brut_temettu = divs.iloc[-1] 
-            # %10 Stopaj düşülerek Midas tarzı NET rakama ulaşılır
-            en_guncel_net_temettu = son_brut_temettu * 0.90 
+            # %10 Stopaj düşülerek Midas tarzı NET rakama ulaşılır (Örn: 12 TL -> 10.8 TL)
+            guncel_net_temettu = son_brut_temettu * 0.90 
             son_tarih = divs.index[-1].strftime('%d.%m.%Y')
         else: 
-            en_guncel_net_temettu = 0.0
+            guncel_net_temettu = 0.0
             son_tarih = "-"
             
-        return {"hist": hist, "temettu": en_guncel_net_temettu, "tarih": son_tarih}
+        return {"hist": hist, "temettu": guncel_net_temettu, "tarih": son_tarih}
     except: return None
 
 @st.cache_data(ttl=300)
@@ -129,17 +128,19 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. ÜST BİLGİ VE PİYASA
+# 2. ÜST BİLGİ
 # ==========================================
 st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']};'>🚀 Borsa Takip</h2>", unsafe_allow_html=True)
 
 # ==========================================
-# 3. VERİ HAZIRLAMA
+# 3. VERİ HAZIRLAMA VE PERFORMANS HESABI
 # ==========================================
 BIST_FULL = sorted(["A1CAP.IS", "ADEL.IS", "AGROT.IS", "AKBNK.IS", "AKSA.IS", "ALARK.IS", "ALFAS.IS", "ARCLK.IS", "ASELS.IS", "ASTOR.IS", "BIMAS.IS", "BRISA.IS", "CANTE.IS", "CCOLA.IS", "CIMSA.IS", "CWENE.IS", "DOAS.IS", "DOHOL.IS", "EKGYO.IS", "ENJSA.IS", "ENKAI.IS", "EREGL.IS", "EUPWR.IS", "FROTO.IS", "GARAN.IS", "GESAN.IS", "GUBRF.IS", "HALKB.IS", "HEKTS.IS", "ISCTR.IS", "ISGYO.IS", "ISMEN.IS", "ISYAT.IS", "KCHOL.IS", "KLKIM.IS", "KONTR.IS", "KOZAL.IS", "KRDMD.IS", "MIATK.IS", "ODAS.IS", "OTKAR.IS", "OYAKC.IS", "PETKM.IS", "PGSUS.IS", "REEDR.IS", "SAHOL.IS", "SASA.IS", "SISE.IS", "SOKM.IS", "TCELL.IS", "THYAO.IS", "TOASO.IS", "TUPRS.IS", "YKBNK.IS"])
 FON_LIST = sorted(["TTE.IS", "AES.IS", "AFO.IS", "AYA.IS", "KPH.IS", "KPA.IS", "ZGD.IS", "ZRE.IS", "TAU.IS", "MAC.IS", "YZG.IS", "OPB.IS", "NNF.IS", "IDH.IS", "GSP.IS", "IHY.IS"])
 
 full_data = []
+history_dfs = [] # Aylık grafik için
+
 for i, item in enumerate(st.session_state.portfoy):
     piyasa_durumu = item.get("Piyasa", "Türk Borsası")
     d = fetch_stock_data(item['Hisse'])
@@ -149,7 +150,14 @@ for i, item in enumerate(st.session_state.portfoy):
         sinyal = "VERİ YOK"; temettu = 0.0; tarih = "-"
     else:
         if d:
-            c = d['hist']['Close'].iloc[-1]; sinyal = get_signal(d['hist']); temettu = d['temettu']; tarih = d['tarih']
+            c = d['hist']['Close'].iloc[-1]
+            sinyal = get_signal(d['hist'])
+            temettu = d['temettu']
+            tarih = d['tarih']
+            # Grafik verisi için hisse adetiyle çarpılmış fiyatları sakla
+            temp_h = d['hist'][['Close']].copy()
+            temp_h['TotalValue'] = temp_h['Close'] * int(item['Adet'])
+            history_dfs.append(temp_h[['TotalValue']])
         else:
             c = item['Maliyet']; sinyal = "VERİ YOK"; temettu = 0.0; tarih = "-"
 
@@ -192,6 +200,16 @@ with tab_tr:
             c3.markdown(f":{kz_color}[{tr_format(r['K/Z'])} ₺]")
             if c4.button("❌", key=f"del_tr_{r['id']}"):
                 st.session_state.portfoy.pop(r['id']); save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
+        
+        # PERFORMANS GRAFİĞİ (AYLIK)
+        if history_dfs:
+            st.divider()
+            st.subheader("📈 Portföy Performansı (Son 30 Gün)")
+            combined_hist = pd.concat(history_dfs, axis=1).sum(axis=1)
+            fig = px.line(combined_hist, labels={'value': 'Toplam Değer (₺)', 'Date': 'Tarih'})
+            fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color=t_sec['text'], showlegend=False)
+            fig.update_traces(line_color=t_sec['accent'])
+            st.plotly_chart(fig, use_container_width=True)
     else: st.info("Hisse bulunamadı.")
 
 # --- FONLAR ---
@@ -205,7 +223,6 @@ with tab_fon:
             c3.write(f"Değer: {tr_format(r['Değer'])} ₺")
             if c4.button("❌", key=f"del_fon_{r['id']}"):
                 st.session_state.portfoy.pop(r['id']); save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
-    else: st.info("Fon bulunamadı.")
 
 # --- TEMETTÜ ---
 with tab_div:
@@ -230,9 +247,9 @@ with tab_ipo:
 
     if st.session_state.ipo_liste:
         for idx, ipo in enumerate(st.session_state.ipo_liste):
-            # SATIRA HİZALAMA: Başlık ve Sil butonu aynı hizada
-            row_c1, row_c2 = st.columns([0.9, 0.1])
-            with row_c1:
+            # SİLME SEKMESİNİ SATIRA HİZALAMA
+            col_exp, col_del = st.columns([0.9, 0.1])
+            with col_exp:
                 with st.expander(f"📈 {ipo['Isim']} ({ipo['Adet']} Lot)"):
                     p = ipo['Fiyat']
                     maliyet = ipo['Adet'] * p
@@ -241,9 +258,8 @@ with tab_ipo:
                         p *= 1.10
                         t_html += f"<tr><td>{g}. Tavan</td><td>{tr_format(p)} ₺</td><td>{tr_format((p*ipo['Adet'])-maliyet)} ₺</td></tr>"
                     st.markdown(t_html + "</tbody></table>", unsafe_allow_html=True)
-            with row_c2:
-                # Sil butonu tam satırın yanında hizalı
-                st.write("") # Görsel boşluk
+            with col_del:
+                st.write("") # Boşluk hizalama için
                 if st.button("❌", key=f"del_ipo_{idx}"):
                     st.session_state.ipo_liste.pop(idx); save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
 
