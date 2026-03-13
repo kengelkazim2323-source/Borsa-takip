@@ -261,7 +261,7 @@ def fetch_single_item(args):
         "Adet": adet_int, "Maliyet": item['Maliyet'],
         "Güncel": c,
         "K/Z": round((c - item['Maliyet']) * adet_int, 3),
-        "Değer": round(c * adet_int, 2),
+        "Değer": round(c * adet_int, 3),
         "Temettu": temettu,
         "NetTemettu": round(temettu * adet_int, 3),
         "DailyDiff": round((c - pc) * adet_int, 3),
