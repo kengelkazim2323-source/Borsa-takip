@@ -370,6 +370,43 @@ def fetch_stock_data(symbol):
 # --- HALKA ARZ ---
 
 # --- HALKA ARZ SEKMESİ İÇİNDEKİ DÜZENLEME ---
+
+with tab_ipo:
+    st.subheader("🚀 Yeni Halka Arz Ekle")
+    with st.form("ipo_form", clear_on_submit=True):
+        ic1, ic2, ic3 = st.columns(3)
+        ipo_isim = ic1.text_input("Şirket Kodu (Örn: BINHO)")
+        ipo_fiyat = ic2.number_input("Halka Arz Fiyatı", min_value=0.0)
+        # Halka arz formu Lot sayısı Integer yapıldı
+        ipo_adet = ic3.number_input("Lot Sayısı", min_value=0, step=1)
+        if st.form_submit_button("➕ Listeye Ekle"):
+            if ipo_isim:
+                st.session_state.ipo_liste.append({"Isim": ipo_isim.upper(), "Fiyat": ipo_fiyat, "Adet": int(ipo_adet)})
+                save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
+
+    if st.session_state.ipo_liste:
+        for idx, ipo in enumerate(st.session_state.ipo_liste):
+            with st.expander(f"📈 {ipo['Isim']} - Tavan Simülasyonu"):
+                col1, col2 = st.columns([6, 1])
+                
+                maliyet = ipo['Adet'] * ipo['Fiyat']
+                tavan_html = "<table class='kral-table' style='text-align:center;'><thead><tr><th style='text-align:center;'>GÜN</th><th style='text-align:center;'>FİYAT</th><th style='text-align:center;'>TOPLAM KAR</th></tr></thead><tbody>"
+                
+                p = ipo['Fiyat']
+                for g in range(1, 11):
+                    p *= 1.10
+                    kar = (p * ipo['Adet']) - maliyet
+                    tavan_html += f"<tr><td><b>{g}. Tavan</b></td><td>{tr_format(p)} ₺</td><td style='color:#00e676; font-weight:bold;'>+{tr_format(kar)} ₺</td></tr>"
+                tavan_html += "</tbody></table>"
+                
+                col1.markdown(tavan_html, unsafe_allow_html=True)
+                
+                if col2.button("❌ LİSTEDEN SİL", key=f"del_ipo_{idx}"):
+                    st.session_state.ipo_liste.pop(idx)
+                    save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
+
+
+
 if st.session_state.ipo_liste:
     for idx, ipo in enumerate(st.session_state.ipo_liste):
         # Başlık ve Sil butonunu yan yana getirmek için sütun yapısı
