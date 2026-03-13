@@ -6,6 +6,7 @@ import os
 import pytz
 from datetime import datetime, timedelta
 import plotly.express as px
+import plotly.graph_objects as go
 from streamlit_autorefresh import st_autorefresh
 import urllib.request
 import re
@@ -421,7 +422,14 @@ st.components.v1.html(clock_html, height=80)
 
 st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']};'>🚀 Borsa Takip</h2>", unsafe_allow_html=True)
 
-piyasa_izleme = {"BIST 100": "XU100.IS", "ONS ALTIN": "GC=F", "ONS GÜMÜŞ": "SI=F", "USD/TRY": "USDTRY=X", "BTC": "BTC-USD"}
+piyasa_izleme = {
+    "BIST 100":  "XU100.IS",
+    "USD/TRY":   "USDTRY=X",
+    "EUR/TRY":   "EURTRY=X",
+    "ONS ALTIN": "GC=F",
+    "ONS GÜMÜŞ": "SI=F",
+    "BTC":       "BTC-USD",
+}
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
 for isim, sembol in piyasa_izleme.items():
     d = fetch_stock_data(sembol)
@@ -433,6 +441,42 @@ for isim, sembol in piyasa_izleme.items():
             ticker_content += f'<div style="text-align:center;"><div>{isim}</div><div style="font-weight:bold;">{tr_format(last)}</div><div class="{"up" if deg>=0 else "down"}">{deg:+.2f}%</div></div>'
         except Exception as e:
             logger.warning(f"Ticker hatası ({sembol}): {e}")
+
+# Gram Altın ve Gram Gümüş — önbellek sayesinde ek API çağrısı yok
+try:
+    _gc     = fetch_stock_data("GC=F")
+    _si     = fetch_stock_data("SI=F")
+    _usdtry = fetch_stock_data("USDTRY=X")
+    if _gc and _usdtry:
+        _ust  = float(_usdtry['hist']['Close'].iloc[-1])
+        _gc_s = float(_gc['hist']['Close'].iloc[-1])
+        _gc_p = float(_gc['hist']['Close'].iloc[-2])
+        _gr_a = _gc_s * _ust / 31.1035
+        _gr_ap = _gc_p * _ust / 31.1035
+        _deg_a = ((_gr_a - _gr_ap) / _gr_ap) * 100
+        ticker_content += (
+            f'<div style="text-align:center;">'
+            f'<div>GRAM ALTIN</div>'
+            f'<div style="font-weight:bold;">{tr_format(_gr_a)}</div>'
+            f'<div class="{"up" if _deg_a>=0 else "down"}">{_deg_a:+.2f}%</div>'
+            f'</div>'
+        )
+    if _si and _usdtry:
+        _ust  = float(_usdtry['hist']['Close'].iloc[-1])
+        _si_s = float(_si['hist']['Close'].iloc[-1])
+        _si_p = float(_si['hist']['Close'].iloc[-2])
+        _gr_g = _si_s * _ust / 31.1035
+        _gr_gp = _si_p * _ust / 31.1035
+        _deg_g = ((_gr_g - _gr_gp) / _gr_gp) * 100
+        ticker_content += (
+            f'<div style="text-align:center;">'
+            f'<div>GRAM GÜMÜŞ</div>'
+            f'<div style="font-weight:bold;">{tr_format(_gr_g)}</div>'
+            f'<div class="{"up" if _deg_g>=0 else "down"}">{_deg_g:+.2f}%</div>'
+            f'</div>'
+        )
+except Exception as e:
+    logger.warning(f"Gram fiyat hesaplama hatası: {e}")
 st.markdown(ticker_content + '</div></div>', unsafe_allow_html=True)
 
 # ==========================================
@@ -707,13 +751,54 @@ with tab_tr:
         df_chart = df_bist[df_bist['Değer'] > 0]
         if not df_chart.empty:
             st.divider()
-            fig = px.pie(
-                df_chart, values='Değer', names='Hisse', hole=0.5,
-                color_discrete_sequence=px.colors.qualitative.Pastel
-            )
+            _total  = df_chart['Değer'].sum()
+            _labels = df_chart['Hisse'].tolist()
+            _values = df_chart['Değer'].tolist()
+            _palette = [
+                "#00D4FF","#FF6B6B","#FFD93D","#6BCB77","#A78BFA",
+                "#F97316","#38BDF8","#F472B6","#34D399","#FBBF24",
+                "#E879F9","#60A5FA","#FB923C","#4ADE80","#C084FC",
+            ]
+            _colors = (_palette * (len(_labels) // len(_palette) + 1))[:len(_labels)]
+
+            fig = go.Figure(data=[go.Pie(
+                labels=_labels,
+                values=_values,
+                hole=0.58,
+                textinfo='label+percent',
+                textposition='outside',
+                hovertemplate='<b>%{label}</b><br>Değer: %{value:,.2f} ₺<br>Oran: %{percent}<extra></extra>',
+                marker=dict(
+                    colors=_colors,
+                    line=dict(color=t_sec['bg'], width=2)
+                ),
+                pull=[0.02] * len(_labels),
+            )])
             fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color=t_sec['text'])
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color=t_sec['text'], size=12, family=secili_font),
+                showlegend=True,
+                legend=dict(
+                    orientation='v',
+                    yanchor='middle', y=0.5,
+                    xanchor='left',   x=1.02,
+                    font=dict(size=11, color=t_sec['text']),
+                    bgcolor='rgba(0,0,0,0)',
+                ),
+                margin=dict(t=70, b=30, l=30, r=160),
+                height=460,
+                title=dict(
+                    text="📊 Hisse Dağılımı",
+                    font=dict(size=15, color=t_sec['accent']),
+                    x=0.5, xanchor='center'
+                ),
+                annotations=[dict(
+                    text=f"<b>{tr_format(_total)}</b><br>₺ TOPLAM",
+                    x=0.42, y=0.5,
+                    font=dict(size=14, color=t_sec['accent']),
+                    showarrow=False, align='center'
+                )]
             )
             st.plotly_chart(fig, use_container_width=True)
     else:
@@ -745,13 +830,54 @@ with tab_fon:
         df_chart_f = df_fon[df_fon['Değer'] > 0]
         if not df_chart_f.empty:
             st.divider()
-            fig_f = px.pie(
-                df_chart_f, values='Değer', names='Hisse', hole=0.5,
-                color_discrete_sequence=px.colors.qualitative.Bold
-            )
+            _total_f  = df_chart_f['Değer'].sum()
+            _labels_f = df_chart_f['Hisse'].tolist()
+            _values_f = df_chart_f['Değer'].tolist()
+            _palette_f = [
+                "#A78BFA","#34D399","#F97316","#38BDF8","#F472B6",
+                "#FBBF24","#60A5FA","#6BCB77","#E879F9","#00D4FF",
+                "#FB923C","#4ADE80","#C084FC","#FFD93D","#FF6B6B",
+            ]
+            _colors_f = (_palette_f * (len(_labels_f) // len(_palette_f) + 1))[:len(_labels_f)]
+
+            fig_f = go.Figure(data=[go.Pie(
+                labels=_labels_f,
+                values=_values_f,
+                hole=0.58,
+                textinfo='label+percent',
+                textposition='outside',
+                hovertemplate='<b>%{label}</b><br>Değer: %{value:,.2f} ₺<br>Oran: %{percent}<extra></extra>',
+                marker=dict(
+                    colors=_colors_f,
+                    line=dict(color=t_sec['bg'], width=2)
+                ),
+                pull=[0.02] * len(_labels_f),
+            )])
             fig_f.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                font=dict(color=t_sec['text'])
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color=t_sec['text'], size=12, family=secili_font),
+                showlegend=True,
+                legend=dict(
+                    orientation='v',
+                    yanchor='middle', y=0.5,
+                    xanchor='left',   x=1.02,
+                    font=dict(size=11, color=t_sec['text']),
+                    bgcolor='rgba(0,0,0,0)',
+                ),
+                margin=dict(t=70, b=30, l=30, r=160),
+                height=460,
+                title=dict(
+                    text="📊 Fon Dağılımı",
+                    font=dict(size=15, color=t_sec['accent']),
+                    x=0.5, xanchor='center'
+                ),
+                annotations=[dict(
+                    text=f"<b>{tr_format(_total_f)}</b><br>₺ TOPLAM",
+                    x=0.42, y=0.5,
+                    font=dict(size=14, color=t_sec['accent']),
+                    showarrow=False, align='center'
+                )]
             )
             st.plotly_chart(fig_f, use_container_width=True)
     else:
