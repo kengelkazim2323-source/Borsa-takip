@@ -260,11 +260,11 @@ def fetch_single_item(args):
         "Sinyal": sinyal, "RSI": rsi_val, "MACD_H": macd_h, "BB_PCT": bb_pct,
         "Adet": adet_int, "Maliyet": item['Maliyet'],
         "Güncel": c,
-        "K/Z": round((c - item['Maliyet']) * adet_int, 2),
+        "K/Z": round((c - item['Maliyet']) * adet_int, 3),
         "Değer": round(c * adet_int, 2),
         "Temettu": temettu,
-        "NetTemettu": round(temettu * adet_int, 2),
-        "DailyDiff": round((c - pc) * adet_int, 2),
+        "NetTemettu": round(temettu * adet_int, 3),
+        "DailyDiff": round((c - pc) * adet_int, 3),
         "Tarih": tarih
     }
 
