@@ -402,13 +402,7 @@ st.markdown(ticker_content + '</div></div>', unsafe_allow_html=True)
 # 3. PARALEL VERİ HAZIRLAMA
 # ==========================================
 BIST_FULL = sorted([
-    "A1CAP.IS","ADEL.IS","AGROT.IS","AKBNK.IS","AKSA.IS","ALARK.IS","ALFAS.IS","ARCLK.IS",
-    "ASELS.IS","ASTOR.IS","BIMAS.IS","BRISA.IS","CANTE.IS","CCOLA.IS","CIMSA.IS","CWENE.IS",
-    "DOAS.IS","DOHOL.IS","EKGYO.IS","ENJSA.IS","ENKAI.IS","EREGL.IS","EUPWR.IS","FROTO.IS",
-    "GARAN.IS","GESAN.IS","GUBRF.IS","HALKB.IS","HEKTS.IS","ISCTR.IS","ISGYO.IS","ISMEN.IS",
-    "ISYAT.IS","KCHOL.IS","KLKIM.IS","KONTR.IS","KOZAL.IS","KRDMD.IS","MIATK.IS","ODAS.IS",
-    "OTKAR.IS","OYAKC.IS","PETKM.IS","PGSUS.IS","REEDR.IS","SAHOL.IS","SASA.IS","SISE.IS",
-    "SOKM.IS","TCELL.IS","THYAO.IS","TOASO.IS","TUPRS.IS","YKBNK.IS"
+    "A1CAP.IS", "ADEL.IS", "AGROT.IS", "AKBNK.IS", "AKSA.IS", "ALARK.IS", "ALFAS.IS", "ARCLK.IS", "ASELS.IS", "ASTOR.IS", "BIMAS.IS", "BRISA.IS", "CANTE.IS", "CCOLA.IS", "CIMSA.IS", "CWENE.IS", "DOAS.IS", "DOHOL.IS", "EKGYO.IS", "ENJSA.IS", "ENKAI.IS", "EREGL.IS", "EUPWR.IS", "FROTO.IS", "GARAN.IS", "GESAN.IS", "GUBRF.IS", "HALKB.IS", "HEKTS.IS", "ISCTR.IS", "ISGYO.IS", "ISMEN.IS", "ISYAT.IS", "KCHOL.IS", "KLKIM.IS", "KONTR.IS", "KOZAL.IS", "KRDMD.IS", "MIATK.IS", "ODAS.IS", "OTKAR.IS", "OYAKC.IS", "PETKM.IS", "PGSUS.IS", "REEDR.IS", "SAHOL.IS", "SASA.IS", "SISE.IS", "SOKM.IS", "TCELL.IS", "THYAO.IS", "TOASO.IS", "TUPRS.IS", "YKBNK.IS"
 ])
 FON_LIST = sorted([
     "TTE.IS","AES.IS","AFO.IS","AYA.IS","KPH.IS","KPA.IS","ZGD.IS","ZRE.IS",
@@ -471,7 +465,7 @@ with st.sidebar:
     if hisse_sec == "DİĞER":
         hisse_sec = st.text_input("Fon Kodu").upper()
     adet_sec    = st.number_input("Adet",    min_value=0,   step=1)
-    maliyet_sec = st.number_input("Maliyet", min_value=0.0)
+    maliyet_sec = st.number_input("Maliyet", min_value=0.000)
     if st.button("🚀 Portföye Ekle"):
         st.session_state.portfoy.append({
             "Piyasa": piyasa_sec, "Hisse": hisse_sec,
