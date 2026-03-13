@@ -384,7 +384,7 @@ with tab_ipo:
     if st.session_state.ipo_liste:
         for idx, ipo in enumerate(st.session_state.ipo_liste):
             with st.expander(f"📈 {ipo['Isim']} - Tavan Simülasyonu"):
-                col1, col2 = st.columns([6, 4])
+                col1, col2 = st.columns([6, 0,5])
                 
                 maliyet = ipo['Adet'] * ipo['Fiyat']
                 tavan_html = "<table class='kral-table' style='text-align:center;'><thead><tr><th style='text-align:center;'>GÜN</th><th style='text-align:center;'>FİYAT</th><th style='text-align:center;'>TOPLAM KAR</th></tr></thead><tbody>"
