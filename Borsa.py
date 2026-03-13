@@ -70,19 +70,30 @@ def fetch_stock_data(symbol):
                 else:
                     divs.index = divs.index.tz_localize(None)
 
-                son_1_yil = datetime.now() - timedelta(days=365)
+                bugun          = datetime.now()
+                son_1_yil      = bugun - timedelta(days=365)
+                son_2_yil      = bugun - timedelta(days=730)
                 son_1_yil_divs = divs[divs.index >= son_1_yil]
+                son_2_yil_divs = divs[divs.index >= son_2_yil]
 
                 if not son_1_yil_divs.empty:
-                    # Son 1 yıl içinde dağıtım var → topla
+                    # Son 1 yılda dağıtım var → tümünü topla (brüt)
                     yillik_brut_temettu = float(son_1_yil_divs.sum())
-                    yillik_net_temettu = round(yillik_brut_temettu * 0.90, 4)
+                    yillik_net_temettu  = round(yillik_brut_temettu * 0.90, 6)
                     son_tarih = divs.index[-1].strftime('%d.%m.%Y')
-                else:
-                    # Son 1 yılda dağıtım yok → en son temettu değerini göster, tarihi işaretle
+                    # Birden fazla dağıtım varsa "(Nx)" göster
+                    n = len(son_1_yil_divs)
+                    if n > 1:
+                        son_tarih += f" ({n}x)"
+                elif not son_2_yil_divs.empty:
+                    # 1-2 yıl arası dağıtım var → en güncel tane
                     yillik_brut_temettu = float(divs.iloc[-1])
-                    yillik_net_temettu = round(yillik_brut_temettu * 0.90, 4)
+                    yillik_net_temettu  = round(yillik_brut_temettu * 0.90, 6)
                     son_tarih = divs.index[-1].strftime('%d.%m.%Y') + " *"
+                else:
+                    # Hiç son verisi yok
+                    yillik_net_temettu = 0.0
+                    son_tarih = "-"
             except Exception as e:
                 logger.warning(f"Temettü işleme hatası ({symbol}): {e}")
                 yillik_net_temettu = 0.0
@@ -137,6 +148,13 @@ def tr_format(val):
         if val is None or pd.isna(val): return "0,00"
         return f"{val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     except: return "0,00"
+
+def tr_format4(val):
+    """Maliyet gibi hassas değerler için 4 ondalık basamak."""
+    try:
+        if val is None or pd.isna(val): return "0,0000"
+        return f"{val:,.4f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except: return "0,0000"
 
 # ==========================================
 # GELİŞTİRİLMİŞ SİNYAL MOTORU
@@ -286,9 +304,24 @@ tema_isimleri = [
     "Kuantum Foton", "Biyolüminesans"
 ]
 
+FONT_SECENEKLERI = {
+    "Inter (Varsayılan)":    ("Inter", "https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"),
+    "Roboto":                ("Roboto", "https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"),
+    "Poppins":               ("Poppins", "https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"),
+    "Nunito":                ("Nunito", "https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap"),
+    "Raleway":               ("Raleway", "https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap"),
+    "Source Code Pro":       ("Source Code Pro", "https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&display=swap"),
+    "Exo 2":                 ("Exo 2", "https://fonts.googleapis.com/css2?family=Exo+2:wght@400;600&display=swap"),
+    "Orbitron (Sci-Fi)":     ("Orbitron", "https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap"),
+    "Share Tech Mono":       ("Share Tech Mono", "https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap"),
+    "Syne":                  ("Syne", "https://fonts.googleapis.com/css2?family=Syne:wght@400;700&display=swap"),
+}
+
 with st.sidebar:
     st.header("🎨 Tema Galerisi")
     tema = st.selectbox("Görünüm Seç", tema_isimleri)
+    secili_font_adi = st.selectbox("🔤 Font Seç", list(FONT_SECENEKLERI.keys()))
+    secili_font, secili_font_url = FONT_SECENEKLERI[secili_font_adi]
 
 tema_renkleri = {
     "Siyah-Beyaz (Klasik)": {"bg": "#FFFFFF", "text": "#000000", "box": "#F5F5F5", "accent": "#000000"},
@@ -347,10 +380,11 @@ t_sec = tema_renkleri.get(tema, tema_renkleri["Galaksi (VIP)"])
 
 st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@700&display=swap');
-    .stApp {{ background-color: {t_sec['bg']}; color: {t_sec['text']}; font-family: 'Inter', sans-serif; }}
+    @import url('{secili_font_url}');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap');
+    .stApp {{ background-color: {t_sec['bg']}; color: {t_sec['text']}; font-family: '{secili_font}', sans-serif; }}
     [data-testid="stMetric"] {{ background: {t_sec['box']}; padding: 20px !important; border-radius: 12px !important; border: 1px solid {t_sec['accent']} !important; text-align: center; }}
-    .kral-table {{ width: 100%; border-collapse: collapse; background: {t_sec['box']}22; margin-top: 10px; border: 1px solid {t_sec['accent']}33; border-radius: 10px; overflow: hidden; }}
+    .kral-table {{ width: 100%; border-collapse: collapse; background: {t_sec['box']}22; margin-top: 10px; border: 1px solid {t_sec['accent']}33; border-radius: 10px; overflow: hidden; font-family: '{secili_font}', sans-serif; }}
     .kral-table th {{ padding: 12px; text-align: left; background: {t_sec['accent']}22; color: {t_sec['accent']}; font-weight: 700; border-bottom: 2px solid {t_sec['accent']}44; }}
     .kral-table td {{ padding: 12px; border-bottom: 1px solid {t_sec['accent']}11; color: {t_sec['text']}; }}
     .ticker-wrapper {{ width: 100%; overflow: hidden; background: {t_sec['box']}; border-radius: 8px; margin-bottom: 30px; padding: 15px 0; border: 1px solid {t_sec['accent']}44; }}
@@ -360,6 +394,9 @@ st.markdown(f"""
     .alarm-aktif {{ color: #ff1744; font-weight: bold; animation: blink 1s step-start infinite; }}
     @keyframes blink {{ 50% {{ opacity: 0; }} }}
     .indikator-bar {{ display: inline-block; height: 8px; border-radius: 4px; }}
+    .vy-kart {{ background: {t_sec['box']}; border: 1px solid {t_sec['accent']}33; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }}
+    .vy-etiket {{ font-size: 10px; opacity: 0.5; margin-bottom: 2px; letter-spacing: 0.8px; }}
+    .vy-deger {{ font-size: 13px; font-weight: 600; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -513,7 +550,7 @@ with st.sidebar:
 
     _col_a, _col_b = st.columns(2)
     adet_sec    = _col_a.number_input("Adet",    min_value=0,   step=1,  label_visibility="visible")
-    maliyet_sec = _col_b.number_input("Maliyet (₺)", min_value=0.0, format="%.3f", label_visibility="visible")
+    maliyet_sec = _col_b.number_input("Maliyet (₺)", min_value=0.0, format="%.4f", label_visibility="visible")
 
     if st.button("🚀 Portföye Ekle", use_container_width=True):
         st.session_state.portfoy.append({
@@ -525,27 +562,63 @@ with st.sidebar:
         st.rerun()
 
 # ==========================================
-# YÖNETİM FONKSİYONU
+# YÖNETİM FONKSİYONU — Kart Bazlı Yeni Tasarım
 # ==========================================
 def varlik_yonetimi_render(df_local):
+    acc = t_sec['accent']
+    box = t_sec['box']
+    txt = t_sec['text']
     with st.expander("🛠️ VARLIK YÖNETİMİ"):
         for _, r in df_local.iterrows():
-            c1, c2, c3, c4 = st.columns([1.5, 2, 2, 1])
-            c1.markdown(f"<div style='margin-top:25px;'><b>{r['Hisse']}</b></div>", unsafe_allow_html=True)
-            y_adet    = c2.number_input("Adet",    value=int(r['Adet']),      step=1,  key=f"a_{r['id']}")
-            y_maliyet = c3.number_input("Maliyet", value=float(r['Maliyet']),          key=f"m_{r['id']}")
-            c4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
-            bc = c4.columns(2)
-            if bc[0].button("💾", key=f"s_{r['id']}"):
+            kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
+            kz_pct   = ((r['Güncel'] - r['Maliyet']) / r['Maliyet'] * 100) if r['Maliyet'] > 0 else 0.0
+            sinyal_str = str(r.get('Sinyal', '—'))
+
+            # Bilgi kartı
+            st.markdown(
+                f"<div class='vy-kart'>"
+                f"<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;'>"
+                f"  <span style='color:{acc};font-weight:700;font-size:15px;letter-spacing:0.5px;'>{r['Hisse']}</span>"
+                f"  <span style='color:{txt};opacity:0.45;font-size:10px;letter-spacing:1px;'>{r['Piyasa'].upper()}</span>"
+                f"</div>"
+                f"<div style='display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;'>"
+                f"  <div><div class='vy-etiket'>ADET</div>"
+                f"      <div class='vy-deger' style='color:{txt};'>{r['Adet']}</div></div>"
+                f"  <div><div class='vy-etiket'>MALİYET</div>"
+                f"      <div class='vy-deger' style='color:{txt};'>{tr_format4(r['Maliyet'])} ₺</div></div>"
+                f"  <div><div class='vy-etiket'>GÜNCEL</div>"
+                f"      <div class='vy-deger' style='color:{acc};'>{tr_format(r['Güncel'])} ₺</div></div>"
+                f"  <div><div class='vy-etiket'>K/Z</div>"
+                f"      <div class='vy-deger' style='color:{kz_color};'>{tr_format(r['K/Z'])} ₺"
+                f"          <span style='font-size:10px;opacity:0.8;'> ({kz_pct:+.1f}%)</span></div></div>"
+                f"</div>"
+                f"<div style='margin-top:8px;padding-top:8px;border-top:1px solid {acc}18;"
+                f"display:flex;justify-content:space-between;align-items:center;'>"
+                f"  <span style='font-size:11px;opacity:0.45;'>Sinyal: {sinyal_str}</span>"
+                f"  <span style='font-size:11px;opacity:0.45;'>Toplam: {tr_format(r['Değer'])} ₺</span>"
+                f"</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+
+            # Düzenleme satırı
+            ec1, ec2, ec3, ec4 = st.columns([2, 2, 1, 1])
+            y_adet    = ec1.number_input("Yeni Adet",    value=int(r['Adet']),      step=1,        key=f"a_{r['id']}")
+            y_maliyet = ec2.number_input("Yeni Maliyet (₺)", value=float(r['Maliyet']), format="%.4f", key=f"m_{r['id']}")
+            ec3.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+            ec4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+
+            if ec3.button("💾 Kaydet", key=f"s_{r['id']}", use_container_width=True):
                 st.session_state.portfoy[r['id']]['Adet']    = y_adet
                 st.session_state.portfoy[r['id']]['Maliyet'] = y_maliyet
                 st.session_state.portfoy = sorted(st.session_state.portfoy, key=lambda x: x['Hisse'])
                 save_json(PORTFOY_DOSYASI, st.session_state.portfoy)
                 st.rerun()
-            if bc[1].button("❌", key=f"d_{r['id']}"):
+            if ec4.button("❌ Sil", key=f"d_{r['id']}", use_container_width=True):
                 st.session_state.portfoy.pop(r['id'])
                 save_json(PORTFOY_DOSYASI, st.session_state.portfoy)
                 st.rerun()
+            st.markdown("<div style='margin-bottom:4px;'></div>", unsafe_allow_html=True)
 
 # ==========================================
 # GELİŞTİRİLMİŞ TABLO — RSI + MACD + BB sütunu
@@ -593,7 +666,7 @@ def render_kral_table(df_local, goster_indikatör=True):
                 f"<td><b>{r['Hisse']}</b></td>"
                 f"<td>{r['Sinyal']}</td>"
                 f"{extra}"
-                f"<td>{tr_format(r['Maliyet'])} ₺</td>"
+                f"<td>{tr_format4(r['Maliyet'])} ₺</td>"
                 f"<td>{tr_format(r['Güncel'])} ₺</td>"
                 f"<td style='color:{kz_color};font-weight:bold;'>{tr_format(r['K/Z'])} ₺</td>"
                 f"<td><b>{tr_format(r['Değer'])} ₺</b></td>"
@@ -604,7 +677,7 @@ def render_kral_table(df_local, goster_indikatör=True):
                 f"<tr>"
                 f"<td><b>{r['Hisse']}</b></td><td>{r['Sinyal']}</td>"
                 f"<td>{r['Adet']}</td>"
-                f"<td>{tr_format(r['Maliyet'])} ₺</td>"
+                f"<td>{tr_format4(r['Maliyet'])} ₺</td>"
                 f"<td>{tr_format(r['Güncel'])} ₺</td>"
                 f"<td style='color:{kz_color};font-weight:bold;'>{tr_format(r['K/Z'])} ₺</td>"
                 f"<td><b>{tr_format(r['Değer'])} ₺</b></td>"
@@ -727,8 +800,8 @@ with tab_div:
                 f"<td><b>{r['Hisse']}</b></td>"
                 f"<td style='color:{tarih_color};'>{tarih_goster}</td>"
                 f"<td>{r['Adet']}</td>"
-                f"<td style='color:#ffc107;'>{tr_format(brut)} ₺</td>"
-                f"<td style='color:#00e676;'>{tr_format(r['Temettu'])} ₺</td>"
+                f"<td style='color:#ffc107;'>{tr_format4(brut)} ₺</td>"
+                f"<td style='color:#00e676;'>{tr_format4(r['Temettu'])} ₺</td>"
                 f"<td><b style='color:#00e676;'>{tr_format(r['NetTemettu'])} ₺</b></td>"
                 f"<td>%{verim:.2f}</td>"
                 f"</tr>"
@@ -813,6 +886,37 @@ with tab_ipo:
                     )
                 tavan_html += "</tbody></table>"
                 st.markdown(tavan_html, unsafe_allow_html=True)
+
+                # Portföye Aktar butonu
+                st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
+                pa1, pa2, pa3 = st.columns([2, 2, 1])
+                aktar_hisse = pa1.text_input(
+                    "BIST Kodu (.IS ekli)",
+                    value=ipo['Isim'] + ".IS",
+                    key=f"aktar_kod_{idx}",
+                    placeholder="Örn: BINHO.IS"
+                )
+                aktar_maliyet = pa2.number_input(
+                    "Alış Maliyeti (₺)",
+                    value=float(ipo['Fiyat']),
+                    format="%.4f",
+                    key=f"aktar_maliyet_{idx}"
+                )
+                pa3.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                if pa3.button("📥 Portföye Ekle", key=f"aktar_btn_{idx}", use_container_width=True):
+                    if aktar_hisse:
+                        st.session_state.portfoy.append({
+                            "Piyasa": "Türk Borsası",
+                            "Hisse":  aktar_hisse.upper(),
+                            "Adet":   int(ipo['Adet']),
+                            "Maliyet": float(aktar_maliyet)
+                        })
+                        st.session_state.portfoy = sorted(
+                            st.session_state.portfoy, key=lambda x: x['Hisse']
+                        )
+                        save_json(PORTFOY_DOSYASI, st.session_state.portfoy)
+                        st.success(f"✅ {aktar_hisse.upper()} portföye eklendi!")
+                        st.rerun()
 
 # ==========================================
 # FİYAT ALARMLARI TABU — YENİ
