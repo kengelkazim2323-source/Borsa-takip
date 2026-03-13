@@ -10,8 +10,6 @@ from streamlit_autorefresh import st_autorefresh
 import urllib.request
 import re
 
-
-
 # ==========================================
 # 0. VERİ YÖNETİMİ
 # ==========================================
@@ -390,6 +388,4 @@ with tab_ipo:
                     save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
 
 st.markdown("---")
-st.caption(f"🕒 Son Güncelleme: {datetime.now(pytz.timezone('Europe/Istanbul')).
-
-
+st.caption(f"🕒 Son Güncelleme: {datetime.now(pytz.timezone('Europe/Istanbul'))}.
