@@ -11,17 +11,6 @@ import urllib.request
 import re
 
 
-import streamlit as st
-import yfinance as yf
-import pandas as pd
-import json
-import os
-import pytz
-from datetime import datetime, timedelta
-import plotly.express as px
-from streamlit_autorefresh import st_autorefresh
-import urllib.request
-import re
 
 # ==========================================
 # 0. VERİ YÖNETİMİ
@@ -34,7 +23,7 @@ def load_json(dosya_adi):
     try:
         with open(dosya_adi, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return data if isinstance(data, list) else []
+            return sorted(data, key=lambda x: x.get('Hisse', '')) if isinstance(data, list) else []
     except: return []
 
 def save_json(dosya_adi, data):
@@ -56,15 +45,21 @@ def fetch_stock_data(symbol):
         if not divs.empty:
             divs.index = divs.index.tz_localize(None)
             son_1_yil = datetime.now() - timedelta(days=365)
-            yillik_temettu = divs[divs.index >= son_1_yil].sum()
-        else: yillik_temettu = 0.0
-        return {"hist": hist, "temettu": yillik_temettu}
+            # Yfinance brüt verir. Türkiye için %10 stopaj kesintisi uygulanarak NET temettü hesaplanır.
+            yillik_brut_temettu = divs[divs.index >= son_1_yil].sum()
+            yillik_net_temettu = yillik_brut_temettu * 0.90 
+            son_tarih = divs.index[-1].strftime('%d.%m.%Y')
+        else: 
+            yillik_net_temettu = 0.0
+            son_tarih = "-"
+        return {"hist": hist, "temettu": yillik_net_temettu, "tarih": son_tarih}
     except: return None
 
 @st.cache_data(ttl=300)
 def fetch_tefas_price(symbol):
     try:
         code = symbol.replace(".IS", "").upper()
+        # TEFAS, Türkiye'deki tüm fonların (Midas dahil) tek resmi ve anlık veri kaynağıdır.
         url = f"https://www.tefas.gov.tr/FonAnaliz.aspx?FonKod={code}"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         html = urllib.request.urlopen(req, timeout=5).read().decode('utf-8')
@@ -103,18 +98,27 @@ def get_signal(hist_data):
 # 1. TEMA VE CSS
 # ==========================================
 st.set_page_config(page_title="Borsa Takip", page_icon="📈", layout="wide")
-st_autorefresh(interval=1000, key="datarefresh")
+st_autorefresh(interval=60000, key="datarefresh") # API yorulmasın diye 60 saniyeye çektim.
+
+tema_isimleri = [
+    "Siyah-Beyaz (Klasik)", "Siyah-Beyaz (Koyu)", "Galaksi (VIP)", "Siber Punk", "Matrix", "Altın Vuruş", 
+    "Zümrüt Yeşili", "Lav Akışı", "Okyanus Derinliği", "Kuzey Işıkları", "Buzul (Dark)", "Mor Ötesi",
+    "Bakır Buharı", "Gece Yarısı", "Safir Gece", "Çöl Fırtınası", "Kızıl Elmas", "Premium Koyu", 
+    "Retro Kehribar", "Derin Orman", "Antrasit VIP", "Neon Gecesi", "Gümüş", "Titanyum", "Platin", 
+    "Yakut", "Ametist", "Turkuaz", "Karanlık Madde", "Süpernova", "Karadelik", "Yıldız Tozu", 
+    "Kozmik Mavi", "Güneş Patlaması", "Zehirli Yeşil", "Çikolata Rüyası", "Vanilya Gökyüzü", 
+    "Kızıl Gezegen", "Buz Devi", "Volkanik Kül", "Şafak Vakti", "Alacakaranlık", "Gece Kuşu", 
+    "Şehir Işıkları", "Siber Gümüş", "Kripto Yeşili", "Hacker Terminali", "Galaktik Mor", 
+    "Kuantum Foton", "Biyolüminesans"
+]
 
 with st.sidebar:
     st.header("🎨 Tema Galerisi")
-    tema = st.selectbox("Görünüm Seç", [
-        "Galaksi (VIP)", "Siber Punk", "Matrix", "Altın Vuruş", "Zümrüt Yeşili", 
-        "Lav Akışı", "Okyanus Derinliği", "Kuzey Işıkları", "Buzul (Dark)", "Mor Ötesi",
-        "Bakır Buharı", "Gece Yarısı", "Safir Gece", "Çöl Fırtınası", "Kızıl Elmas",
-        "Premium Koyu", "Retro Kehribar", "Derin Orman", "Antrasit VIP", "Neon Gecesi"
-    ])
+    tema = st.selectbox("Görünüm Seç", tema_isimleri)
 
 tema_renkleri = {
+    "Siyah-Beyaz (Klasik)": {"bg": "#FFFFFF", "text": "#000000", "box": "#F5F5F5", "accent": "#000000"},
+    "Siyah-Beyaz (Koyu)": {"bg": "#000000", "text": "#FFFFFF", "box": "#1A1A1A", "accent": "#FFFFFF"},
     "Galaksi (VIP)": {"bg": "#0B0E14", "text": "#E0E0E0", "box": "#161B22", "accent": "#00D4FF"},
     "Siber Punk": {"bg": "#0D0221", "text": "#FFFFFF", "box": "#190033", "accent": "#FF00FF"},
     "Matrix": {"bg": "#000000", "text": "#00FF41", "box": "#0D0208", "accent": "#00FF41"},
@@ -134,10 +138,39 @@ tema_renkleri = {
     "Retro Kehribar": {"bg": "#0A0A0A", "text": "#FFB300", "box": "#1A1A1A", "accent": "#FF8F00"},
     "Derin Orman": {"bg": "#081C15", "text": "#D8F3DC", "box": "#1B4332", "accent": "#95D5B2"},
     "Antrasit VIP": {"bg": "#1B1B1B", "text": "#D1D1D1", "box": "#2D2D2D", "accent": "#E0E0E0"},
-    "Neon Gecesi": {"bg": "#000814", "text": "#FFFFFF", "box": "#001D3D", "accent": "#FFC300"}
+    "Neon Gecesi": {"bg": "#000814", "text": "#FFFFFF", "box": "#001D3D", "accent": "#FFC300"},
+    "Gümüş": {"bg": "#111111", "text": "#E0E0E0", "box": "#222222", "accent": "#C0C0C0"},
+    "Titanyum": {"bg": "#1C1F22", "text": "#E8E9EA", "box": "#2B2F33", "accent": "#878681"},
+    "Platin": {"bg": "#151515", "text": "#FDFDFD", "box": "#252525", "accent": "#E5E4E2"},
+    "Yakut": {"bg": "#1A0505", "text": "#FDE0E0", "box": "#2B0A0A", "accent": "#E0115F"},
+    "Ametist": {"bg": "#140A1A", "text": "#EAD5F7", "box": "#251330", "accent": "#9966CC"},
+    "Turkuaz": {"bg": "#061A1C", "text": "#D5F4F7", "box": "#0A2D30", "accent": "#40E0D0"},
+    "Karanlık Madde": {"bg": "#020202", "text": "#808080", "box": "#0A0A0A", "accent": "#4B0082"},
+    "Süpernova": {"bg": "#1A0D00", "text": "#FFDAB9", "box": "#331A00", "accent": "#FF4500"},
+    "Karadelik": {"bg": "#000000", "text": "#4A4A4A", "box": "#050505", "accent": "#FFFFFF"},
+    "Yıldız Tozu": {"bg": "#0A0A12", "text": "#F0F8FF", "box": "#141424", "accent": "#FFD700"},
+    "Kozmik Mavi": {"bg": "#050B14", "text": "#B0C4DE", "box": "#0A1628", "accent": "#1E90FF"},
+    "Güneş Patlaması": {"bg": "#140500", "text": "#FFEFD5", "box": "#280A00", "accent": "#FF8C00"},
+    "Zehirli Yeşil": {"bg": "#051405", "text": "#E0FFE0", "box": "#0A280A", "accent": "#39FF14"},
+    "Çikolata Rüyası": {"bg": "#1E120D", "text": "#E8D8D0", "box": "#2D1B14", "accent": "#D2691E"},
+    "Vanilya Gökyüzü": {"bg": "#F3E5AB", "text": "#3E2723", "box": "#FFF3E0", "accent": "#5D4037"},
+    "Kızıl Gezegen": {"bg": "#1C0A00", "text": "#FFD1B3", "box": "#331400", "accent": "#B22222"},
+    "Buz Devi": {"bg": "#00111A", "text": "#CCEEFF", "box": "#002233", "accent": "#00FFFF"},
+    "Volkanik Kül": {"bg": "#1C1C1C", "text": "#A9A9A9", "box": "#2A2A2A", "accent": "#FF6347"},
+    "Şafak Vakti": {"bg": "#1A1016", "text": "#FADADD", "box": "#2B1A24", "accent": "#FF69B4"},
+    "Alacakaranlık": {"bg": "#0B0C10", "text": "#C5C6C7", "box": "#1F2833", "accent": "#66FCF1"},
+    "Gece Kuşu": {"bg": "#080808", "text": "#CCCCCC", "box": "#141414", "accent": "#7B68EE"},
+    "Şehir Işıkları": {"bg": "#0A0A0A", "text": "#F0F0F0", "box": "#171717", "accent": "#FF1493"},
+    "Siber Gümüş": {"bg": "#0D0D11", "text": "#D1D5DB", "box": "#1F2937", "accent": "#9CA3AF"},
+    "Kripto Yeşili": {"bg": "#0B110B", "text": "#E5FFE5", "box": "#152215", "accent": "#00FF00"},
+    "Hacker Terminali": {"bg": "#000000", "text": "#00FF00", "box": "#051105", "accent": "#008000"},
+    "Galaktik Mor": {"bg": "#0A0014", "text": "#E6CCFF", "box": "#140028", "accent": "#8A2BE2"},
+    "Kuantum Foton": {"bg": "#000A14", "text": "#CCE5FF", "box": "#001428", "accent": "#00BFFF"},
+    "Biyolüminesans": {"bg": "#001414", "text": "#CCFFFF", "box": "#002828", "accent": "#00FA9A"}
 }
 
-t_sec = tema_renkleri[tema]
+t_sec = tema_renkleri.get(tema, tema_renkleri["Galaksi (VIP)"])
+
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@700&display=swap');
@@ -172,7 +205,6 @@ setInterval(updateClock, 1000); updateClock();
 """
 st.components.v1.html(clock_html, height=80)
 
-
 st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']};'>🚀 Borsa Takip</h2>", unsafe_allow_html=True)
 piyasa_izleme = { "BIST 100": "XU100.IS", "ONS ALTIN": "GC=F", "ONS GÜMÜŞ": "SI=F", "USD/TRY": "USDTRY=X", "BTC": "BTC-USD"}
 
@@ -205,19 +237,21 @@ for i, item in enumerate(st.session_state.portfoy):
         else:
             c = item['Maliyet']; pc = c; sinyal = "VERİ YOK"
         temettu = 0.0
+        tarih = "-"
     else:
         if d:
             c = d['hist']['Close'].iloc[-1]; pc = d['hist']['Close'].iloc[-2]
-            sinyal = get_signal(d['hist']); temettu = d['temettu']
+            sinyal = get_signal(d['hist']); temettu = d['temettu']; tarih = d['tarih']
         else:
-            c = item['Maliyet']; pc = c; sinyal = "VERİ YOK"; temettu = 0.0
+            c = item['Maliyet']; pc = c; sinyal = "VERİ YOK"; temettu = 0.0; tarih = "-"
 
     full_data.append({
         "id": i, "Piyasa": piyasa_durumu, "Hisse": item['Hisse'], 
         "Sinyal": sinyal, "Adet": item['Adet'], "Maliyet": item['Maliyet'], 
         "Güncel": c, "K/Z": (c - item['Maliyet']) * item['Adet'], 
         "Değer": c * item['Adet'], "Temettu": temettu, 
-        "NetTemettu": temettu * item['Adet'], "DailyDiff": (c - pc) * item['Adet']
+        "NetTemettu": temettu * item['Adet'], "DailyDiff": (c - pc) * item['Adet'],
+        "Tarih": tarih
     })
 
 # ==========================================
@@ -236,6 +270,8 @@ with st.sidebar:
     maliyet_sec = st.number_input("Maliyet", min_value=0.0)
     if st.button("🚀 Portföye Ekle"):
         st.session_state.portfoy.append({"Piyasa": piyasa_sec, "Hisse": hisse_sec, "Adet": float(adet_sec), "Maliyet": float(maliyet_sec)})
+        # Eklendikten sonra listeyi harf sırasına sokar
+        st.session_state.portfoy = sorted(st.session_state.portfoy, key=lambda x: x['Hisse'])
         save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
 
 # --- YÖNETİM FONKSİYONU ---
@@ -249,8 +285,10 @@ def varlik_yonetimi_render(df_local):
             c4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
             bc = c4.columns(2)
             if bc[0].button("💾", key=f"s_{r['id']}"):
+                # İlgili id üzerinden güncellemeyi yap
                 st.session_state.portfoy[r['id']]['Adet'] = y_adet
                 st.session_state.portfoy[r['id']]['Maliyet'] = y_maliyet
+                st.session_state.portfoy = sorted(st.session_state.portfoy, key=lambda x: x['Hisse'])
                 save_json(PORTFOY_DOSYASI, st.session_state.portfoy); st.rerun()
             if bc[1].button("❌", key=f"d_{r['id']}"):
                 st.session_state.portfoy.pop(r['id'])
@@ -301,16 +339,17 @@ with tab_fon:
 
 # --- TEMETTÜ GELİRİ ---
 with tab_div:
-    st.markdown(f"### 💰 Yıllık Projeksiyon")
+    st.markdown(f"### 💰 Yıllık Projeksiyon (Net Değerler)")
     df_div = pd.DataFrame([x for x in full_data if x['Temettu'] > 0])
     if not df_div.empty:
         toplam_temettu = df_div['NetTemettu'].sum()
         st.metric("TAHMİNİ YILLIK NAKİT AKIŞI", f"{tr_format(toplam_temettu)} ₺", delta=f"Aylık: {tr_format(toplam_temettu/12)} ₺")
         
-        div_table = "<table class='kral-table'><thead><tr><th>HİSSE</th><th>ADET</th><th>HİSSE BAŞI</th><th>YILLIK TOPLAM</th><th>VERİM (%)</th></tr></thead><tbody>"
+        # Tarih Sütunu Eklendi
+        div_table = "<table class='kral-table'><thead><tr><th>HİSSE</th><th>SON DAĞITIM TARİHİ</th><th>ADET</th><th>NET HİSSE BAŞI</th><th>YILLIK TOPLAM (NET)</th><th>VERİM (%)</th></tr></thead><tbody>"
         for _, r in df_div.iterrows():
             verim = (r['Temettu'] / r['Güncel']) * 100 if r['Güncel'] > 0 else 0
-            div_table += f"<tr><td><b>{r['Hisse']}</b></td><td>{r['Adet']}</td><td>{tr_format(r['Temettu'])} ₺</td><td><b>{tr_format(r['NetTemettu'])} ₺</b></td><td>%{verim:.2f}</td></tr>"
+            div_table += f"<tr><td><b>{r['Hisse']}</b></td><td>{r['Tarih']}</td><td>{r['Adet']}</td><td>{tr_format(r['Temettu'])} ₺</td><td><b style='color:#00e676;'>{tr_format(r['NetTemettu'])} ₺</b></td><td>%{verim:.2f}</td></tr>"
         st.markdown(div_table + "</tbody></table>", unsafe_allow_html=True)
     else: st.warning("Temettü verisi bulunamadı.")
 
@@ -330,18 +369,26 @@ with tab_ipo:
     if st.session_state.ipo_liste:
         for idx, ipo in enumerate(st.session_state.ipo_liste):
             with st.expander(f"📈 {ipo['Isim']} - Tavan Simülasyonu"):
-                col1, col2 = st.columns([4, 1])
+                col1, col2 = st.columns([6, 1])
+                
+                # Simetrik ve şık tablo yapısı
                 maliyet = ipo['Adet'] * ipo['Fiyat']
-                tavan_list = []
+                tavan_html = "<table class='kral-table' style='text-align:center;'><thead><tr><th style='text-align:center;'>GÜN</th><th style='text-align:center;'>FİYAT</th><th style='text-align:center;'>TOPLAM KAR</th></tr></thead><tbody>"
+                
                 p = ipo['Fiyat']
                 for g in range(1, 11):
                     p *= 1.10
-                    tavan_list.append({"Gün": f"{g}. Tavan", "Fiyat": f"{tr_format(p)} ₺", "Toplam Kar": f"{tr_format((p * ipo['Adet']) - maliyet)} ₺"})
-                col1.table(pd.DataFrame(tavan_list))
-                if col2.button("❌ SİL", key=f"del_ipo_{idx}"):
+                    kar = (p * ipo['Adet']) - maliyet
+                    tavan_html += f"<tr><td><b>{g}. Tavan</b></td><td>{tr_format(p)} ₺</td><td style='color:#00e676; font-weight:bold;'>+{tr_format(kar)} ₺</td></tr>"
+                tavan_html += "</tbody></table>"
+                
+                col1.markdown(tavan_html, unsafe_allow_html=True)
+                
+                if col2.button("❌ LİSTEDEN SİL", key=f"del_ipo_{idx}"):
                     st.session_state.ipo_liste.pop(idx)
                     save_json(IPO_DOSYASI, st.session_state.ipo_liste); st.rerun()
 
 st.markdown("---")
 st.caption(f"🕒 Son Güncelleme: {datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')}")
+
 
