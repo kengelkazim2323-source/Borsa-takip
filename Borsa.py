@@ -481,7 +481,7 @@ with st.sidebar:
 def varlik_yonetimi_render(df_local):
     with st.expander("🛠️ VARLIK YÖNETİMİ"):
         for _, r in df_local.iterrows():
-            c1, c2, c3, c4 = st.columns([1.5, 2, 4, 1])
+            c1, c2, c3, c4 = st.columns([1.5, 2, 2, 1])
             c1.markdown(f"<div style='margin-top:25px;'><b>{r['Hisse']}</b></div>", unsafe_allow_html=True)
             y_adet    = c2.number_input("Adet",    value=int(r['Adet']),      step=1,  key=f"a_{r['id']}")
             y_maliyet = c3.number_input("Maliyet", value=float(r['Maliyet']),          key=f"m_{r['id']}")
