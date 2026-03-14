@@ -4,4 +4,4 @@ pandas
 plotly
 streamlit-javascript
 streamlit_autorefresh
-streamlit run
+streamlit_run
