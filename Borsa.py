@@ -528,6 +528,15 @@ def fetch_single_item(args):
             temettu = 0.0; tarih = "-"
 
     adet_int = int(item['Adet'])
+
+    # Son 7 günlük kapanış verisi (sparkline için)
+    spark_prices = []
+    if d and not d['hist'].empty:
+        try:
+            spark_prices = [round(float(v), 4) for v in d['hist']['Close'].iloc[-7:].tolist()]
+        except Exception:
+            spark_prices = []
+
     return {
         "id": i, "Piyasa": piyasa_durumu, "Hisse": item['Hisse'],
         "Sinyal": sinyal, "RSI": rsi_val, "MACD_H": macd_h, "BB_PCT": bb_pct,
@@ -538,7 +547,8 @@ def fetch_single_item(args):
         "Temettu": temettu,
         "NetTemettu": round(temettu * adet_int, 2),
         "DailyDiff": round((c - pc) * adet_int, 2),
-        "Tarih": tarih
+        "Tarih": tarih,
+        "Sparkline": spark_prices,
     }
 
 # ==========================================
@@ -1104,6 +1114,58 @@ def varlik_yonetimi_render(df_local):
                 st.rerun()
             st.markdown("<div style='margin-bottom:4px;'></div>", unsafe_allow_html=True)
 
+def make_sparkline_svg(prices, width=80, height=28, renk_kz=None):
+    """
+    Verilen fiyat listesinden inline SVG sparkline üretir.
+    renk_kz: None ise ilk-son fiyata göre otomatik renk seçer.
+    """
+    if not prices or len(prices) < 2:
+        return "<span style='opacity:0.25;font-size:10px;'>—</span>"
+
+    try:
+        mn   = min(prices)
+        mx   = max(prices)
+        span = mx - mn if mx != mn else 1.0
+        pad  = 3   # üst/alt boşluk (px)
+
+        # x koordinatları eşit aralıklı
+        xs = [round(i * (width - 1) / (len(prices) - 1), 2) for i in range(len(prices))]
+        # y koordinatları: yüksek fiyat = düşük y (SVG y ekseni ters)
+        ys = [round(pad + (1 - (p - mn) / span) * (height - 2 * pad), 2) for p in prices]
+
+        # Renk: son - ilk fiyata göre
+        if renk_kz is not None:
+            renk = "#00e676" if renk_kz >= 0 else "#ff1744"
+        else:
+            renk = "#00e676" if prices[-1] >= prices[0] else "#ff1744"
+
+        # Polylon noktaları
+        pts = " ".join(f"{x},{y}" for x, y in zip(xs, ys))
+
+        # Dolgu için alan kapatma (altına in, sola git, kapat)
+        alan_pts = (
+            f"0,{height} "      # sol alt köşe
+            + pts +
+            f" {width},{height}" # sağ alt köşe
+        )
+
+        svg = (
+            f"<svg width='{width}' height='{height}' viewBox='0 0 {width} {height}' "
+            f"xmlns='http://www.w3.org/2000/svg' style='vertical-align:middle;overflow:visible;'>"
+            # Alan dolgusu (şeffaf)
+            f"<polygon points='{alan_pts}' fill='{renk}' fill-opacity='0.12'/>"
+            # Çizgi
+            f"<polyline points='{pts}' fill='none' stroke='{renk}' "
+            f"stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/>"
+            # Son nokta
+            f"<circle cx='{xs[-1]}' cy='{ys[-1]}' r='2' fill='{renk}'/>"
+            f"</svg>"
+        )
+        return svg
+    except Exception:
+        return "<span style='opacity:0.25;font-size:10px;'>—</span>"
+
+
 @st.cache_data(ttl=600)
 def hesapla_korelasyon(hisse_listesi):
     """Son 30 gün kapanış fiyatları üzerinden korelasyon matrisi hesaplar."""
@@ -1123,14 +1185,18 @@ def hesapla_korelasyon(hisse_listesi):
 # ==========================================
 def render_kral_table(df_local, goster_indikatör=True):
     if goster_indikatör:
-        baslik = "<tr><th>VARLIK</th><th>SİNYAL</th><th>RSI</th><th>MACD-H</th><th>BB%</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr>"
+        baslik = "<tr><th>VARLIK</th><th>7G</th><th>SİNYAL</th><th>RSI</th><th>MACD-H</th><th>BB%</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr>"
     else:
-        baslik = "<tr><th>VARLIK</th><th>SİNYAL</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr>"
+        baslik = "<tr><th>VARLIK</th><th>7G</th><th>SİNYAL</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr>"
 
     table_html = f"<table class='kral-table'><thead>{baslik}</thead><tbody>"
 
     for _, r in df_local.iterrows():
         kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
+
+        # Sparkline SVG
+        spark_prices = r.get('Sparkline', [])
+        spark_svg    = make_sparkline_svg(spark_prices, renk_kz=r['K/Z'])
 
         if goster_indikatör:
             # RSI rengi
@@ -1147,7 +1213,7 @@ def render_kral_table(df_local, goster_indikatör=True):
             # Bollinger % bar
             bb_pct   = max(0, min(100, r['BB_PCT']))
             bb_color = "#00e676" if bb_pct < 30 else ("#ff1744" if bb_pct > 70 else "#ffc107")
-            bb_bg = t_sec['box']
+            bb_bg    = t_sec['box']
 
             extra = (
                 f"<td style='color:{rsi_color};font-weight:bold;'>{rsi:.1f}</td>"
@@ -1162,6 +1228,7 @@ def render_kral_table(df_local, goster_indikatör=True):
             table_html += (
                 f"<tr>"
                 f"<td><b>{r['Hisse']}</b></td>"
+                f"<td style='padding:8px 12px;'>{spark_svg}</td>"
                 f"<td>{r['Sinyal']}</td>"
                 f"{extra}"
                 f"<td>{tr_format4(r['Maliyet'])} ₺</td>"
@@ -1173,7 +1240,9 @@ def render_kral_table(df_local, goster_indikatör=True):
         else:
             table_html += (
                 f"<tr>"
-                f"<td><b>{r['Hisse']}</b></td><td>{r['Sinyal']}</td>"
+                f"<td><b>{r['Hisse']}</b></td>"
+                f"<td style='padding:8px 12px;'>{spark_svg}</td>"
+                f"<td>{r['Sinyal']}</td>"
                 f"<td>{r['Adet']}</td>"
                 f"<td>{tr_format4(r['Maliyet'])} ₺</td>"
                 f"<td>{tr_format(r['Güncel'])} ₺</td>"
