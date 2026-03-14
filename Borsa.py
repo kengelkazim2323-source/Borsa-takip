@@ -1234,29 +1234,126 @@ with st.sidebar:
         st.session_state.yenileme_suresi = _sure_sec
         st.rerun()
 
-    # Telefon URL bilgisi
-    try:
-        import socket
-        _hostname = socket.gethostname()
-        _local_ip = socket.gethostbyname(_hostname)
-    except Exception:
-        _local_ip = "—"
+    # --- GELİŞMİŞ IP TESPİTİ ---
+    def _get_lan_ips():
+        """Çoklu yöntemle LAN IP adreslerini toplar, 127.x ve 0.0.0.0 filtreler."""
+        ips = []
+        # Yöntem 1: UDP trick (en güvenilir)
+        try:
+            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            _s.connect(("8.8.8.8", 80))
+            _ip = _s.getsockname()[0]
+            _s.close()
+            if _ip and not _ip.startswith("127."):
+                ips.append(_ip)
+        except Exception:
+            pass
+        # Yöntem 2: hostname -I (Linux)
+        try:
+            import subprocess as _sp
+            _r = _sp.run(["hostname", "-I"], capture_output=True, text=True, timeout=2)
+            for _ip in _r.stdout.strip().split():
+                if not _ip.startswith("127.") and _ip != "0.0.0.0" and _ip not in ips:
+                    ips.append(_ip)
+        except Exception:
+            pass
+        # Yöntem 3: ip route (Linux)
+        try:
+            import subprocess as _sp, re as _re
+            _r = _sp.run(["ip", "route", "get", "8.8.8.8"], capture_output=True, text=True, timeout=2)
+            _m = _re.search(r"src (\d+\.\d+\.\d+\.\d+)", _r.stdout)
+            if _m and _m.group(1) not in ips:
+                ips.append(_m.group(1))
+        except Exception:
+            pass
+        return ips
 
-    st.markdown(
-        f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}22;"
-        f"border-radius:8px;padding:8px 12px;margin-top:4px;'>"
-        f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
-        f"<div style='font-size:10px;color:{_acc_s};font-weight:600;'>"
-        f"Aynı Wi-Fi'ya bağlı ol,<br>tarayıcıda şunu aç:</div>"
-        f"<div style='font-size:11px;font-family:monospace;margin-top:4px;"
-        f"word-break:break-all;opacity:0.8;'>"
-        f"http://{_local_ip}:8501</div>"
-        f"<div style='font-size:9px;opacity:0.4;margin-top:4px;'>"
-        f"Aynı URL'yi telefon ve bilgisayarda aç — "
-        f"her ikisi de {st.session_state.yenileme_suresi}sn'de otomatik güncellenir.</div>"
-        f"</div>",
-        unsafe_allow_html=True
+    # Ortam tespiti: Streamlit Cloud mı, local mı?
+    _is_cloud = (
+        os.environ.get('STREAMLIT_SHARING_MODE') is not None
+        or '/mount/src/' in os.path.abspath(__file__)
+        or os.environ.get('STREAMLIT_SERVER_HEADLESS', '') == '1'
     )
+    _port = os.environ.get('STREAMLIT_SERVER_PORT', '8501')
+
+    if _is_cloud:
+        # Streamlit Cloud: tarayıcı adres çubuğundaki URL kullanılmalı
+        st.markdown(
+            f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
+            f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
+            f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
+            f"<div style='font-size:11px;color:{_acc_s};font-weight:600;margin-bottom:4px;'>"
+            f"Streamlit Cloud üzerinde çalışıyor</div>"
+            f"<div style='font-size:10px;opacity:0.7;line-height:1.5;'>"
+            f"Tarayıcının adres çubuğundaki URL'yi<br>"
+            f"telefonuna kopyala — direk açılır.</div>"
+            f"<div style='font-size:9px;opacity:0.4;margin-top:6px;'>"
+            f"Her {st.session_state.yenileme_suresi}sn'de otomatik yenilenir.</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        # Local: LAN IP bul ve göster
+        _ips = _get_lan_ips()
+
+        if _ips:
+            _ip  = _ips[0]
+            _url = f"http://{_ip}:{_port}"
+
+            st.markdown(
+                f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
+                f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
+                f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
+                f"<div style='font-size:10px;opacity:0.7;margin-bottom:6px;line-height:1.5;'>"
+                f"1. Telefonu aynı Wi-Fi'ya bağla<br>"
+                f"2. Tarayıcıda şu adresi aç:</div>"
+                f"<div style='font-size:13px;font-family:monospace;font-weight:700;"
+                f"color:{_acc_s};background:{t_sec['bg']};padding:6px 10px;"
+                f"border-radius:6px;word-break:break-all;letter-spacing:0.5px;'>"
+                f"{_url}</div>",
+                unsafe_allow_html=True
+            )
+
+            # Birden fazla IP varsa diğerlerini de göster
+            if len(_ips) > 1:
+                st.markdown(
+                    f"<div style='font-size:9px;opacity:0.45;margin-top:4px;'>"
+                    f"Diğer adresler: " + " · ".join(f"http://{ip}:{_port}" for ip in _ips[1:]) +
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+
+            st.markdown(
+                f"<div style='font-size:9px;opacity:0.4;margin-top:4px;'>"
+                f"Her {st.session_state.yenileme_suresi}sn'de otomatik yenilenir · "
+                f"Çalışmazsa `streamlit run Borsa.py --server.address=0.0.0.0` ile başlat"
+                f"</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+
+            # Kopyalama butonu
+            if st.button("📋 URL'yi Kopyala", key="url_kopyala", use_container_width=True):
+                st.code(_url, language=None)
+                st.caption("↑ Yukarıdaki URL'yi seç ve kopyala")
+        else:
+            st.markdown(
+                f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
+                f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
+                f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
+                f"<div style='font-size:10px;opacity:0.7;line-height:1.5;'>"
+                f"IP adresi otomatik bulunamadı.<br>"
+                f"Terminalde şunu çalıştır:<br>"
+                f"<span style='font-family:monospace;color:{_acc_s};'>"
+                f"streamlit run Borsa.py --server.address=0.0.0.0</span><br><br>"
+                f"Sonra telefon tarayıcısında:<br>"
+                f"<span style='font-family:monospace;color:{_acc_s};'>"
+                f"http://[BİLGİSAYAR-IP]:{_port}</span>"
+                f"</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+            st.caption("💡 Bilgisayarın IP'sini öğrenmek için: `ipconfig` (Windows) veya `ifconfig` (Mac/Linux)")
 
 
 # ==========================================
