@@ -31,7 +31,12 @@ def load_json(dosya_adi):
     try:
         with open(dosya_adi, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return sorted(data, key=lambda x: x.get('Hisse', '')) if isinstance(data, list) else []
+            if not isinstance(data, list):
+                return []
+            # Performans dosyası 'tarih' key'i kullanır, portföy 'Hisse' key'i
+            if data and 'tarih' in data[0] and 'Hisse' not in data[0]:
+                return sorted(data, key=lambda x: x.get('tarih', ''))
+            return sorted(data, key=lambda x: x.get('Hisse', ''))
     except Exception as e:
         logger.error(f"JSON yükleme hatası ({dosya_adi}): {e}")
         return []
@@ -463,8 +468,27 @@ FONT_SECENEKLERI = {
 
 with st.sidebar:
     st.header("🎨 Tema Galerisi")
-    tema = st.selectbox("Görünüm Seç", tema_isimleri)
-    secili_font_adi = st.selectbox("🔤 Font Seç", list(FONT_SECENEKLERI.keys()))
+    # session_state ile seçim kalıcı kalır (tema değişince rerun da etkilemez)
+    if 'tema_secim' not in st.session_state:
+        st.session_state.tema_secim = "Galaksi (VIP)"
+    if 'font_secim' not in st.session_state:
+        st.session_state.font_secim = "Inter (Varsayılan)"
+
+    tema = st.selectbox(
+        "Görünüm Seç", tema_isimleri,
+        index=tema_isimleri.index(st.session_state.tema_secim)
+              if st.session_state.tema_secim in tema_isimleri else 2,
+        key="tema_widget"
+    )
+    st.session_state.tema_secim = tema
+
+    secili_font_adi = st.selectbox(
+        "🔤 Font Seç", list(FONT_SECENEKLERI.keys()),
+        index=list(FONT_SECENEKLERI.keys()).index(st.session_state.font_secim)
+              if st.session_state.font_secim in FONT_SECENEKLERI else 0,
+        key="font_widget"
+    )
+    st.session_state.font_secim = secili_font_adi
     secili_font, secili_font_url = FONT_SECENEKLERI[secili_font_adi]
 
 tema_renkleri = {
@@ -626,13 +650,64 @@ st.markdown(ticker_content + '</div></div>', unsafe_allow_html=True)
 # 3. PARALEL VERİ HAZIRLAMA
 # ==========================================
 BIST_FULL = sorted([
-    "A1CAP.IS","ADEL.IS","AGROT.IS","AKBNK.IS","AKSA.IS","ALARK.IS","ALFAS.IS","ARCLK.IS",
-    "ASELS.IS","ASTOR.IS","BIMAS.IS","BRISA.IS","CANTE.IS","CCOLA.IS","CIMSA.IS","CWENE.IS",
-    "DOAS.IS","DOHOL.IS","EKGYO.IS","ENJSA.IS","ENKAI.IS","EREGL.IS","EUPWR.IS","FROTO.IS",
-    "GARAN.IS","GESAN.IS","GUBRF.IS","HALKB.IS","HEKTS.IS","ISCTR.IS","ISGYO.IS","ISMEN.IS",
-    "ISYAT.IS","KCHOL.IS","KLKIM.IS","KONTR.IS","KOZAL.IS","KRDMD.IS","MIATK.IS","ODAS.IS",
-    "OTKAR.IS","OYAKC.IS","PETKM.IS","PGSUS.IS","REEDR.IS","SAHOL.IS","SASA.IS","SISE.IS",
-    "SOKM.IS","TCELL.IS","THYAO.IS","TOASO.IS","TUPRS.IS","YKBNK.IS"
+    "A1CAP.IS","ACSEL.IS","ADEL.IS","ADESE.IS","AEFES.IS","AFYON.IS","AGESA.IS","AGHOL.IS",
+    "AGROT.IS","AHGAZ.IS","AKBNK.IS","AKCNS.IS","AKENR.IS","AKFGY.IS","AKFYE.IS","AKGRT.IS",
+    "AKMGY.IS","AKSA.IS","AKSEN.IS","ALARK.IS","ALBRK.IS","ALFAS.IS","ALGYO.IS","ALKIM.IS",
+    "ALMAD.IS","ANELE.IS","ANGEN.IS","ANHYT.IS","ANSGR.IS","ARCLK.IS","ARDYZ.IS","ARENA.IS",
+    "ARSAN.IS","ASGYO.IS","ASELS.IS","ASTOR.IS","ASUZU.IS","ATEKS.IS","ATLAS.IS","ATSYH.IS",
+    "AVHOL.IS","AVOD.IS","AYDEM.IS","AYEN.IS","AYGAZ.IS","BAGFS.IS","BAKAB.IS","BALAT.IS",
+    "BANVT.IS","BASGZ.IS","BAYRK.IS","BEGYO.IS","BERA.IS","BFREN.IS","BIMAS.IS","BINHO.IS",
+    "BIOEN.IS","BIZIM.IS","BJKAS.IS","BLCYT.IS","BMSTL.IS","BNTAS.IS","BOBET.IS","BORLS.IS",
+    "BORSK.IS","BOSSA.IS","BRISA.IS","BRKO.IS","BRKSN.IS","BRKVY.IS","BRLSM.IS","BRMEN.IS",
+    "BRYAT.IS","BSOKE.IS","BTCIM.IS","BUCIM.IS","BURCE.IS","BURVA.IS","BVSAN.IS","BYDNR.IS",
+    "CANTE.IS","CASA.IS","CATES.IS","CCOLA.IS","CELHA.IS","CEMAS.IS","CEMTS.IS","CEVNY.IS",
+    "CIMSA.IS","CLEBI.IS","CMBTN.IS","CMENT.IS","CONSE.IS","COSMO.IS","CRDFA.IS","CRFSA.IS",
+    "CUSAN.IS","CVKMD.IS","CWENE.IS","DAGHL.IS","DAGI.IS","DAPGM.IS","DARDL.IS","DENGE.IS",
+    "DERAS.IS","DERIM.IS","DESA.IS","DESPC.IS","DEVA.IS","DGGYO.IS","DIRIT.IS","DITAS.IS",
+    "DMSAS.IS","DOAS.IS","DOCO.IS","DOHOL.IS","DOKTA.IS","DURDO.IS","DYOBY.IS","DZGYO.IS",
+    "EBEBK.IS","ECILC.IS","ECZYT.IS","EDATA.IS","EDIP.IS","EGEEN.IS","EGEPO.IS","EGGUB.IS",
+    "EGPRO.IS","EGSER.IS","EKGYO.IS","EKIZ.IS","EKOS.IS","EKSUN.IS","ELITE.IS","EMKEL.IS",
+    "ENERY.IS","ENJSA.IS","ENKAI.IS","ERBOS.IS","EREGL.IS","ERSU.IS","ESCOM.IS","ESEN.IS",
+    "EUPWR.IS","EUREN.IS","EYGYO.IS","FMIZP.IS","FONET.IS","FORMT.IS","FORTE.IS","FROTO.IS",
+    "FZLGY.IS","GARAN.IS","GENTS.IS","GEREL.IS","GESAN.IS","GIPTA.IS","GLBMD.IS","GLCVY.IS",
+    "GLRYH.IS","GLYHO.IS","GMTAS.IS","GOKNR.IS","GOLTS.IS","GOODY.IS","GOZDE.IS","GRNYO.IS",
+    "GRSEL.IS","GSDDE.IS","GSDHO.IS","GUBRF.IS","GWIND.IS","GZNMI.IS","HALKB.IS","HATEK.IS",
+    "HATSN.IS","HEDEF.IS","HEKTS.IS","HKTM.IS","HLGYO.IS","HTTBT.IS","HUBVC.IS","HUNER.IS",
+    "HURGZ.IS","ICBCT.IS","IDAS.IS","IDEAS.IS","IDGYO.IS","IEYHO.IS","IHEVA.IS","IHGZT.IS",
+    "IHLAS.IS","IHLGM.IS","IHYAY.IS","IMASM.IS","INDES.IS","INFO.IS","INTEM.IS","IPEKE.IS",
+    "ISATR.IS","ISBTR.IS","ISCTR.IS","ISDMR.IS","ISFIN.IS","ISGSY.IS","ISGYO.IS","ISMEN.IS",
+    "ISSEN.IS","ISYAT.IS","ITTFH.IS","IZENR.IS","IZFAS.IS","IZINV.IS","IZMDC.IS","JANTS.IS",
+    "KAPLM.IS","KAREL.IS","KARSN.IS","KARTN.IS","KARYE.IS","KATMR.IS","KAYSE.IS","KBCOR.IS",
+    "KCAER.IS","KCHOL.IS","KFEIN.IS","KGYO.IS","KIMMR.IS","KLGYO.IS","KLMSN.IS","KLNMA.IS",
+    "KLKIM.IS","KLRHO.IS","KLSYN.IS","KLYAS.IS","KMEPU.IS","KMPUR.IS","KNFRT.IS","KONTR.IS",
+    "KONYA.IS","KORDS.IS","KOZAA.IS","KOZAL.IS","KRDMA.IS","KRDMB.IS","KRDMD.IS","KRGYO.IS",
+    "KRONT.IS","KRPLS.IS","KRSTL.IS","KRTEK.IS","KRVGD.IS","KSTUR.IS","KUTPO.IS","KUVVA.IS",
+    "KUYAS.IS","KZBGY.IS","KZGYO.IS","LIDER.IS","LIDFA.IS","LINK.IS","LMKDC.IS","LOGAS.IS",
+    "LOGO.IS","LRSHO.IS","LUKSK.IS","MAALT.IS","MACKO.IS","MAGEN.IS","MAKIM.IS","MAKTK.IS",
+    "MANAS.IS","MARKA.IS","MARTI.IS","MAVI.IS","MEDTR.IS","MEGAP.IS","MEKAG.IS","MEPET.IS",
+    "MERCN.IS","MERKO.IS","METRO.IS","METUR.IS","MHRGY.IS","MIATK.IS","MIPAZ.IS","MNDRS.IS",
+    "MNDTR.IS","MOBTL.IS","MPARK.IS","MRGYO.IS","MRSHL.IS","MSGYO.IS","MTRKS.IS","MUDO.IS",
+    "MZHLD.IS","NATEN.IS","NETAS.IS","NIBAS.IS","NTGAZ.IS","NTHOL.IS","NUGYO.IS","NUHCM.IS",
+    "OBAMS.IS","OBASE.IS","ODAS.IS","ONCSM.IS","ORCAY.IS","ORGE.IS","ORMA.IS","OSMEN.IS",
+    "OSTIM.IS","OTKAR.IS","OYAKC.IS","OYAYO.IS","OYLUM.IS","OYYAT.IS","OZGYO.IS","OZKGY.IS",
+    "OZRDN.IS","OZSUB.IS","PAGYO.IS","PAMEL.IS","PAPIL.IS","PARSN.IS","PASEU.IS","PATEK.IS",
+    "PCILT.IS","PEGYO.IS","PEKGY.IS","PENTA.IS","PETKM.IS","PETUN.IS","PGSUS.IS","PINSU.IS",
+    "PKART.IS","PKENT.IS","PNLSN.IS","PNSUT.IS","POLHO.IS","POLTK.IS","PRKAB.IS","PRKME.IS",
+    "PRZMA.IS","PSDTC.IS","PSGYO.IS","QNBFB.IS","QNBFL.IS","QUAGR.IS","RALYH.IS","RAYYS.IS",
+    "REEDR.IS","RNPOL.IS","RODRG.IS","ROYAL.IS","RTALB.IS","RUBNS.IS","RYGYO.IS","RYSAS.IS",
+    "SAHOL.IS","SAMAT.IS","SANEL.IS","SANFO.IS","SANIC.IS","SARKY.IS","SASA.IS","SAYAS.IS",
+    "SDTTR.IS","SEGYO.IS","SEKFK.IS","SEKOK.IS","SELEC.IS","SELGD.IS","SERVE.IS","SEYKM.IS",
+    "SILVR.IS","SISE.IS","SKBNK.IS","SKTAS.IS","SKYMD.IS","SKYLP.IS","SMART.IS","SMRTG.IS",
+    "SNGYO.IS","SNICA.IS","SNKPA.IS","SOKM.IS","SONME.IS","SRVGY.IS","SUMAS.IS","SUNTK.IS",
+    "SURGY.IS","SUWEN.IS","TABGD.IS","TAPDI.IS","TARKM.IS","TATEN.IS","TATGD.IS","TAVHL.IS",
+    "TBORG.IS","TCELL.IS","TDGYO.IS","TEKTU.IS","TERA.IS","TETMT.IS","TEZOL.IS","TGSAS.IS",
+    "THYAO.IS","TIRE.IS","TKFEN.IS","TKNSA.IS","TMSN.IS","TOASO.IS","TRCAS.IS","TRGYO.IS",
+    "TRILC.IS","TSKB.IS","TSPOR.IS","TTKOM.IS","TTRAK.IS","TUCLK.IS","TUKAS.IS","TUPRS.IS",
+    "TURSG.IS","UFUK.IS","ULAS.IS","ULKER.IS","ULUFA.IS","ULUSE.IS","VAKBN.IS","VAKFN.IS",
+    "VAKKO.IS","VANGD.IS","VBTYM.IS","VERTU.IS","VERUS.IS","VESBE.IS","VESTL.IS","VKGYO.IS",
+    "VKING.IS","VRGYO.IS","YAPRK.IS","YATAS.IS","YAYLA.IS","YEOTK.IS","YESIL.IS","YGGYO.IS",
+    "YGYO.IS","YKBNK.IS","YONGA.IS","YOTAS.IS","YUNSA.IS","YYLGD.IS","ZEDUR.IS","ZOREN.IS",
+    "ZRGYO.IS",
 ])
 FON_LIST = sorted([
     "TTE.IS","AES.IS","AFO.IS","AYA.IS","KPH.IS","KPA.IS","ZGD.IS","ZRE.IS",
@@ -772,12 +847,16 @@ with st.sidebar:
     _acc3 = t_sec['accent']
     st.markdown(f"<div style='color:{_acc3};font-weight:700;font-size:13px;letter-spacing:1px;margin-bottom:8px;'>💱 DÖVİZ ÇEVİRİCİ</div>", unsafe_allow_html=True)
     try:
-        _usd_try_r = float(fetch_stock_data("USDTRY=X")['hist']['Close'].iloc[-1]) if fetch_stock_data("USDTRY=X") else 0.0
-        _eur_try_r = float(fetch_stock_data("EURTRY=X")['hist']['Close'].iloc[-1]) if fetch_stock_data("EURTRY=X") else 0.0
-        _gc_r      = float(fetch_stock_data("GC=F")['hist']['Close'].iloc[-1]) if fetch_stock_data("GC=F") else 0.0
-        _si_r      = float(fetch_stock_data("SI=F")['hist']['Close'].iloc[-1]) if fetch_stock_data("SI=F") else 0.0
-        _gram_altin  = _gc_r * _usd_try_r / 31.1035 if _usd_try_r and _gc_r else 0.0
-        _gram_gumus  = _si_r * _usd_try_r / 31.1035 if _usd_try_r and _si_r else 0.0
+        _d_usd = fetch_stock_data("USDTRY=X")
+        _d_eur = fetch_stock_data("EURTRY=X")
+        _d_gc  = fetch_stock_data("GC=F")
+        _d_si  = fetch_stock_data("SI=F")
+        _usd_try_r = float(_d_usd['hist']['Close'].iloc[-1]) if _d_usd else 0.0
+        _eur_try_r = float(_d_eur['hist']['Close'].iloc[-1]) if _d_eur else 0.0
+        _gc_r      = float(_d_gc['hist']['Close'].iloc[-1])  if _d_gc  else 0.0
+        _si_r      = float(_d_si['hist']['Close'].iloc[-1])  if _d_si  else 0.0
+        _gram_altin = _gc_r * _usd_try_r / 31.1035 if _usd_try_r and _gc_r else 0.0
+        _gram_gumus = _si_r * _usd_try_r / 31.1035 if _usd_try_r and _si_r else 0.0
 
         _doviz_rates = {
             "TRY (₺)":          1.0,
@@ -898,6 +977,20 @@ def varlik_yonetimi_render(df_local):
                 st.rerun()
             st.markdown("<div style='margin-bottom:4px;'></div>", unsafe_allow_html=True)
 
+@st.cache_data(ttl=600)
+def hesapla_korelasyon(hisse_listesi):
+    """Son 30 gün kapanış fiyatları üzerinden korelasyon matrisi hesaplar."""
+    kapanis = {}
+    for h in hisse_listesi:
+        d = fetch_stock_data(h)
+        if d and not d['hist'].empty:
+            kapanis[h] = d['hist']['Close'].values[-30:]
+    if len(kapanis) < 2:
+        return None
+    min_uzunluk = min(len(v) for v in kapanis.values())
+    df_kap = pd.DataFrame({k: v[-min_uzunluk:] for k, v in kapanis.items()})
+    return df_kap.corr()
+
 # ==========================================
 # GELİŞTİRİLMİŞ TABLO — RSI + MACD + BB sütunu
 # ==========================================
@@ -1007,6 +1100,7 @@ with tab_tr:
                     line=dict(color=t_sec['bg'], width=2)
                 ),
                 pull=[0.02] * len(_labels),
+                domain=dict(x=[0.0, 0.72], y=[0.0, 1.0]),
             )])
             fig.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
@@ -1016,22 +1110,24 @@ with tab_tr:
                 legend=dict(
                     orientation='v',
                     yanchor='middle', y=0.5,
-                    xanchor='left',   x=1.05,
+                    xanchor='left',   x=0.75,
                     font=dict(size=11, color=t_sec['text']),
                     bgcolor='rgba(0,0,0,0)',
+                    itemsizing='constant',
                 ),
-                margin=dict(t=80, b=40, l=80, r=180),
+                margin=dict(t=70, b=30, l=20, r=20),
                 height=480,
                 title=dict(
                     text="📊 Hisse Dağılımı",
                     font=dict(size=15, color=t_sec['accent']),
-                    x=0.44, xanchor='center', y=0.97,
+                    x=0.36, xanchor='center', y=0.97,
                 ),
                 annotations=[dict(
-                    text=f"<b>{tr_format(_total)}</b><br><span style='font-size:11px'>₺ TOPLAM</span>",
-                    x=0.44, y=0.5,
+                    text=f"<b>{tr_format(_total)}</b><br>₺ TOPLAM",
+                    x=0.36, y=0.5,
                     font=dict(size=14, color=t_sec['accent']),
                     showarrow=False, align='center',
+                    xref='paper', yref='paper',
                 )]
             )
             st.plotly_chart(fig, use_container_width=True)
@@ -1086,6 +1182,7 @@ with tab_fon:
                     line=dict(color=t_sec['bg'], width=2)
                 ),
                 pull=[0.02] * len(_labels_f),
+                domain=dict(x=[0.0, 0.72], y=[0.0, 1.0]),
             )])
             fig_f.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
@@ -1095,22 +1192,24 @@ with tab_fon:
                 legend=dict(
                     orientation='v',
                     yanchor='middle', y=0.5,
-                    xanchor='left',   x=1.05,
+                    xanchor='left',   x=0.75,
                     font=dict(size=11, color=t_sec['text']),
                     bgcolor='rgba(0,0,0,0)',
+                    itemsizing='constant',
                 ),
-                margin=dict(t=80, b=40, l=80, r=180),
+                margin=dict(t=70, b=30, l=20, r=20),
                 height=480,
                 title=dict(
                     text="📊 Fon Dağılımı",
                     font=dict(size=15, color=t_sec['accent']),
-                    x=0.44, xanchor='center', y=0.97,
+                    x=0.36, xanchor='center', y=0.97,
                 ),
                 annotations=[dict(
-                    text=f"<b>{tr_format(_total_f)}</b><br><span style='font-size:11px'>₺ TOPLAM</span>",
-                    x=0.44, y=0.5,
+                    text=f"<b>{tr_format(_total_f)}</b><br>₺ TOPLAM",
+                    x=0.36, y=0.5,
                     font=dict(size=14, color=t_sec['accent']),
                     showarrow=False, align='center',
+                    xref='paper', yref='paper',
                 )]
             )
             st.plotly_chart(fig_f, use_container_width=True)
@@ -1546,19 +1645,6 @@ with tab_analiz:
     st.markdown(f"<h4 style='color:{acc};'>🔗 Hisse Korelasyon Matrisi</h4>", unsafe_allow_html=True)
     portfoy_bist = [x['Hisse'] for x in full_data if x['Piyasa'] == 'Türk Borsası']
     if len(portfoy_bist) >= 2:
-        @st.cache_data(ttl=600)
-        def hesapla_korelasyon(hisse_listesi):
-            kapanis = {}
-            for h in hisse_listesi:
-                d = fetch_stock_data(h)
-                if d and not d['hist'].empty:
-                    kapanis[h] = d['hist']['Close'].values[-30:]  # son 30 gün
-            if len(kapanis) < 2:
-                return None
-            min_uzunluk = min(len(v) for v in kapanis.values())
-            df_kap = pd.DataFrame({k: v[-min_uzunluk:] for k, v in kapanis.items()})
-            return df_kap.corr()
-
         kor_df = hesapla_korelasyon(tuple(portfoy_bist))
         if kor_df is not None and not kor_df.empty:
             n = len(kor_df)
