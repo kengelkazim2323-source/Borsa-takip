@@ -1002,7 +1002,7 @@ if tetiklenen_alarmlar:
 # ==========================================
 # 4. TABLAR VE İÇERİK
 # ==========================================
-tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_olcek, tab_export = st.tabs([
+tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_takvim, tab_olcek, tab_export = st.tabs([
     "🇹🇷 TÜRK BORSASI",
     "📊 YATIRIM FONLARI",
     "💰 TEMETTÜ GELİRİ",
@@ -1011,6 +1011,7 @@ tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_teme
     "📈 ANALİZ",
     "📰 HABERLER",
     "🏦 TEMEL VERİLER",
+    "📅 EKONOMİK TAKVİM",
     "📐 EKRAN AYARLARI",
     "📤 DIŞA AKTAR",
 ])
@@ -1239,6 +1240,49 @@ with st.sidebar:
             f"</div>",
             unsafe_allow_html=True
         )
+
+    st.divider()
+
+    # --- POZİSYON BÜYÜKLÜĞÜ HESAPLAYICI ---
+    _acc_pb = t_sec['accent']
+    st.markdown(
+        f"<div style='color:{_acc_pb};font-weight:700;font-size:13px;"
+        f"letter-spacing:1px;margin-bottom:8px;'>⚖️ POZİSYON BÜYÜKLÜĞÜ</div>",
+        unsafe_allow_html=True
+    )
+    _pb_portfoy = sum(x.get('Değer', 0) for x in full_data)
+    _pb_portfoy_input = st.number_input(
+        "Portföy Değeri (₺)", value=float(max(_pb_portfoy, 1000.0)),
+        min_value=100.0, step=1000.0, format="%.0f", key="pb_portfoy"
+    )
+    _pb_risk_pct = st.slider("Risk Oranı (%)", 0.5, 5.0, 2.0, step=0.5, key="pb_risk")
+    _pb_c1, _pb_c2 = st.columns(2)
+    _pb_fiyat = _pb_c1.number_input("Alış Fiyatı (₺)", min_value=0.01, value=10.0, format="%.4f", key="pb_fiyat")
+    _pb_stop  = _pb_c2.number_input("Stop-Loss (₺)",   min_value=0.01, value=9.5,  format="%.4f", key="pb_stop")
+
+    if _pb_fiyat > _pb_stop > 0:
+        _pb_risk_tl  = _pb_portfoy_input * _pb_risk_pct / 100
+        _pb_hisse_rk = _pb_fiyat - _pb_stop
+        _pb_lot      = max(1, int(_pb_risk_tl / _pb_hisse_rk))
+        _pb_maliyet  = _pb_lot * _pb_fiyat
+        _pb_pay_pct  = _pb_maliyet / _pb_portfoy_input * 100 if _pb_portfoy_input > 0 else 0
+        st.markdown(
+            f"<div style='background:{t_sec['box']};border:1px solid {_acc_pb}33;"
+            f"border-radius:8px;padding:10px 14px;margin-top:4px;'>"
+            f"<div style='display:grid;grid-template-columns:1fr 1fr;gap:6px;'>"
+            f"<div><div style='font-size:9px;opacity:0.45;'>MAX KAYIP</div>"
+            f"    <div style='color:#ff1744;font-size:12px;font-weight:700;'>{tr_format(_pb_risk_tl)} ₺</div></div>"
+            f"<div><div style='font-size:9px;opacity:0.45;'>ÖNERİLEN LOT</div>"
+            f"    <div style='color:{_acc_pb};font-size:14px;font-weight:700;'>{_pb_lot:,} lot</div></div>"
+            f"<div><div style='font-size:9px;opacity:0.45;'>TOPLAM MALİYET</div>"
+            f"    <div style='font-size:12px;font-weight:600;'>{tr_format(_pb_maliyet)} ₺</div></div>"
+            f"<div><div style='font-size:9px;opacity:0.45;'>PORTFÖY PAYI</div>"
+            f"    <div style='font-size:12px;font-weight:600;'>%{_pb_pay_pct:.1f}</div></div>"
+            f"</div></div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.caption("Alış fiyatı stop-loss'tan yüksek olmalı.")
 
     st.divider()
 
@@ -1717,21 +1761,30 @@ with tab_tr:
             )
             st.plotly_chart(fig, use_container_width=True)
 
-            # Bilgi tablosu — grafiğin altında
+            # Yatay mini kart grid — her hisse için renkli kutu
             _pct_list = [v / _total * 100 for v in _values]
-            _tbl_rows = "".join(
-                f"<tr>"
-                f"<td><span style='display:inline-block;width:10px;height:10px;border-radius:50%;"
-                f"background:{_colors[i]};margin-right:6px;'></span><b>{_labels[i]}</b></td>"
-                f"<td style='text-align:right;'>{tr_format(_values[i])} ₺</td>"
-                f"<td style='text-align:right;color:{_colors[i]};font-weight:700;'>%{_pct_list[i]:.1f}</td>"
-                f"</tr>"
+            _kartlar = "".join(
+                f"<div style='"
+                f"display:inline-flex;flex-direction:column;align-items:flex-start;"
+                f"background:{t_sec['box']};border:1px solid {_colors[i]}55;"
+                f"border-left:4px solid {_colors[i]};"
+                f"border-radius:8px;padding:8px 12px;margin:4px;"
+                f"min-width:110px;max-width:160px;vertical-align:top;'>"
+                f"<span style='display:flex;align-items:center;gap:6px;margin-bottom:4px;'>"
+                f"  <span style='width:8px;height:8px;border-radius:50%;"
+                f"  background:{_colors[i]};flex-shrink:0;'></span>"
+                f"  <b style='font-size:12px;color:{t_sec['text']};'>{_labels[i]}</b>"
+                f"</span>"
+                f"<span style='font-size:13px;font-weight:700;color:{_colors[i]};'>"
+                f"%{_pct_list[i]:.1f}</span>"
+                f"<span style='font-size:10px;opacity:0.6;margin-top:2px;'>"
+                f"{tr_format(_values[i])} ₺</span>"
+                f"</div>"
                 for i in range(len(_labels))
             )
             st.markdown(
-                f"<table class='kral-table'><thead><tr>"
-                f"<th>HİSSE</th><th style='text-align:right;'>DEĞER</th><th style='text-align:right;'>ORAN</th>"
-                f"</tr></thead><tbody>{_tbl_rows}</tbody></table>",
+                f"<div style='display:flex;flex-wrap:wrap;gap:0;margin-top:8px;'>"
+                f"{_kartlar}</div>",
                 unsafe_allow_html=True
             )
     else:
@@ -1805,21 +1858,30 @@ with tab_fon:
             )
             st.plotly_chart(fig_f, use_container_width=True)
 
-            # Bilgi tablosu — grafiğin altında
+            # Yatay mini kart grid — her fon için renkli kutu
             _pct_f = [v / _total_f * 100 for v in _values_f]
-            _tbl_f = "".join(
-                f"<tr>"
-                f"<td><span style='display:inline-block;width:10px;height:10px;border-radius:50%;"
-                f"background:{_colors_f[i]};margin-right:6px;'></span><b>{_labels_f[i]}</b></td>"
-                f"<td style='text-align:right;'>{tr_format(_values_f[i])} ₺</td>"
-                f"<td style='text-align:right;color:{_colors_f[i]};font-weight:700;'>%{_pct_f[i]:.1f}</td>"
-                f"</tr>"
+            _kartlar_f = "".join(
+                f"<div style='"
+                f"display:inline-flex;flex-direction:column;align-items:flex-start;"
+                f"background:{t_sec['box']};border:1px solid {_colors_f[i]}55;"
+                f"border-left:4px solid {_colors_f[i]};"
+                f"border-radius:8px;padding:8px 12px;margin:4px;"
+                f"min-width:110px;max-width:160px;vertical-align:top;'>"
+                f"<span style='display:flex;align-items:center;gap:6px;margin-bottom:4px;'>"
+                f"  <span style='width:8px;height:8px;border-radius:50%;"
+                f"  background:{_colors_f[i]};flex-shrink:0;'></span>"
+                f"  <b style='font-size:12px;color:{t_sec['text']};'>{_labels_f[i]}</b>"
+                f"</span>"
+                f"<span style='font-size:13px;font-weight:700;color:{_colors_f[i]};'>"
+                f"%{_pct_f[i]:.1f}</span>"
+                f"<span style='font-size:10px;opacity:0.6;margin-top:2px;'>"
+                f"{tr_format(_values_f[i])} ₺</span>"
+                f"</div>"
                 for i in range(len(_labels_f))
             )
             st.markdown(
-                f"<table class='kral-table'><thead><tr>"
-                f"<th>FON</th><th style='text-align:right;'>DEĞER</th><th style='text-align:right;'>ORAN</th>"
-                f"</tr></thead><tbody>{_tbl_f}</tbody></table>",
+                f"<div style='display:flex;flex-wrap:wrap;gap:0;margin-top:8px;'>"
+                f"{_kartlar_f}</div>",
                 unsafe_allow_html=True
             )
     else:
@@ -2311,6 +2373,315 @@ with tab_analiz:
     else:
         st.info("Korelasyon matrisi için portföyde en az 2 Türk Borsası hissesi gerekli.")
 
+    st.divider()
+
+    # ---------- D) HİSSE KARŞILAŞTIRMA ----------
+    st.markdown(f"<h4 style='color:{acc};'>⚔️ Hisse Karşılaştırma</h4>", unsafe_allow_html=True)
+    _tum_hisseler = sorted(set(x['Hisse'] for x in full_data if x['Piyasa'] == 'Türk Borsası'))
+    if len(_tum_hisseler) >= 2:
+        _kc1, _kc2 = st.columns(2)
+        _kars_a = _kc1.selectbox("1. Hisse", _tum_hisseler, index=0, key="kars_a")
+        _kars_b = _kc2.selectbox("2. Hisse", _tum_hisseler, index=min(1, len(_tum_hisseler)-1), key="kars_b")
+        if _kars_a != _kars_b:
+            _da = fetch_stock_data(_kars_a)
+            _db = fetch_stock_data(_kars_b)
+            if _da and _db and not _da['hist'].empty and not _db['hist'].empty:
+                _ha = _da['hist']['Close'].copy()
+                _hb = _db['hist']['Close'].copy()
+                _ha.index = _ha.index.tz_localize(None) if _ha.index.tz else _ha.index
+                _hb.index = _hb.index.tz_localize(None) if _hb.index.tz else _hb.index
+                _min_len = min(len(_ha), len(_hb))
+                _na = (_ha.iloc[-_min_len:] / _ha.iloc[-_min_len] * 100)
+                _nb = (_hb.iloc[-_min_len:] / _hb.iloc[-_min_len] * 100)
+                _kars_fig = go.Figure()
+                _kars_fig.add_trace(go.Scatter(
+                    x=_na.index, y=_na.values, name=_kars_a,
+                    line=dict(color=acc, width=2),
+                    hovertemplate=f'<b>{_kars_a}</b><br>%{{y:.1f}}<extra></extra>',
+                ))
+                _kars_fig.add_trace(go.Scatter(
+                    x=_nb.index, y=_nb.values, name=_kars_b,
+                    line=dict(color='#ffc107', width=2, dash='dash'),
+                    hovertemplate=f'<b>{_kars_b}</b><br>%{{y:.1f}}<extra></extra>',
+                ))
+                _kars_fig.add_hline(y=100, line_dash='dot', line_color=txt, opacity=0.2)
+                _kars_fig.update_layout(
+                    paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color=txt, size=11, family=secili_font),
+                    height=320, margin=dict(t=40, b=40, l=40, r=20),
+                    xaxis=dict(showgrid=True, gridcolor=hex_rgba(acc, 0.08), color=txt,
+                               rangeslider=dict(visible=False)),
+                    yaxis=dict(showgrid=True, gridcolor=hex_rgba(acc, 0.08), color=txt,
+                               title=dict(text='Normalize (Başlangıç=100)', font=dict(size=10))),
+                    legend=dict(orientation='h', x=0, y=1.08, font=dict(size=11, color=txt),
+                                bgcolor='rgba(0,0,0,0)'),
+                    title=dict(text=f"{_kars_a} vs {_kars_b}",
+                               font=dict(size=13, color=acc), x=0.5, xanchor='center'),
+                )
+                st.plotly_chart(_kars_fig, use_container_width=True)
+                # Özet
+                _ret_a = float(_na.iloc[-1] - 100)
+                _ret_b = float(_nb.iloc[-1] - 100)
+                _cc1, _cc2 = st.columns(2)
+                _cc1.metric(f"{_kars_a} 60G getiri", f"%{_ret_a:+.2f}",
+                            delta="↑ Daha iyi" if _ret_a > _ret_b else None)
+                _cc2.metric(f"{_kars_b} 60G getiri", f"%{_ret_b:+.2f}",
+                            delta="↑ Daha iyi" if _ret_b > _ret_a else None)
+            else:
+                st.warning("Karşılaştırma için veri alınamadı.")
+        else:
+            st.info("Farklı iki hisse seç.")
+    else:
+        st.info("Karşılaştırma için en az 2 hisse gerekli.")
+
+    st.divider()
+
+    # ---------- E) K/Z TRENDİ (30 GÜN) ----------
+    st.markdown(f"<h4 style='color:{acc};'>📆 30 Günlük K/Z Trendi</h4>", unsafe_allow_html=True)
+    _perf_data = load_json(PERFORMANS_DOSYASI)
+    if len(_perf_data) >= 2:
+        _pdf = pd.DataFrame(_perf_data[-30:])
+        _pdf = _pdf.sort_values('tarih')
+        _kz_vals = _pdf['kz'].tolist() if 'kz' in _pdf.columns else []
+        if _kz_vals:
+            _trend_fig = go.Figure()
+            _trend_colors = ['#00e676' if v >= 0 else '#ff1744' for v in _kz_vals]
+            _trend_fig.add_trace(go.Bar(
+                x=_pdf['tarih'].tolist(), y=_kz_vals,
+                marker_color=_trend_colors, name='Günlük K/Z',
+                hovertemplate='<b>%{x}</b><br>K/Z: %{y:,.0f} ₺<extra></extra>',
+            ))
+            if 'deger' in _pdf.columns:
+                _trend_fig.add_trace(go.Scatter(
+                    x=_pdf['tarih'].tolist(), y=_pdf['deger'].tolist(),
+                    name='Portföy Değeri', yaxis='y2',
+                    line=dict(color=acc, width=2),
+                    hovertemplate='Değer: %{y:,.0f} ₺<extra></extra>',
+                ))
+            _trend_fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color=txt, size=11, family=secili_font),
+                height=300, margin=dict(t=40, b=50, l=50, r=60),
+                xaxis=dict(color=txt, showgrid=True, gridcolor=hex_rgba(acc,0.08),
+                           tickangle=-30, tickfont=dict(size=9)),
+                yaxis=dict(color=txt, showgrid=True, gridcolor=hex_rgba(acc,0.08),
+                           title=dict(text='K/Z (₺)', font=dict(size=10))),
+                yaxis2=dict(overlaying='y', side='right', color=acc,
+                            title=dict(text='Değer (₺)', font=dict(size=10, color=acc))),
+                legend=dict(orientation='h', x=0, y=1.08, font=dict(size=10, color=txt),
+                            bgcolor='rgba(0,0,0,0)'),
+                barmode='overlay',
+            )
+            st.plotly_chart(_trend_fig, use_container_width=True)
+            _toplam_kz_30 = sum(_kz_vals)
+            _kz_color_30 = "#00e676" if _toplam_kz_30 >= 0 else "#ff1744"
+            st.markdown(
+                f"<div style='text-align:center;font-size:12px;opacity:0.7;'>"
+                f"Son 30 gün toplam K/Z: "
+                f"<b style='color:{_kz_color_30};'>{tr_format(_toplam_kz_30)} ₺</b></div>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.info("Yeterli performans verisi yok.")
+    else:
+        st.info("K/Z trendi için en az 2 günlük snapshot gerekli. Uygulama her açılışta otomatik kaydeder.")
+
+    st.divider()
+
+    # ---------- F) PORTFÖY RİSK SKORU ----------
+    st.markdown(f"<h4 style='color:{acc};'>🎯 Portföy Risk Skoru</h4>", unsafe_allow_html=True)
+    _risk_bist = [x['Hisse'] for x in full_data if x['Piyasa'] == 'Türk Borsası']
+    if _risk_bist:
+        _risk_rsi_list  = [x.get('RSI', 50)    for x in full_data if x['Piyasa'] == 'Türk Borsası']
+        _risk_bb_list   = [x.get('BB_PCT', 50)  for x in full_data if x['Piyasa'] == 'Türk Borsası']
+        _risk_macd_list = [x.get('MACD_H', 0)   for x in full_data if x['Piyasa'] == 'Türk Borsası']
+
+        # Beta (var mı?)
+        _beta_val = None
+        try:
+            _bist_n, _port_n = fetch_bist100_karsilastirma(tuple(_risk_bist))
+            if _bist_n is not None and _port_n is not None and len(_bist_n) > 10:
+                _br = np.array(_bist_n.pct_change().dropna())
+                _pr = np.array(_port_n.pct_change().dropna())
+                _ml = min(len(_br), len(_pr))
+                _cov = np.cov(_pr[-_ml:], _br[-_ml:])
+                if _cov[1,1] != 0:
+                    _beta_val = round(_cov[0,1] / _cov[1,1], 2)
+        except Exception:
+            pass
+
+        # Korelasyon yoğunluğu
+        _kor_skoru = 0
+        if len(_risk_bist) >= 2:
+            try:
+                _km = hesapla_korelasyon(tuple(_risk_bist))
+                if _km is not None:
+                    _kor_skoru = float(_km.values[np.triu_indices(len(_km), k=1)].mean())
+            except Exception:
+                pass
+
+        # RSI aşırı alım skoru
+        _rsi_asiri = sum(1 for r in _risk_rsi_list if r > 70) / len(_risk_rsi_list)
+
+        # Bileşik risk skoru (0–10)
+        _risk_beta   = min(10, abs(_beta_val or 1.0) * 5)
+        _risk_kor    = min(10, abs(_kor_skoru) * 10)
+        _risk_rsi    = _rsi_asiri * 10
+        _risk_puan   = round((_risk_beta * 0.4 + _risk_kor * 0.3 + _risk_rsi * 0.3), 1)
+
+        _risk_renk   = '#00e676' if _risk_puan < 4 else ('#ffc107' if _risk_puan < 7 else '#ff1744')
+        _risk_etiket = 'DÜŞÜK RİSK' if _risk_puan < 4 else ('ORTA RİSK' if _risk_puan < 7 else 'YÜKSEK RİSK')
+
+        _rp1, _rp2, _rp3, _rp4 = st.columns(4)
+        _rp1.metric("Risk Skoru", f"{_risk_puan}/10")
+        _rp2.metric("Beta", f"β {_beta_val}" if _beta_val else "—")
+        _rp3.metric("Ort. Korelasyon", f"{_kor_skoru:.2f}" if _kor_skoru else "—")
+        _rp4.metric("Aşırı Alım", f"%{_rsi_asiri*100:.0f}")
+
+        # Görsel ölçek
+        _bar_w = int(_risk_puan / 10 * 100)
+        st.markdown(
+            f"<div style='margin-top:8px;'>"
+            f"<div style='background:{t_sec['box']};border-radius:8px;height:22px;"
+            f"border:1px solid {_risk_renk}44;overflow:hidden;'>"
+            f"  <div style='width:{_bar_w}%;background:{_risk_renk};height:100%;"
+            f"  display:flex;align-items:center;justify-content:flex-end;padding-right:8px;"
+            f"  font-size:11px;font-weight:700;color:{t_sec['bg']};transition:width 0.3s;'>"
+            f"  {_risk_etiket}</div></div>"
+            f"<div style='font-size:9px;opacity:0.4;margin-top:4px;'>"
+            f"Beta %40 · Korelasyon %30 · RSI aşırı alım %30</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.info("Risk skoru için portföyde Türk Borsası hissesi gerekli.")
+
+    st.divider()
+
+    # ---------- G) DÖVİZ KORUMAL GETIRI ----------
+    st.markdown(f"<h4 style='color:{acc};'>💵 Döviz Korumalı (USD Bazlı) Getiri</h4>",
+                unsafe_allow_html=True)
+    _usd_data = fetch_stock_data("USDTRY=X")
+    _df_dov = pd.DataFrame([x for x in full_data if x['Piyasa'] == 'Türk Borsası' and x['Maliyet'] > 0])
+    if _usd_data and not _df_dov.empty:
+        try:
+            _usd_guncel = float(_usd_data['hist']['Close'].iloc[-1])
+            _usd_dun    = float(_usd_data['hist']['Close'].iloc[-30]) if len(_usd_data['hist']) >= 30 else _usd_guncel
+            _usd_alim_tahmini = _usd_dun   # alım tarihi bilinmediği için 30 gün önceki kur
+
+            _dov_tbl = (
+                "<table class='kral-table'><thead><tr>"
+                "<th>HİSSE</th><th>TL K/Z%</th><th>USD K/Z%</th>"
+                "<th>KUR ETKİSİ</th><th>GERÇEK KAZANÇ</th>"
+                "</tr></thead><tbody>"
+            )
+            for _, _r in _df_dov.iterrows():
+                try:
+                    _tl_kz_pct = (_r['Güncel'] - _r['Maliyet']) / _r['Maliyet'] * 100
+                    _usd_maliyet = _r['Maliyet'] / _usd_alim_tahmini
+                    _usd_guncel_hisse = _r['Güncel'] / _usd_guncel
+                    _usd_kz_pct = (_usd_guncel_hisse - _usd_maliyet) / _usd_maliyet * 100
+                    _kur_etkisi = _tl_kz_pct - _usd_kz_pct
+                    _tl_c  = '#00e676' if _tl_kz_pct  >= 0 else '#ff1744'
+                    _usd_c = '#00e676' if _usd_kz_pct >= 0 else '#ff1744'
+                    _kur_c = '#ff7043' if _kur_etkisi  > 0 else '#00e676'
+                    _dov_tbl += (
+                        f"<tr><td><b>{_r['Hisse']}</b></td>"
+                        f"<td style='color:{_tl_c};'>%{_tl_kz_pct:+.2f}</td>"
+                        f"<td style='color:{_usd_c};font-weight:700;'>%{_usd_kz_pct:+.2f}</td>"
+                        f"<td style='color:{_kur_c};font-size:11px;'>"
+                        f"{'Kur eritti' if _kur_etkisi>2 else ('Kur katkı' if _kur_etkisi<-2 else 'Nötr')}"
+                        f"</td>"
+                        f"<td style='color:{'#00e676' if _usd_kz_pct>=0 else '#ff1744'};font-weight:700;'>"
+                        f"{'✅ Kazanç' if _usd_kz_pct>=0 else '❌ Kayıp'}</td>"
+                        f"</tr>"
+                    )
+                except Exception:
+                    continue
+            _dov_tbl += "</tbody></table>"
+            st.markdown(_dov_tbl, unsafe_allow_html=True)
+            st.caption(f"USD/TRY güncel: {tr_format4(_usd_guncel)} · Alım kuru tahmini: {tr_format4(_usd_alim_tahmini)} (30 gün öncesi)")
+        except Exception as _de:
+            st.warning(f"Döviz hesabı hatası: {_de}")
+    else:
+        st.info("Döviz getirisi için USD/TRY verisi ve portföyde hisse gerekli.")
+
+    st.divider()
+
+    # ---------- H) BACKTEST ----------
+    st.markdown(f"<h4 style='color:{acc};'>🔁 Sinyal Backtest (RSI + MACD)</h4>",
+                unsafe_allow_html=True)
+    st.markdown(
+        f"<small style='color:{acc}88;'>Mevcut sinyal motoru 60 günlük geçmişte kaç kez doğru çalıştı?</small>",
+        unsafe_allow_html=True
+    )
+    _bt_hisseler = sorted(set(x['Hisse'] for x in full_data if x['Piyasa'] == 'Türk Borsası'))
+    if _bt_hisseler:
+        _bt1, _bt2, _bt3 = st.columns([2, 1, 1])
+        _bt_hisse   = _bt1.selectbox("Hisse", _bt_hisseler, key="bt_hisse")
+        _bt_al_esik = _bt2.slider("AL ≤ RSI", 20, 50, 40, key="bt_al")
+        _bt_sat_esik= _bt3.slider("SAT ≥ RSI", 55, 80, 65, key="bt_sat")
+
+        @st.cache_data(ttl=600)
+        def _backtest(symbol, al_esik, sat_esik):
+            _d = fetch_stock_data(symbol)
+            if not _d or _d['hist'].empty or len(_d['hist']) < 26:
+                return []
+            _c = _d['hist']['Close'].copy()
+            _delta = _c.diff()
+            _gain  = _delta.where(_delta > 0, 0).rolling(14).mean()
+            _loss  = (-_delta.where(_delta < 0, 0)).rolling(14).mean()
+            _rsi   = 100 - (100 / (1 + _gain / _loss.replace(0, 1e-9)))
+            _poz, _islemler = 0.0, []
+            for i in range(1, len(_c)):
+                _r  = float(_rsi.iloc[i])
+                _fz = float(_c.iloc[i])
+                _t  = str(_c.index[i])[:10]
+                if _r <= al_esik and _poz == 0:
+                    _poz = _fz
+                    _islemler.append({'tarih':_t,'tip':'AL','fiyat':_fz,'kz':None})
+                elif _r >= sat_esik and _poz > 0:
+                    _kz = (_fz - _poz) / _poz * 100
+                    _islemler.append({'tarih':_t,'tip':'SAT','fiyat':_fz,'kz':round(_kz,2)})
+                    _poz = 0.0
+            return _islemler
+
+        with st.spinner("Backtest hesaplanıyor..."):
+            _bt_islemler = _backtest(_bt_hisse, _bt_al_esik, _bt_sat_esik)
+
+        if _bt_islemler:
+            _satislar = [x for x in _bt_islemler if x['tip'] == 'SAT']
+            _karlilar = [x for x in _satislar if (x['kz'] or 0) > 0]
+            _ort_kz   = sum(x['kz'] for x in _satislar) / len(_satislar) if _satislar else 0
+            _basari   = len(_karlilar) / len(_satislar) * 100 if _satislar else 0
+
+            _bm1, _bm2, _bm3, _bm4 = st.columns(4)
+            _bm1.metric("İşlem Sayısı",   len(_satislar))
+            _bm2.metric("Başarı Oranı",   f"%{_basari:.0f}")
+            _bm3.metric("Ort. K/Z",       f"%{_ort_kz:+.2f}")
+            _bm4.metric("Kümülatif K/Z",  f"%{sum(x['kz'] for x in _satislar):+.2f}")
+
+            _bt_tbl = (
+                "<table class='kral-table'><thead><tr>"
+                "<th>TARİH</th><th>İŞLEM</th><th>FİYAT</th><th>K/Z %</th>"
+                "</tr></thead><tbody>"
+            )
+            for _ix in _bt_islemler:
+                _tc  = '#00e676' if _ix['tip'] == 'AL' else '#ff1744'
+                _kzs = f"%{_ix['kz']:+.2f}" if _ix['kz'] is not None else '—'
+                _kzc = '#00e676' if (_ix['kz'] or 0) > 0 else ('#ff1744' if _ix['kz'] is not None else txt)
+                _bt_tbl += (
+                    f"<tr><td style='font-size:11px;'>{_ix['tarih']}</td>"
+                    f"<td style='color:{_tc};font-weight:700;'>{_ix['tip']}</td>"
+                    f"<td>{tr_format4(_ix['fiyat'])} ₺</td>"
+                    f"<td style='color:{_kzc};font-weight:bold;'>{_kzs}</td></tr>"
+                )
+            _bt_tbl += "</tbody></table>"
+            st.markdown(_bt_tbl, unsafe_allow_html=True)
+            st.caption("⚠️ Geçmiş performans geleceği garantilemez. Sadece bilgi amaçlıdır.")
+        else:
+            st.info("Seçilen parametrelerle sinyal oluşmadı veya yeterli veri yok.")
+
 # ==========================================
 # HABERLER TABU
 # ==========================================
@@ -2331,6 +2702,45 @@ with tab_haberler:
             haberler = fetch_haberler(tuple(portfoy_hisseleri_haber))
 
         if haberler:
+            # --- Duyarlılık skoru ---
+            _POZITIF = ['artış','yüksel','rekor','kar','büyüme','güçlü','hedef','al ',
+                        'pozitif','başarı','ivme','fırsat','aşıldı','rally','yeni yüksek']
+            _NEGATIF = ['düşüş','geriledi','kayıp','zarar','risk','uyarı','kriz','endişe',
+                        'baskı','satış','negatif','darbesi','zayıf','kötüleş','tehdit']
+            _duyarlilik = {}
+            for _h in portfoy_hisseleri_haber:
+                _code = _h.replace('.IS','')
+                _ilgili = [n for n in haberler if n['hisse'] == _code]
+                if not _ilgili:
+                    continue
+                _poz = sum(1 for n in _ilgili
+                           if any(k in n['baslik'].lower() for k in _POZITIF))
+                _neg = sum(1 for n in _ilgili
+                           if any(k in n['baslik'].lower() for k in _NEGATIF))
+                _duyarlilik[_code] = {'poz': _poz, 'neg': _neg, 'toplam': len(_ilgili)}
+
+            if _duyarlilik:
+                st.markdown(f"<h5 style='color:{acc};margin-top:4px;'>📊 Haber Duyarlılığı</h5>",
+                            unsafe_allow_html=True)
+                _duy_html = "<div style='display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;'>"
+                for _hk, _sv in sorted(_duyarlilik.items()):
+                    _net = _sv['poz'] - _sv['neg']
+                    _dc  = '#00e676' if _net > 0 else ('#ff1744' if _net < 0 else '#888')
+                    _etiket = '😊 Olumlu' if _net > 0 else ('😟 Olumsuz' if _net < 0 else '😐 Nötr')
+                    _duy_html += (
+                        f"<div style='background:{box};border:1px solid {_dc}44;"
+                        f"border-left:3px solid {_dc};border-radius:8px;padding:8px 12px;"
+                        f"min-width:100px;'>"
+                        f"<div style='font-size:11px;font-weight:700;color:{_dc};'>{_hk}</div>"
+                        f"<div style='font-size:10px;margin-top:2px;'>{_etiket}</div>"
+                        f"<div style='font-size:9px;opacity:0.5;margin-top:2px;'>"
+                        f"✅{_sv['poz']} ❌{_sv['neg']} / {_sv['toplam']} haber</div>"
+                        f"</div>"
+                    )
+                _duy_html += "</div>"
+                st.markdown(_duy_html, unsafe_allow_html=True)
+                st.caption("Duyarlılık: başlık anahtar kelime analizi ile hesaplanır, yaklaşıktır.")
+
             # Hisse filtresi — PİYASA ve GENEL de dahil
             _filtre_secenekler = ["Tümü"] + sorted(set(
                 h['hisse'] for h in haberler if h['hisse'] not in ('', None)
@@ -2529,6 +2939,131 @@ with tab_temel:
     else:
         st.info("Türk Borsası'nda hisse bulunamadı.")
 
+
+# ==========================================
+# EKONOMİK TAKVİM TABU
+# ==========================================
+with tab_takvim:
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>📅 Ekonomik Takvim</h4>", unsafe_allow_html=True)
+    st.markdown(
+        f"<small style='color:{acc}88;'>TCMB · Enflasyon · BIST önemli tarihler · 2025–2026</small>",
+        unsafe_allow_html=True
+    )
+
+    # Sabit ekonomik takvim verisi
+    _TAKVIM = [
+        # 2025
+        {"tarih":"2025-01-23","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2025-02-03","kategori":"Enflasyon","olay":"Ocak 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2025-02-27","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2025-03-03","kategori":"Enflasyon","olay":"Şubat 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2025-03-06","kategori":"BIST","olay":"Şubat Sanayi Üretimi Endeksi","etki":"Orta"},
+        {"tarih":"2025-04-03","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2025-04-03","kategori":"Enflasyon","olay":"Mart 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2025-05-05","kategori":"Enflasyon","olay":"Nisan 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2025-05-22","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2025-06-03","kategori":"Enflasyon","olay":"Mayıs 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2025-07-03","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2025-07-03","kategori":"Enflasyon","olay":"Haziran 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2025-08-04","kategori":"Enflasyon","olay":"Temmuz 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2025-08-21","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2025-09-03","kategori":"Enflasyon","olay":"Ağustos 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2025-10-02","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2025-10-03","kategori":"Enflasyon","olay":"Eylül 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2025-11-04","kategori":"Enflasyon","olay":"Ekim 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2025-11-20","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2025-12-03","kategori":"Enflasyon","olay":"Kasım 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2025-12-25","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        # 2026
+        {"tarih":"2026-01-05","kategori":"Enflasyon","olay":"Aralık 2025 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-01-22","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2026-02-03","kategori":"Enflasyon","olay":"Ocak 2026 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-02-26","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2026-03-03","kategori":"Enflasyon","olay":"Şubat 2026 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-04-02","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2026-04-03","kategori":"Enflasyon","olay":"Mart 2026 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-05-04","kategori":"Enflasyon","olay":"Nisan 2026 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-05-21","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2026-06-03","kategori":"Enflasyon","olay":"Mayıs 2026 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-07-02","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2026-07-03","kategori":"Enflasyon","olay":"Haziran 2026 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-08-03","kategori":"Enflasyon","olay":"Temmuz 2026 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-08-20","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2026-09-03","kategori":"Enflasyon","olay":"Ağustos 2026 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-10-01","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2026-10-05","kategori":"Enflasyon","olay":"Eylül 2026 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-11-04","kategori":"Enflasyon","olay":"Ekim 2026 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-11-19","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+        {"tarih":"2026-12-03","kategori":"Enflasyon","olay":"Kasım 2026 TÜFE Açıklaması","etki":"Yüksek"},
+        {"tarih":"2026-12-24","kategori":"TCMB","olay":"TCMB Para Politikası Kurulu Toplantısı","etki":"Yüksek"},
+    ]
+
+    _bugün  = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%Y-%m-%d')
+    _kat_renk = {"TCMB": "#00D4FF", "Enflasyon": "#FF6B6B", "BIST": "#6BCB77", "Diğer": "#888"}
+
+    # Filtre
+    _tk_f1, _tk_f2 = st.columns([2, 2])
+    _tk_kat  = _tk_f1.multiselect("Kategori", ["Tümü","TCMB","Enflasyon","BIST"],
+                                   default=["Tümü"], key="tk_kat")
+    _tk_donem = _tk_f2.radio("Dönem", ["Yaklaşan","Geçmiş","Tümü"], horizontal=True, key="tk_donem")
+
+    _takvim_f = _TAKVIM
+    if "Tümü" not in _tk_kat and _tk_kat:
+        _takvim_f = [x for x in _takvim_f if x['kategori'] in _tk_kat]
+    if _tk_donem == "Yaklaşan":
+        _takvim_f = [x for x in _takvim_f if x['tarih'] >= _bugün]
+    elif _tk_donem == "Geçmiş":
+        _takvim_f = [x for x in _takvim_f if x['tarih'] < _bugün]
+
+    _takvim_f = sorted(_takvim_f, key=lambda x: x['tarih'],
+                       reverse=(_tk_donem == "Geçmiş"))
+
+    # Yaklaşan event varsa kaç gün kaldığını hesapla
+    for _ev in _takvim_f[:20]:
+        try:
+            _ev_dt  = datetime.strptime(_ev['tarih'], '%Y-%m-%d')
+            _bug_dt = datetime.strptime(_bugün, '%Y-%m-%d')
+            _delta  = (_ev_dt - _bug_dt).days
+            _renk   = _kat_renk.get(_ev['kategori'], '#888')
+            _gecti  = _ev['tarih'] < _bugün
+            _bg     = f"{box}" if not _gecti else f"{t_sec['bg']}"
+            _opc    = "1" if not _gecti else "0.45"
+            _gun_str = (f"<b style='color:{_renk};'>{_delta} gün kaldı</b>"
+                        if not _gecti and _delta >= 0
+                        else ("<b style='color:#00e676;'>BUGÜN ⚡</b>" if _delta == 0
+                              else f"<span style='opacity:0.4;'>{abs(_delta)} gün önce</span>"))
+            st.markdown(
+                f"<div style='background:{_bg};border:1px solid {_renk}33;"
+                f"border-left:3px solid {_renk};border-radius:8px;"
+                f"padding:10px 14px;margin-bottom:6px;opacity:{_opc};'>"
+                f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+                f"  <div>"
+                f"    <span style='background:{_renk}22;color:{_renk};font-size:9px;"
+                f"          font-weight:700;padding:2px 6px;border-radius:4px;margin-right:8px;'>"
+                f"    {_ev['kategori']}</span>"
+                f"    <span style='font-size:13px;font-weight:600;'>{_ev['olay']}</span>"
+                f"  </div>"
+                f"  <div style='text-align:right;white-space:nowrap;'>"
+                f"    <div style='font-size:11px;opacity:0.6;'>{_ev['tarih']}</div>"
+                f"    <div style='font-size:11px;margin-top:2px;'>{_gun_str}</div>"
+                f"  </div>"
+                f"</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+        except Exception:
+            continue
+
+    if not _takvim_f:
+        st.info("Seçilen filtreler için etkinlik bulunamadı.")
+
+    st.divider()
+    st.markdown(
+        f"<small style='color:{acc}66;'>Tarihler tahmini olup değişebilir. "
+        f"Kesin tarihler için TCMB ve TÜİK resmi sitelerini takip edin.</small>",
+        unsafe_allow_html=True
+    )
 
 # ==========================================
 # EKRAN AYARLARI TABU
