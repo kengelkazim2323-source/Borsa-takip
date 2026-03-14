@@ -7,6 +7,8 @@ import pytz
 from datetime import datetime, timedelta
 import plotly.express as px
 import plotly.graph_objects as go
+import numpy as np
+import time as _time
 from streamlit_autorefresh import st_autorefresh
 import urllib.request
 import re
@@ -19,9 +21,10 @@ logger = logging.getLogger(__name__)
 # ==========================================
 # 0. VERİ YÖNETİMİ
 # ==========================================
-PORTFOY_DOSYASI = "portfoy_kayitlari.json"
-IPO_DOSYASI = "halka_arz_kayitlari.json"
-ALARM_DOSYASI = "alarm_kayitlari.json"
+PORTFOY_DOSYASI   = "portfoy_kayitlari.json"
+IPO_DOSYASI       = "halka_arz_kayitlari.json"
+ALARM_DOSYASI     = "alarm_kayitlari.json"
+PERFORMANS_DOSYASI = "portfoy_performans.json"
 
 def load_json(dosya_adi):
     if not os.path.exists(dosya_adi): return []
@@ -46,6 +49,140 @@ if 'ipo_liste' not in st.session_state:
     st.session_state.ipo_liste = load_json(IPO_DOSYASI)
 if 'alarmlar' not in st.session_state:
     st.session_state.alarmlar = load_json(ALARM_DOSYASI)
+if 'performans' not in st.session_state:
+    st.session_state.performans = load_json(PERFORMANS_DOSYASI)
+
+@st.cache_data(ttl=3600)
+def fetch_temettu_isyatirim(symbol):
+    """isyatirim.com.tr API'sinden net temettü verisini çeker (birincil kaynak)."""
+    code = symbol.replace(".IS", "").upper()
+    try:
+        ts       = int(_time.time() * 1000)
+        bugun    = datetime.now()
+        bitis    = bugun.strftime("%d-%m-%Y")
+        baslangic = (bugun - timedelta(days=730)).strftime("%d-%m-%Y")
+        url = (
+            f"https://www.isyatirim.com.tr/_layouts/15/IsYatirim.Website/Common/Data.aspx/"
+            f"HisseTemettuTablosu?hisse={code}&baslangic={baslangic}&bitis={bitis}&_={ts}"
+        )
+        req = urllib.request.Request(url, headers={
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+            'Accept': 'application/json, text/javascript, */*; q=0.01',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Referer': f'https://www.isyatirim.com.tr/analiz-ve-raporlar/analiz/hisse/{code}',
+        })
+        response = urllib.request.urlopen(req, timeout=8)
+        data = json.loads(response.read().decode('utf-8'))
+
+        kayitlar = data.get('value') or data.get('Value') or []
+        if not kayitlar:
+            return None
+
+        son_1_yil  = datetime.now() - timedelta(days=365)
+        son_2_yil  = datetime.now() - timedelta(days=730)
+        parsed = []
+        for item in kayitlar:
+            # Net temettü tutarı — farklı field isimlerine karşı güvenli
+            net = (item.get('NET_TEMETTU_TUTARI') or item.get('NetTemettuTutari')
+                   or item.get('netTemettuTutari') or item.get('NetTemettu') or 0)
+            brut = (item.get('BRUT_TEMETTU_TUTARI') or item.get('BrutTemettuTutari')
+                    or item.get('brutTemettuTutari') or item.get('BrutTemettu') or 0)
+            tarih_str = (item.get('TEMETTU_ODEME_TARIHI') or item.get('OdemeTarihi')
+                         or item.get('Tarih') or item.get('tarih') or '')
+            try:
+                net_val  = float(str(net).replace(',', '.').replace(' ', ''))
+                brut_val = float(str(brut).replace(',', '.').replace(' ', ''))
+                if not tarih_str:
+                    continue
+                # Tarih formatları: dd.mm.yyyy veya yyyy-mm-dd
+                for fmt in ('%d.%m.%Y', '%Y-%m-%dT%H:%M:%S', '%Y-%m-%d'):
+                    try:
+                        dt = datetime.strptime(tarih_str[:10], fmt)
+                        break
+                    except ValueError:
+                        dt = None
+                if dt and net_val > 0:
+                    parsed.append({'dt': dt, 'net': net_val, 'brut': brut_val,
+                                   'tarih_str': dt.strftime('%d.%m.%Y')})
+            except Exception:
+                continue
+
+        if not parsed:
+            return None
+
+        parsed.sort(key=lambda x: x['dt'], reverse=True)
+        son_1_yil_list = [p for p in parsed if p['dt'] >= son_1_yil]
+        son_2_yil_list = [p for p in parsed if p['dt'] >= son_2_yil]
+
+        if son_1_yil_list:
+            net_toplam = sum(p['net'] for p in son_1_yil_list)
+            n = len(son_1_yil_list)
+            son_tarih = son_1_yil_list[0]['tarih_str'] + (f" ({n}x)" if n > 1 else "")
+            return {'net': round(net_toplam, 6), 'tarih': son_tarih, 'kaynak': 'isyatirim'}
+        elif son_2_yil_list:
+            net_val = son_2_yil_list[0]['net']
+            son_tarih = son_2_yil_list[0]['tarih_str'] + " *"
+            return {'net': round(net_val, 6), 'tarih': son_tarih, 'kaynak': 'isyatirim'}
+
+        return None
+    except Exception as e:
+        logger.warning(f"isyatirim temettü hatası ({code}): {e}")
+        return None
+
+
+def piyasa_acik_mi():
+    """BIST'in şu an açık olup olmadığını İstanbul saatine göre döner."""
+    try:
+        tz      = pytz.timezone('Europe/Istanbul')
+        su_an   = datetime.now(tz)
+        gun     = su_an.weekday()      # 0=Pzt … 6=Paz
+        saat    = su_an.hour
+        dakika  = su_an.minute
+        if gun >= 5:
+            return False, "Hafta Sonu"
+        toplam_dakika = saat * 60 + dakika
+        acilis  = 10 * 60          # 10:00
+        kapanis = 18 * 60          # 18:00
+        if acilis <= toplam_dakika <= kapanis:
+            return True, f"Açık · Kapanışa {18*60 - toplam_dakika} dk"
+        elif toplam_dakika < acilis:
+            return False, f"Kapalı · {10*60 - toplam_dakika} dk'ya açılıyor"
+        else:
+            return False, "Kapandı"
+    except Exception:
+        return None, "?"
+
+
+def kaydet_performans_snapshot(full_data_list):
+    """Her yüklemede o günkü portföy değerini performans geçmişine kaydeder."""
+    if not full_data_list:
+        return
+    try:
+        bugun       = datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%Y-%m-%d')
+        toplam_deger = round(sum(x['Değer'] for x in full_data_list), 2)
+        toplam_kz   = round(sum(x['K/Z']   for x in full_data_list), 2)
+
+        kayitlar = load_json(PERFORMANS_DOSYASI)
+        # list formatına dönüştür (load_json sıralı döndürür, biz dict listesi tutuyoruz)
+        if not isinstance(kayitlar, list):
+            kayitlar = []
+
+        guncellendi = False
+        for k in kayitlar:
+            if k.get('tarih') == bugun:
+                k['deger'] = toplam_deger
+                k['kz']    = toplam_kz
+                guncellendi = True
+                break
+        if not guncellendi:
+            kayitlar.append({'tarih': bugun, 'deger': toplam_deger, 'kz': toplam_kz})
+
+        kayitlar = sorted(kayitlar, key=lambda x: x.get('tarih', ''))[-365:]
+        save_json(PERFORMANS_DOSYASI, kayitlar)
+        st.session_state.performans = kayitlar
+    except Exception as e:
+        logger.error(f"Performans kayıt hatası: {e}")
+
 
 # ==========================================
 # VERİ ÇEKME FONKSİYONLARI
@@ -99,6 +236,12 @@ def fetch_stock_data(symbol):
                 logger.warning(f"Temettü işleme hatası ({symbol}): {e}")
                 yillik_net_temettu = 0.0
                 son_tarih = "-"
+
+        # isyatirim.com.tr birincil kaynak olarak dene (daha doğru net temettü)
+        isy = fetch_temettu_isyatirim(symbol)
+        if isy:
+            yillik_net_temettu = isy['net']
+            son_tarih          = isy['tarih']
 
         return {"hist": hist, "temettu": yillik_net_temettu, "tarih": son_tarih}
 
@@ -503,6 +646,9 @@ if st.session_state.portfoy:
         results = list(executor.map(fetch_single_item, args_list))
     full_data = sorted(results, key=lambda x: x['Hisse'])
 
+# Günlük performans snapshot kaydet
+kaydet_performans_snapshot(full_data)
+
 # ==========================================
 # ALARM KONTROLÜ — sayfa yüklenince otomatik çalışır
 # ==========================================
@@ -533,15 +679,30 @@ if tetiklenen_alarmlar:
 # ==========================================
 # 4. TABLAR VE İÇERİK
 # ==========================================
-tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm = st.tabs([
+tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz = st.tabs([
     "🇹🇷 TÜRK BORSASI",
     "📊 YATIRIM FONLARI",
     "💰 TEMETTÜ GELİRİ",
     "🚀 HALKA ARZ TAKİP",
-    "🔔 FİYAT ALARMLARI"
+    "🔔 FİYAT ALARMLARI",
+    "📈 ANALİZ",
 ])
 
 with st.sidebar:
+    # --- PİYASA DURUMU ---
+    _acik, _durum_msg = piyasa_acik_mi()
+    _durum_color = "#00e676" if _acik else "#ff1744"
+    _durum_icon  = "🟢" if _acik else "🔴"
+    st.markdown(
+        f"<div style='background:{t_sec['box']};border:1px solid {_durum_color}55;"
+        f"border-radius:10px;padding:8px 14px;margin-bottom:8px;"
+        f"display:flex;justify-content:space-between;align-items:center;'>"
+        f"<span style='font-size:11px;color:{t_sec['text']};opacity:0.6;'>BIST DURUMU</span>"
+        f"<span style='font-size:11px;color:{_durum_color};font-weight:700;'>{_durum_icon} {_durum_msg}</span>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+
     st.divider()
 
     # --- MİNİ PORTFÖY ÖZETİ ---
@@ -604,6 +765,79 @@ with st.sidebar:
         st.session_state.portfoy = sorted(st.session_state.portfoy, key=lambda x: x['Hisse'])
         save_json(PORTFOY_DOSYASI, st.session_state.portfoy)
         st.rerun()
+
+    st.divider()
+
+    # --- DÖVİZ ÇEVİRİCİ ---
+    _acc3 = t_sec['accent']
+    st.markdown(f"<div style='color:{_acc3};font-weight:700;font-size:13px;letter-spacing:1px;margin-bottom:8px;'>💱 DÖVİZ ÇEVİRİCİ</div>", unsafe_allow_html=True)
+    try:
+        _usd_try_r = float(fetch_stock_data("USDTRY=X")['hist']['Close'].iloc[-1]) if fetch_stock_data("USDTRY=X") else 0.0
+        _eur_try_r = float(fetch_stock_data("EURTRY=X")['hist']['Close'].iloc[-1]) if fetch_stock_data("EURTRY=X") else 0.0
+        _gc_r      = float(fetch_stock_data("GC=F")['hist']['Close'].iloc[-1]) if fetch_stock_data("GC=F") else 0.0
+        _si_r      = float(fetch_stock_data("SI=F")['hist']['Close'].iloc[-1]) if fetch_stock_data("SI=F") else 0.0
+        _gram_altin  = _gc_r * _usd_try_r / 31.1035 if _usd_try_r and _gc_r else 0.0
+        _gram_gumus  = _si_r * _usd_try_r / 31.1035 if _usd_try_r and _si_r else 0.0
+
+        _doviz_rates = {
+            "TRY (₺)":          1.0,
+            "USD ($)":          _usd_try_r,
+            "EUR (€)":          _eur_try_r,
+            "Gram Altın":       _gram_altin,
+            "Gram Gümüş":       _gram_gumus,
+        }
+        _cv1, _cv2 = st.columns(2)
+        _cv_miktar = _cv1.number_input("Miktar", value=1.0, min_value=0.0, format="%.4f", key="cv_miktar")
+        _cv_kaynak = _cv2.selectbox("Kaynak", list(_doviz_rates.keys()), key="cv_kaynak")
+        _cv_hedef  = st.selectbox("Hedef", list(_doviz_rates.keys()), index=3, key="cv_hedef")
+
+        if _doviz_rates[_cv_kaynak] > 0 and _doviz_rates[_cv_hedef] > 0:
+            _sonuc = _cv_miktar * _doviz_rates[_cv_kaynak] / _doviz_rates[_cv_hedef]
+            st.markdown(
+                f"<div style='background:{t_sec['box']};border:1px solid {_acc3}44;"
+                f"border-radius:8px;padding:10px 14px;text-align:center;'>"
+                f"<span style='color:{t_sec['text']};opacity:0.6;font-size:11px;'>{tr_format(_cv_miktar)} {_cv_kaynak}</span><br>"
+                f"<span style='color:{_acc3};font-size:18px;font-weight:700;'>{tr_format4(_sonuc)} {_cv_hedef}</span>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+    except Exception as _e:
+        st.caption("Kur verisi yükleniyor...")
+
+    st.divider()
+
+    # --- KAR AL / ZARAR KES HESAPLAYICI ---
+    st.markdown(f"<div style='color:{t_sec['accent']};font-weight:700;font-size:13px;letter-spacing:1px;margin-bottom:8px;'>🎯 KAR AL / ZARAR KES</div>", unsafe_allow_html=True)
+    _portfoy_hisseler_kz = sorted(set(x['Hisse'] for x in full_data))
+    if _portfoy_hisseler_kz:
+        _kz_hisse = st.selectbox("Hisse", _portfoy_hisseler_kz, key="kz_hisse")
+        _kz_guncel = next((x['Güncel'] for x in full_data if x['Hisse'] == _kz_hisse), 0.0)
+    else:
+        _kz_hisse  = None
+        _kz_guncel = 0.0
+
+    _kz_fiyat  = st.number_input("Güncel Fiyat (₺)", value=float(_kz_guncel), format="%.4f", key="kz_fiyat")
+    _kz_c1, _kz_c2 = st.columns(2)
+    _kar_pct   = _kz_c1.number_input("Kar Al %", value=10.0, min_value=0.1, step=0.5, key="kar_pct")
+    _zarar_pct = _kz_c2.number_input("Zarar Kes %", value=5.0, min_value=0.1, step=0.5, key="zarar_pct")
+
+    if _kz_fiyat > 0:
+        _kar_fiyat   = _kz_fiyat * (1 + _kar_pct / 100)
+        _zarar_fiyat = _kz_fiyat * (1 - _zarar_pct / 100)
+        st.markdown(
+            f"<div style='background:{t_sec['box']};border:1px solid {t_sec['accent']}33;"
+            f"border-radius:8px;padding:10px 14px;margin-top:4px;'>"
+            f"<div style='display:flex;justify-content:space-between;margin-bottom:6px;'>"
+            f"  <span style='font-size:11px;opacity:0.55;'>Kar Al Hedefi</span>"
+            f"  <span style='color:#00e676;font-weight:700;'>{tr_format4(_kar_fiyat)} ₺</span>"
+            f"</div>"
+            f"<div style='display:flex;justify-content:space-between;'>"
+            f"  <span style='font-size:11px;opacity:0.55;'>Zarar Kes Seviyesi</span>"
+            f"  <span style='color:#ff1744;font-weight:700;'>{tr_format4(_zarar_fiyat)} ₺</span>"
+            f"</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
 
 # ==========================================
 # YÖNETİM FONKSİYONU — Kart Bazlı Yeni Tasarım
@@ -782,22 +1016,22 @@ with tab_tr:
                 legend=dict(
                     orientation='v',
                     yanchor='middle', y=0.5,
-                    xanchor='left',   x=1.02,
+                    xanchor='left',   x=1.05,
                     font=dict(size=11, color=t_sec['text']),
                     bgcolor='rgba(0,0,0,0)',
                 ),
-                margin=dict(t=70, b=30, l=30, r=160),
-                height=460,
+                margin=dict(t=80, b=40, l=80, r=180),
+                height=480,
                 title=dict(
                     text="📊 Hisse Dağılımı",
                     font=dict(size=15, color=t_sec['accent']),
-                    x=0.5, xanchor='center'
+                    x=0.44, xanchor='center', y=0.97,
                 ),
                 annotations=[dict(
-                    text=f"<b>{tr_format(_total)}</b><br>₺ TOPLAM",
-                    x=0.42, y=0.5,
+                    text=f"<b>{tr_format(_total)}</b><br><span style='font-size:11px'>₺ TOPLAM</span>",
+                    x=0.44, y=0.5,
                     font=dict(size=14, color=t_sec['accent']),
-                    showarrow=False, align='center'
+                    showarrow=False, align='center',
                 )]
             )
             st.plotly_chart(fig, use_container_width=True)
@@ -861,22 +1095,22 @@ with tab_fon:
                 legend=dict(
                     orientation='v',
                     yanchor='middle', y=0.5,
-                    xanchor='left',   x=1.02,
+                    xanchor='left',   x=1.05,
                     font=dict(size=11, color=t_sec['text']),
                     bgcolor='rgba(0,0,0,0)',
                 ),
-                margin=dict(t=70, b=30, l=30, r=160),
-                height=460,
+                margin=dict(t=80, b=40, l=80, r=180),
+                height=480,
                 title=dict(
                     text="📊 Fon Dağılımı",
                     font=dict(size=15, color=t_sec['accent']),
-                    x=0.5, xanchor='center'
+                    x=0.44, xanchor='center', y=0.97,
                 ),
                 annotations=[dict(
-                    text=f"<b>{tr_format(_total_f)}</b><br>₺ TOPLAM",
-                    x=0.42, y=0.5,
+                    text=f"<b>{tr_format(_total_f)}</b><br><span style='font-size:11px'>₺ TOPLAM</span>",
+                    x=0.44, y=0.5,
                     font=dict(size=14, color=t_sec['accent']),
-                    showarrow=False, align='center'
+                    showarrow=False, align='center',
                 )]
             )
             st.plotly_chart(fig_f, use_container_width=True)
@@ -1159,6 +1393,224 @@ with tab_alarm:
                     st.rerun()
     else:
         st.info("Henüz alarm eklenmemiş.")
+
+# ==========================================
+# ANALİZ TABU
+# ==========================================
+with tab_analiz:
+    acc = t_sec['accent']
+    txt = t_sec['text']
+    box = t_sec['box']
+    bg  = t_sec['bg']
+
+    # ---------- A) HİSSE FİYAT GRAFİĞİ (Candlestick) ----------
+    st.markdown(f"<h4 style='color:{acc};'>🕯️ Hisse Fiyat Grafiği (60 Gün)</h4>", unsafe_allow_html=True)
+    portfoy_hisseler_a = sorted(set(x['Hisse'] for x in full_data if x['Piyasa'] == 'Türk Borsası'))
+    if portfoy_hisseler_a:
+        cs1, cs2 = st.columns([3, 1])
+        cs_hisse = cs1.selectbox("Hisse Seç", portfoy_hisseler_a, key="cs_hisse")
+        cs_tip   = cs2.selectbox("Grafik Tipi", ["Candlestick", "Çizgi"], key="cs_tip")
+
+        cs_data = fetch_stock_data(cs_hisse)
+        if cs_data and not cs_data['hist'].empty:
+            hist = cs_data['hist'].copy()
+            hist.index = hist.index.tz_localize(None) if hist.index.tz is not None else hist.index
+
+            if cs_tip == "Candlestick":
+                cs_fig = go.Figure(data=[go.Candlestick(
+                    x=hist.index,
+                    open=hist['Open'], high=hist['High'],
+                    low=hist['Low'],   close=hist['Close'],
+                    increasing_line_color='#00e676',
+                    decreasing_line_color='#ff1744',
+                    increasing_fillcolor='#00e67644',
+                    decreasing_fillcolor='#ff174444',
+                    name=cs_hisse,
+                )])
+            else:
+                cs_fig = go.Figure(data=[go.Scatter(
+                    x=hist.index, y=hist['Close'],
+                    mode='lines',
+                    line=dict(color=acc, width=2),
+                    fill='tozeroy',
+                    fillcolor=acc + '18',
+                    name=cs_hisse,
+                )])
+
+            # MA20 üzerine ekle
+            ma20 = hist['Close'].rolling(20).mean()
+            cs_fig.add_trace(go.Scatter(
+                x=hist.index, y=ma20,
+                mode='lines',
+                line=dict(color='#ffc107', width=1.2, dash='dot'),
+                name='MA20', opacity=0.8,
+            ))
+
+            cs_fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color=txt, size=11, family=secili_font),
+                height=380,
+                margin=dict(t=40, b=40, l=40, r=20),
+                xaxis=dict(
+                    showgrid=True, gridcolor=acc + '15',
+                    rangeslider=dict(visible=False),
+                    color=txt,
+                ),
+                yaxis=dict(
+                    showgrid=True, gridcolor=acc + '15',
+                    color=txt, side='right',
+                ),
+                legend=dict(
+                    orientation='h', x=0, y=1.08,
+                    font=dict(size=10, color=txt),
+                    bgcolor='rgba(0,0,0,0)',
+                ),
+                title=dict(
+                    text=f"{cs_hisse} — Son 60 Gün",
+                    font=dict(size=13, color=acc),
+                    x=0.5, xanchor='center',
+                ),
+            )
+            st.plotly_chart(cs_fig, use_container_width=True)
+        else:
+            st.warning(f"{cs_hisse} için veri alınamadı.")
+    else:
+        st.info("Türk Borsası'nda hisse bulunamadı.")
+
+    st.divider()
+
+    # ---------- B) PORTFÖY PERFORMANS GRAFİĞİ ----------
+    st.markdown(f"<h4 style='color:{acc};'>📉 Portföy Performans Geçmişi</h4>", unsafe_allow_html=True)
+    perf_kayitlar = st.session_state.get('performans', [])
+    if len(perf_kayitlar) >= 2:
+        perf_df = pd.DataFrame(perf_kayitlar)
+        perf_df['tarih'] = pd.to_datetime(perf_df['tarih'])
+        perf_df = perf_df.sort_values('tarih')
+
+        pf_fig = go.Figure()
+        pf_fig.add_trace(go.Scatter(
+            x=perf_df['tarih'], y=perf_df['deger'],
+            mode='lines+markers',
+            name='Portföy Değeri',
+            line=dict(color=acc, width=2.5),
+            marker=dict(size=5, color=acc),
+            fill='tozeroy', fillcolor=acc + '15',
+            hovertemplate='<b>%{x|%d.%m.%Y}</b><br>Değer: %{y:,.0f} ₺<extra></extra>',
+        ))
+        pf_fig.add_trace(go.Bar(
+            x=perf_df['tarih'], y=perf_df['kz'],
+            name='Günlük K/Z',
+            marker_color=[('#00e676' if v >= 0 else '#ff1744') for v in perf_df['kz']],
+            opacity=0.6,
+            yaxis='y2',
+            hovertemplate='<b>%{x|%d.%m.%Y}</b><br>K/Z: %{y:,.0f} ₺<extra></extra>',
+        ))
+        pf_fig.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color=txt, size=11, family=secili_font),
+            height=360,
+            margin=dict(t=50, b=40, l=40, r=60),
+            xaxis=dict(showgrid=True, gridcolor=acc+'15', color=txt),
+            yaxis=dict(showgrid=True, gridcolor=acc+'15', color=txt,
+                       title=dict(text='Değer (₺)', font=dict(size=11))),
+            yaxis2=dict(overlaying='y', side='right', showgrid=False, color=txt,
+                        title=dict(text='K/Z (₺)', font=dict(size=11))),
+            legend=dict(orientation='h', x=0, y=1.08,
+                        font=dict(size=10, color=txt), bgcolor='rgba(0,0,0,0)'),
+            title=dict(text="Günlük Portföy Değeri & K/Z",
+                       font=dict(size=13, color=acc), x=0.5, xanchor='center'),
+            barmode='overlay',
+        )
+        st.plotly_chart(pf_fig, use_container_width=True)
+
+        # Özet istatistikler
+        _ilk  = perf_df['deger'].iloc[0]
+        _son  = perf_df['deger'].iloc[-1]
+        _max  = perf_df['deger'].max()
+        _min  = perf_df['deger'].min()
+        _perf = ((_son - _ilk) / _ilk * 100) if _ilk > 0 else 0
+        _pc   = "#00e676" if _perf >= 0 else "#ff1744"
+        ps1, ps2, ps3, ps4 = st.columns(4)
+        ps1.metric("Dönem Başı",        f"{tr_format(_ilk)} ₺")
+        ps2.metric("Bugün",             f"{tr_format(_son)} ₺")
+        ps3.metric("Dönem Getirisi",    f"%{_perf:+.2f}")
+        ps4.metric("En Yüksek Değer",   f"{tr_format(_max)} ₺")
+    else:
+        st.info("Performans geçmişi için en az 2 günlük veri gerekli. Uygulama her açıldığında o günün değerini kaydeder.")
+
+    st.divider()
+
+    # ---------- C) KORELASYON MATRİSİ ----------
+    st.markdown(f"<h4 style='color:{acc};'>🔗 Hisse Korelasyon Matrisi</h4>", unsafe_allow_html=True)
+    portfoy_bist = [x['Hisse'] for x in full_data if x['Piyasa'] == 'Türk Borsası']
+    if len(portfoy_bist) >= 2:
+        @st.cache_data(ttl=600)
+        def hesapla_korelasyon(hisse_listesi):
+            kapanis = {}
+            for h in hisse_listesi:
+                d = fetch_stock_data(h)
+                if d and not d['hist'].empty:
+                    kapanis[h] = d['hist']['Close'].values[-30:]  # son 30 gün
+            if len(kapanis) < 2:
+                return None
+            min_uzunluk = min(len(v) for v in kapanis.values())
+            df_kap = pd.DataFrame({k: v[-min_uzunluk:] for k, v in kapanis.items()})
+            return df_kap.corr()
+
+        kor_df = hesapla_korelasyon(tuple(portfoy_bist))
+        if kor_df is not None and not kor_df.empty:
+            n = len(kor_df)
+            kor_z = kor_df.values
+            labels = kor_df.columns.tolist()
+
+            # Renk skalası: kırmızı(-1) → beyaz(0) → yeşil(+1)
+            kor_fig = go.Figure(data=go.Heatmap(
+                z=kor_z,
+                x=labels,
+                y=labels,
+                colorscale=[
+                    [0.0,  '#ff1744'],
+                    [0.5,  box],
+                    [1.0,  '#00e676'],
+                ],
+                zmin=-1, zmax=1,
+                text=[[f"{kor_z[i][j]:.2f}" for j in range(n)] for i in range(n)],
+                texttemplate="%{text}",
+                textfont=dict(size=11, color=txt),
+                hovertemplate='<b>%{y} × %{x}</b><br>Korelasyon: %{z:.3f}<extra></extra>',
+                showscale=True,
+                colorbar=dict(
+                    thickness=12, len=0.8,
+                    tickfont=dict(size=10, color=txt),
+                    title=dict(text='r', font=dict(color=txt)),
+                ),
+            ))
+            kor_fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color=txt, size=11, family=secili_font),
+                height=max(300, n * 44 + 80),
+                margin=dict(t=50, b=60, l=60, r=80),
+                xaxis=dict(color=txt, tickangle=-35),
+                yaxis=dict(color=txt),
+                title=dict(
+                    text="Son 30 Gün Kapanış Korelasyonu",
+                    font=dict(size=13, color=acc),
+                    x=0.5, xanchor='center',
+                ),
+            )
+            st.plotly_chart(kor_fig, use_container_width=True)
+            st.markdown(
+                f"<small style='color:{acc}88;'>+1,00 = Tam pozitif korelasyon &nbsp;|&nbsp; "
+                f"0,00 = İlişkisiz &nbsp;|&nbsp; -1,00 = Tam negatif korelasyon</small>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.warning("Korelasyon hesaplanamadı (yeterli veri yok).")
+    else:
+        st.info("Korelasyon matrisi için portföyde en az 2 Türk Borsası hissesi gerekli.")
 
 # ==========================================
 # FOOTER
