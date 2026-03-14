@@ -1259,60 +1259,77 @@ with st.sidebar:
     )
 
 
+# ==========================================
+# YÖNETİM FONKSİYONU — Kart Bazlı Yeni Tasarım
+# ==========================================
+def varlik_yonetimi_render(df_local):
+    # Güvenlik kalkanı: None, boş veya DataFrame olmayan girdi
+    if df_local is None or not isinstance(df_local, pd.DataFrame) or df_local.empty:
+        st.info("Gösterilecek varlık bulunamadı.")
+        return
+
     acc = t_sec['accent']
     box = t_sec['box']
     txt = t_sec['text']
     with st.expander("🛠️ VARLIK YÖNETİMİ"):
-        for _, r in df_local.iterrows(): 
-            kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
-            kz_pct   = ((r['Güncel'] - r['Maliyet']) / r['Maliyet'] * 100) if r['Maliyet'] > 0 else 0.0
-            sinyal_str = str(r.get('Sinyal', '—'))
+        for _, r in df_local.iterrows():
+            try:
+                kz_color   = "#00e676" if r.get('K/Z', 0) >= 0 else "#ff1744"
+                kz_pct     = ((r.get('Güncel', 0) - r.get('Maliyet', 0)) / r.get('Maliyet', 1) * 100) if r.get('Maliyet', 0) > 0 else 0.0
+                sinyal_str = str(r.get('Sinyal', '—'))
 
-            # Bilgi kartı
-            st.markdown(
-                f"<div class='vy-kart'>"
-                f"<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;'>"
-                f"  <span style='color:{acc};font-weight:700;font-size:15px;letter-spacing:0.5px;'>{r['Hisse']}</span>"
-                f"  <span style='color:{txt};opacity:0.45;font-size:10px;letter-spacing:1px;'>{r['Piyasa'].upper()}</span>"
-                f"</div>"
-                f"<div style='display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;'>"
-                f"  <div><div class='vy-etiket'>ADET</div>"
-                f"      <div class='vy-deger' style='color:{txt};'>{r['Adet']}</div></div>"
-                f"  <div><div class='vy-etiket'>MALİYET</div>"
-                f"      <div class='vy-deger' style='color:{txt};'>{tr_format4(r['Maliyet'])} ₺</div></div>"
-                f"  <div><div class='vy-etiket'>GÜNCEL</div>"
-                f"      <div class='vy-deger' style='color:{acc};'>{tr_format4(r['Güncel'])} ₺</div></div>"
-                f"  <div><div class='vy-etiket'>K/Z</div>"
-                f"      <div class='vy-deger' style='color:{kz_color};'>{tr_format(r['K/Z'])} ₺"
-                f"          <span style='font-size:10px;opacity:0.8;'> ({kz_pct:+.1f}%)</span></div></div>"
-                f"</div>"
-                f"<div style='margin-top:8px;padding-top:8px;border-top:1px solid {acc}18;"
-                f"display:flex;justify-content:space-between;align-items:center;'>"
-                f"  <span style='font-size:11px;opacity:0.45;'>Sinyal: {sinyal_str}</span>"
-                f"  <span style='font-size:11px;opacity:0.45;'>Toplam: {tr_format(r['Değer'])} ₺</span>"
-                f"</div>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
+                # Bilgi kartı
+                st.markdown(
+                    f"<div class='vy-kart'>"
+                    f"<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;'>"
+                    f"  <span style='color:{acc};font-weight:700;font-size:15px;letter-spacing:0.5px;'>{r.get('Hisse','?')}</span>"
+                    f"  <span style='color:{txt};opacity:0.45;font-size:10px;letter-spacing:1px;'>{str(r.get('Piyasa','')).upper()}</span>"
+                    f"</div>"
+                    f"<div style='display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;'>"
+                    f"  <div><div class='vy-etiket'>ADET</div>"
+                    f"      <div class='vy-deger' style='color:{txt};'>{r.get('Adet',0)}</div></div>"
+                    f"  <div><div class='vy-etiket'>MALİYET</div>"
+                    f"      <div class='vy-deger' style='color:{txt};'>{tr_format4(r.get('Maliyet',0))} ₺</div></div>"
+                    f"  <div><div class='vy-etiket'>GÜNCEL</div>"
+                    f"      <div class='vy-deger' style='color:{acc};'>{tr_format4(r.get('Güncel',0))} ₺</div></div>"
+                    f"  <div><div class='vy-etiket'>K/Z</div>"
+                    f"      <div class='vy-deger' style='color:{kz_color};'>{tr_format(r.get('K/Z',0))} ₺"
+                    f"          <span style='font-size:10px;opacity:0.8;'> ({kz_pct:+.1f}%)</span></div></div>"
+                    f"</div>"
+                    f"<div style='margin-top:8px;padding-top:8px;border-top:1px solid {acc}18;"
+                    f"display:flex;justify-content:space-between;align-items:center;'>"
+                    f"  <span style='font-size:11px;opacity:0.45;'>Sinyal: {sinyal_str}</span>"
+                    f"  <span style='font-size:11px;opacity:0.45;'>Toplam: {tr_format(r.get('Değer',0))} ₺</span>"
+                    f"</div>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
 
-            # Düzenleme satırı
-            ec1, ec2, ec3, ec4 = st.columns([2, 2, 1, 1])
-            y_adet    = ec1.number_input("Yeni Adet",    value=int(r['Adet']),      step=1,        key=f"a_{r['id']}")
-            y_maliyet = ec2.number_input("Yeni Maliyet (₺)", value=float(r['Maliyet']), format="%.4f", key=f"m_{r['id']}")
-            ec3.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
-            ec4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                # Düzenleme satırı
+                _row_id = int(r.get('id', 0))
+                ec1, ec2, ec3, ec4 = st.columns([2, 2, 1, 1])
+                y_adet    = ec1.number_input("Yeni Adet",       value=int(r.get('Adet', 0)),       step=1,       key=f"a_{_row_id}")
+                y_maliyet = ec2.number_input("Yeni Maliyet (₺)", value=float(r.get('Maliyet', 0.0)), format="%.4f", key=f"m_{_row_id}")
+                ec3.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                ec4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
 
-            if ec3.button("💾 Kaydet", key=f"s_{r['id']}", use_container_width=True):
-                st.session_state.portfoy[r['id']]['Adet']    = y_adet
-                st.session_state.portfoy[r['id']]['Maliyet'] = y_maliyet
-                st.session_state.portfoy = sorted(st.session_state.portfoy, key=lambda x: x['Hisse'])
-                save_json(PORTFOY_DOSYASI, st.session_state.portfoy)
-                st.rerun()
-            if ec4.button("❌ Sil", key=f"d_{r['id']}", use_container_width=True):
-                st.session_state.portfoy.pop(r['id'])
-                save_json(PORTFOY_DOSYASI, st.session_state.portfoy)
-                st.rerun()
-            st.markdown("<div style='margin-bottom:4px;'></div>", unsafe_allow_html=True)
+                if ec3.button("💾 Kaydet", key=f"s_{_row_id}", use_container_width=True):
+                    if _row_id < len(st.session_state.portfoy):
+                        st.session_state.portfoy[_row_id]['Adet']    = y_adet
+                        st.session_state.portfoy[_row_id]['Maliyet'] = y_maliyet
+                        st.session_state.portfoy = sorted(st.session_state.portfoy, key=lambda x: x['Hisse'])
+                        save_json(PORTFOY_DOSYASI, st.session_state.portfoy)
+                        st.rerun()
+                if ec4.button("❌ Sil", key=f"d_{_row_id}", use_container_width=True):
+                    if _row_id < len(st.session_state.portfoy):
+                        st.session_state.portfoy.pop(_row_id)
+                        save_json(PORTFOY_DOSYASI, st.session_state.portfoy)
+                        st.rerun()
+                st.markdown("<div style='margin-bottom:4px;'></div>", unsafe_allow_html=True)
+
+            except Exception as _ve:
+                logger.error(f"Varlık yönetimi render hatası ({r.get('Hisse','?')}): {_ve}")
+                st.warning(f"⚠️ {r.get('Hisse','?')} için gösterim hatası: {_ve}")
 
 def make_sparkline_svg(prices, width=80, height=28, renk_kz=None):
     """
@@ -1384,6 +1401,10 @@ def hesapla_korelasyon(hisse_listesi):
 # GELİŞTİRİLMİŞ TABLO — RSI + MACD + BB sütunu
 # ==========================================
 def render_kral_table(df_local, goster_indikatör=True):
+    # Güvenlik kalkanı
+    if df_local is None or not isinstance(df_local, pd.DataFrame) or df_local.empty:
+        return "<table class='kral-table'><tbody><tr><td style='opacity:0.5;padding:16px;'>Veri bulunamadı.</td></tr></tbody></table>"
+
     if goster_indikatör:
         baslik = "<tr><th>VARLIK</th><th>7G</th><th>SİNYAL</th><th>RSI</th><th>MACD-H</th><th>BB%</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr>"
     else:
@@ -1392,64 +1413,67 @@ def render_kral_table(df_local, goster_indikatör=True):
     table_html = f"<table class='kral-table'><thead>{baslik}</thead><tbody>"
 
     for _, r in df_local.iterrows():
-        kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
+        try:
+            kz_color = "#00e676" if r.get('K/Z', 0) >= 0 else "#ff1744"
 
-        # Sparkline SVG
-        spark_prices = r.get('Sparkline', [])
-        spark_svg    = make_sparkline_svg(spark_prices, renk_kz=r['K/Z'])
+            # Sparkline SVG
+            spark_prices = r.get('Sparkline', [])
+            if not isinstance(spark_prices, list):
+                spark_prices = []
+            spark_svg = make_sparkline_svg(spark_prices, renk_kz=r.get('K/Z', 0))
 
-        if goster_indikatör:
-            # RSI rengi
-            rsi = r['RSI']
-            if rsi < 35:   rsi_color = "#00e676"
-            elif rsi > 65: rsi_color = "#ff1744"
-            else:          rsi_color = "#ffc107"
+            if goster_indikatör:
+                rsi = float(r.get('RSI', 50))
+                if rsi < 35:   rsi_color = "#00e676"
+                elif rsi > 65: rsi_color = "#ff1744"
+                else:          rsi_color = "#ffc107"
 
-            # MACD histogram
-            macd_h = r['MACD_H']
-            macd_color  = "#00e676" if macd_h > 0 else "#ff1744"
-            macd_sembol = f"+{tr_format(macd_h)}" if macd_h > 0 else tr_format(macd_h)
+                macd_h      = float(r.get('MACD_H', 0))
+                macd_color  = "#00e676" if macd_h > 0 else "#ff1744"
+                macd_sembol = f"+{tr_format(macd_h)}" if macd_h > 0 else tr_format(macd_h)
 
-            # Bollinger % bar
-            bb_pct   = max(0, min(100, r['BB_PCT']))
-            bb_color = "#00e676" if bb_pct < 30 else ("#ff1744" if bb_pct > 70 else "#ffc107")
-            bb_bg    = t_sec['box']
+                bb_pct   = max(0, min(100, float(r.get('BB_PCT', 50))))
+                bb_color = "#00e676" if bb_pct < 30 else ("#ff1744" if bb_pct > 70 else "#ffc107")
+                bb_bg    = t_sec['box']
 
-            extra = (
-                f"<td style='color:{rsi_color};font-weight:bold;'>{rsi:.1f}</td>"
-                f"<td style='color:{macd_color};font-weight:bold;'>{macd_sembol}</td>"
-                f"<td>"
-                f"<div style='background:{bb_bg}; border-radius:4px; width:80px; height:8px; display:inline-block; vertical-align:middle;'>"
-                f"<div style='width:{bb_pct}%; background:{bb_color}; height:8px; border-radius:4px;'></div>"
-                f"</div> <span style='font-size:11px;color:{bb_color};'>{bb_pct:.0f}%</span>"
-                f"</td>"
-                f"<td>{r['Adet']}</td>"
-            )
-            table_html += (
-                f"<tr>"
-                f"<td><b>{r['Hisse']}</b></td>"
-                f"<td style='padding:8px 12px;'>{spark_svg}</td>"
-                f"<td>{r['Sinyal']}</td>"
-                f"{extra}"
-                f"<td>{tr_format4(r['Maliyet'])} ₺</td>"
-                f"<td>{tr_format4(r['Güncel'])} ₺</td>"
-                f"<td style='color:{kz_color};font-weight:bold;'>{tr_format(r['K/Z'])} ₺</td>"
-                f"<td><b>{tr_format(r['Değer'])} ₺</b></td>"
-                f"</tr>"
-            )
-        else:
-            table_html += (
-                f"<tr>"
-                f"<td><b>{r['Hisse']}</b></td>"
-                f"<td style='padding:8px 12px;'>{spark_svg}</td>"
-                f"<td>{r['Sinyal']}</td>"
-                f"<td>{r['Adet']}</td>"
-                f"<td>{tr_format4(r['Maliyet'])} ₺</td>"
-                f"<td>{tr_format4(r['Güncel'])} ₺</td>"
-                f"<td style='color:{kz_color};font-weight:bold;'>{tr_format(r['K/Z'])} ₺</td>"
-                f"<td><b>{tr_format(r['Değer'])} ₺</b></td>"
-                f"</tr>"
-            )
+                extra = (
+                    f"<td style='color:{rsi_color};font-weight:bold;'>{rsi:.1f}</td>"
+                    f"<td style='color:{macd_color};font-weight:bold;'>{macd_sembol}</td>"
+                    f"<td>"
+                    f"<div style='background:{bb_bg};border-radius:4px;width:80px;height:8px;display:inline-block;vertical-align:middle;'>"
+                    f"<div style='width:{bb_pct}%;background:{bb_color};height:8px;border-radius:4px;'></div>"
+                    f"</div> <span style='font-size:11px;color:{bb_color};'>{bb_pct:.0f}%</span>"
+                    f"</td>"
+                    f"<td>{r.get('Adet', 0)}</td>"
+                )
+                table_html += (
+                    f"<tr>"
+                    f"<td><b>{r.get('Hisse','?')}</b></td>"
+                    f"<td style='padding:8px 12px;'>{spark_svg}</td>"
+                    f"<td>{r.get('Sinyal','—')}</td>"
+                    f"{extra}"
+                    f"<td>{tr_format4(r.get('Maliyet',0))} ₺</td>"
+                    f"<td>{tr_format4(r.get('Güncel',0))} ₺</td>"
+                    f"<td style='color:{kz_color};font-weight:bold;'>{tr_format(r.get('K/Z',0))} ₺</td>"
+                    f"<td><b>{tr_format(r.get('Değer',0))} ₺</b></td>"
+                    f"</tr>"
+                )
+            else:
+                table_html += (
+                    f"<tr>"
+                    f"<td><b>{r.get('Hisse','?')}</b></td>"
+                    f"<td style='padding:8px 12px;'>{spark_svg}</td>"
+                    f"<td>{r.get('Sinyal','—')}</td>"
+                    f"<td>{r.get('Adet',0)}</td>"
+                    f"<td>{tr_format4(r.get('Maliyet',0))} ₺</td>"
+                    f"<td>{tr_format4(r.get('Güncel',0))} ₺</td>"
+                    f"<td style='color:{kz_color};font-weight:bold;'>{tr_format(r.get('K/Z',0))} ₺</td>"
+                    f"<td><b>{tr_format(r.get('Değer',0))} ₺</b></td>"
+                    f"</tr>"
+                )
+        except Exception as _te:
+            logger.error(f"Tablo satır hatası ({r.get('Hisse','?')}): {_te}")
+            table_html += f"<tr><td colspan='11' style='opacity:0.4;font-size:11px;'>⚠️ {r.get('Hisse','?')} — gösterim hatası</td></tr>"
 
     return table_html + "</tbody></table>"
 
