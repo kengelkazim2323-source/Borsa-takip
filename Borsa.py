@@ -843,7 +843,6 @@ piyasa_izleme = {
     "EUR/TRY":   "EURTRY=X",
     "ONS ALTIN": "GC=F",
     "ONS GÜMÜŞ": "SI=F",
-    "BTC":       "BTC-USD",
 }
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
 for isim, sembol in piyasa_izleme.items():
