@@ -594,7 +594,12 @@ def fetch_single_item(args):
 # 1. TEMA VE CSS
 # ==========================================
 st.set_page_config(page_title="Borsa Takip", page_icon="📈", layout="wide")
-st_autorefresh(interval=60000, key="datarefresh")
+
+# Yenileme süresi session_state'ten okunur (sidebar'dan ayarlanabilir)
+if 'yenileme_suresi' not in st.session_state:
+    st.session_state.yenileme_suresi = 60   # saniye
+
+st_autorefresh(interval=st.session_state.yenileme_suresi * 1000, key="datarefresh")
 
 tema_isimleri = [
     "Siyah-Beyaz (Klasik)", "Siyah-Beyaz (Koyu)", "Galaksi (VIP)", "Siber Punk", "Matrix", "Altın Vuruş",
@@ -1147,7 +1152,52 @@ with st.sidebar:
             st.success(f"✅ Yedek oluşturuldu: {os.path.basename(_zip_adi)}")
         except Exception as _ez:
             st.error(f"Yedek alınamadı: {_ez}")
-def varlik_yonetimi_render(df_local):
+
+    st.divider()
+
+    # --- YENİLEME & TELEFON SYNC ---
+    _acc_s = t_sec['accent']
+    st.markdown(
+        f"<div style='color:{_acc_s};font-weight:700;font-size:11px;"
+        f"letter-spacing:1px;margin-bottom:6px;'>🔄 YENİLEME & SYNC</div>",
+        unsafe_allow_html=True
+    )
+    _sure_sec = st.select_slider(
+        "Otomatik yenileme",
+        options=[15, 30, 60, 120, 300],
+        value=st.session_state.yenileme_suresi,
+        format_func=lambda x: f"{x}sn" if x < 60 else f"{x//60}dk",
+        key="yenileme_slider"
+    )
+    if _sure_sec != st.session_state.yenileme_suresi:
+        st.session_state.yenileme_suresi = _sure_sec
+        st.rerun()
+
+    # Telefon URL bilgisi
+    try:
+        import socket
+        _hostname = socket.gethostname()
+        _local_ip = socket.gethostbyname(_hostname)
+    except Exception:
+        _local_ip = "—"
+
+    st.markdown(
+        f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}22;"
+        f"border-radius:8px;padding:8px 12px;margin-top:4px;'>"
+        f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
+        f"<div style='font-size:10px;color:{_acc_s};font-weight:600;'>"
+        f"Aynı Wi-Fi'ya bağlı ol,<br>tarayıcıda şunu aç:</div>"
+        f"<div style='font-size:11px;font-family:monospace;margin-top:4px;"
+        f"word-break:break-all;opacity:0.8;'>"
+        f"http://{_local_ip}:8501</div>"
+        f"<div style='font-size:9px;opacity:0.4;margin-top:4px;'>"
+        f"Aynı URL'yi telefon ve bilgisayarda aç — "
+        f"her ikisi de {st.session_state.yenileme_suresi}sn'de otomatik güncellenir.</div>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+
+
     acc = t_sec['accent']
     box = t_sec['box']
     txt = t_sec['text']
@@ -1170,7 +1220,7 @@ def varlik_yonetimi_render(df_local):
                 f"  <div><div class='vy-etiket'>MALİYET</div>"
                 f"      <div class='vy-deger' style='color:{txt};'>{tr_format4(r['Maliyet'])} ₺</div></div>"
                 f"  <div><div class='vy-etiket'>GÜNCEL</div>"
-                f"      <div class='vy-deger' style='color:{acc};'>{tr_format(r['Güncel'])} ₺</div></div>"
+                f"      <div class='vy-deger' style='color:{acc};'>{tr_format4(r['Güncel'])} ₺</div></div>"
                 f"  <div><div class='vy-etiket'>K/Z</div>"
                 f"      <div class='vy-deger' style='color:{kz_color};'>{tr_format(r['K/Z'])} ₺"
                 f"          <span style='font-size:10px;opacity:0.8;'> ({kz_pct:+.1f}%)</span></div></div>"
@@ -1321,7 +1371,7 @@ def render_kral_table(df_local, goster_indikatör=True):
                 f"<td>{r['Sinyal']}</td>"
                 f"{extra}"
                 f"<td>{tr_format4(r['Maliyet'])} ₺</td>"
-                f"<td>{tr_format(r['Güncel'])} ₺</td>"
+                f"<td>{tr_format4(r['Güncel'])} ₺</td>"
                 f"<td style='color:{kz_color};font-weight:bold;'>{tr_format(r['K/Z'])} ₺</td>"
                 f"<td><b>{tr_format(r['Değer'])} ₺</b></td>"
                 f"</tr>"
@@ -1334,7 +1384,7 @@ def render_kral_table(df_local, goster_indikatör=True):
                 f"<td>{r['Sinyal']}</td>"
                 f"<td>{r['Adet']}</td>"
                 f"<td>{tr_format4(r['Maliyet'])} ₺</td>"
-                f"<td>{tr_format(r['Güncel'])} ₺</td>"
+                f"<td>{tr_format4(r['Güncel'])} ₺</td>"
                 f"<td style='color:{kz_color};font-weight:bold;'>{tr_format(r['K/Z'])} ₺</td>"
                 f"<td><b>{tr_format(r['Değer'])} ₺</b></td>"
                 f"</tr>"
@@ -2110,7 +2160,7 @@ with tab_temel:
                 f"<td>{bo_str}</td>"
                 f"<td style='font-size:11px;'>{fmt_mkt(tv.get('Piyasa_Degeri'))}</td>"
                 f"<td>{'%'+str(tv.get('Temettu_Verimi')) if tv.get('Temettu_Verimi') else '<span style=\"opacity:0.35;\">—</span>'}</td>"
-                f"<td>{tr_format(r['Güncel'])} ₺</td>"
+                f"<td>{tr_format4(r['Güncel'])} ₺</td>"
                 f"</tr>"
             )
         tbl += "</tbody></table>"
