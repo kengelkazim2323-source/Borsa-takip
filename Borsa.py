@@ -921,7 +921,7 @@ if tetiklenen_alarmlar:
 # ==========================================
 # 4. TABLAR VE İÇERİK
 # ==========================================
-tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_notlar, tab_islem, tab_sim, tab_export = st.tabs([
+tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_notlar, tab_islem, tab_export = st.tabs([
     "🇹🇷 TÜRK BORSASI",
     "📊 YATIRIM FONLARI",
     "💰 TEMETTÜ GELİRİ",
@@ -932,7 +932,6 @@ tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_teme
     "🏦 TEMEL VERİLER",
     "📝 NOTLAR",
     "📒 İŞLEM GÜNLÜĞÜ",
-    "🔬 SİMÜLASYON",
     "📤 DIŞA AKTAR",
 ])
 
@@ -1235,126 +1234,29 @@ with st.sidebar:
         st.session_state.yenileme_suresi = _sure_sec
         st.rerun()
 
-    # --- GELİŞMİŞ IP TESPİTİ ---
-    def _get_lan_ips():
-        """Çoklu yöntemle LAN IP adreslerini toplar, 127.x ve 0.0.0.0 filtreler."""
-        ips = []
-        # Yöntem 1: UDP trick (en güvenilir)
-        try:
-            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            _s.connect(("8.8.8.8", 80))
-            _ip = _s.getsockname()[0]
-            _s.close()
-            if _ip and not _ip.startswith("127."):
-                ips.append(_ip)
-        except Exception:
-            pass
-        # Yöntem 2: hostname -I (Linux)
-        try:
-            import subprocess as _sp
-            _r = _sp.run(["hostname", "-I"], capture_output=True, text=True, timeout=2)
-            for _ip in _r.stdout.strip().split():
-                if not _ip.startswith("127.") and _ip != "0.0.0.0" and _ip not in ips:
-                    ips.append(_ip)
-        except Exception:
-            pass
-        # Yöntem 3: ip route (Linux)
-        try:
-            import subprocess as _sp, re as _re
-            _r = _sp.run(["ip", "route", "get", "8.8.8.8"], capture_output=True, text=True, timeout=2)
-            _m = _re.search(r"src (\d+\.\d+\.\d+\.\d+)", _r.stdout)
-            if _m and _m.group(1) not in ips:
-                ips.append(_m.group(1))
-        except Exception:
-            pass
-        return ips
+    # Telefon URL bilgisi
+    try:
+        import socket
+        _hostname = socket.gethostname()
+        _local_ip = socket.gethostbyname(_hostname)
+    except Exception:
+        _local_ip = "—"
 
-    # Ortam tespiti: Streamlit Cloud mı, local mı?
-    _is_cloud = (
-        os.environ.get('STREAMLIT_SHARING_MODE') is not None
-        or '/mount/src/' in os.path.abspath(__file__)
-        or os.environ.get('STREAMLIT_SERVER_HEADLESS', '') == '1'
+    st.markdown(
+        f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}22;"
+        f"border-radius:8px;padding:8px 12px;margin-top:4px;'>"
+        f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
+        f"<div style='font-size:10px;color:{_acc_s};font-weight:600;'>"
+        f"Aynı Wi-Fi'ya bağlı ol,<br>tarayıcıda şunu aç:</div>"
+        f"<div style='font-size:11px;font-family:monospace;margin-top:4px;"
+        f"word-break:break-all;opacity:0.8;'>"
+        f"http://{_local_ip}:8501</div>"
+        f"<div style='font-size:9px;opacity:0.4;margin-top:4px;'>"
+        f"Aynı URL'yi telefon ve bilgisayarda aç — "
+        f"her ikisi de {st.session_state.yenileme_suresi}sn'de otomatik güncellenir.</div>"
+        f"</div>",
+        unsafe_allow_html=True
     )
-    _port = os.environ.get('STREAMLIT_SERVER_PORT', '8501')
-
-    if _is_cloud:
-        # Streamlit Cloud: tarayıcı adres çubuğundaki URL kullanılmalı
-        st.markdown(
-            f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
-            f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
-            f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
-            f"<div style='font-size:11px;color:{_acc_s};font-weight:600;margin-bottom:4px;'>"
-            f"Streamlit Cloud üzerinde çalışıyor</div>"
-            f"<div style='font-size:10px;opacity:0.7;line-height:1.5;'>"
-            f"Tarayıcının adres çubuğundaki URL'yi<br>"
-            f"telefonuna kopyala — direk açılır.</div>"
-            f"<div style='font-size:9px;opacity:0.4;margin-top:6px;'>"
-            f"Her {st.session_state.yenileme_suresi}sn'de otomatik yenilenir.</div>"
-            f"</div>",
-            unsafe_allow_html=True
-        )
-    else:
-        # Local: LAN IP bul ve göster
-        _ips = _get_lan_ips()
-
-        if _ips:
-            _ip  = _ips[0]
-            _url = f"http://{_ip}:{_port}"
-
-            st.markdown(
-                f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
-                f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
-                f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
-                f"<div style='font-size:10px;opacity:0.7;margin-bottom:6px;line-height:1.5;'>"
-                f"1. Telefonu aynı Wi-Fi'ya bağla<br>"
-                f"2. Tarayıcıda şu adresi aç:</div>"
-                f"<div style='font-size:13px;font-family:monospace;font-weight:700;"
-                f"color:{_acc_s};background:{t_sec['bg']};padding:6px 10px;"
-                f"border-radius:6px;word-break:break-all;letter-spacing:0.5px;'>"
-                f"{_url}</div>",
-                unsafe_allow_html=True
-            )
-
-            # Birden fazla IP varsa diğerlerini de göster
-            if len(_ips) > 1:
-                st.markdown(
-                    f"<div style='font-size:9px;opacity:0.45;margin-top:4px;'>"
-                    f"Diğer adresler: " + " · ".join(f"http://{ip}:{_port}" for ip in _ips[1:]) +
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-
-            st.markdown(
-                f"<div style='font-size:9px;opacity:0.4;margin-top:4px;'>"
-                f"Her {st.session_state.yenileme_suresi}sn'de otomatik yenilenir · "
-                f"Çalışmazsa `streamlit run Borsa.py --server.address=0.0.0.0` ile başlat"
-                f"</div>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
-
-            # Kopyalama butonu
-            if st.button("📋 URL'yi Kopyala", key="url_kopyala", use_container_width=True):
-                st.code(_url, language=None)
-                st.caption("↑ Yukarıdaki URL'yi seç ve kopyala")
-        else:
-            st.markdown(
-                f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
-                f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
-                f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
-                f"<div style='font-size:10px;opacity:0.7;line-height:1.5;'>"
-                f"IP adresi otomatik bulunamadı.<br>"
-                f"Terminalde şunu çalıştır:<br>"
-                f"<span style='font-family:monospace;color:{_acc_s};'>"
-                f"streamlit run Borsa.py --server.address=0.0.0.0</span><br><br>"
-                f"Sonra telefon tarayıcısında:<br>"
-                f"<span style='font-family:monospace;color:{_acc_s};'>"
-                f"http://[BİLGİSAYAR-IP]:{_port}</span>"
-                f"</div>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
-            st.caption("💡 Bilgisayarın IP'sini öğrenmek için: `ipconfig` (Windows) veya `ifconfig` (Mac/Linux)")
 
 
 # ==========================================
@@ -2695,316 +2597,6 @@ with tab_islem:
                     st.rerun()
     else:
         st.info("Henüz işlem girilmemiş. Yukarıdaki formu kullanarak al/sat işlemlerini kaydet.")
-
-# ==========================================
-# SİMÜLASYON TABU — Backtest · Reel Getiri · Senaryo · Vergi
-# ==========================================
-with tab_sim:
-    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
-
-    sim_sekme = st.radio(
-        "Bölüm Seç",
-        ["📊 Backtest", "📉 Reel Getiri", "🎯 Senaryo", "🧾 Vergi Hesabı"],
-        horizontal=True, key="sim_sekme_radio"
-    )
-
-    st.divider()
-
-    # ── A) BACKTEST ─────────────────────────────────────────────────────────────
-    if sim_sekme == "📊 Backtest":
-        st.markdown(f"<h4 style='color:{acc};'>📊 Sinyal Backtest (RSI + MACD)</h4>",
-                    unsafe_allow_html=True)
-        st.markdown(
-            f"<small style='color:{acc}88;'>Mevcut sinyal motoru geçmiş {60} günde kaç kez doğru çalıştı?</small>",
-            unsafe_allow_html=True
-        )
-
-        bist_hisseler_bt = sorted(set(x['Hisse'] for x in full_data if x['Piyasa'] == 'Türk Borsası'))
-        if not bist_hisseler_bt:
-            st.info("Türk Borsası hissesi bulunamadı.")
-        else:
-            bt_hisse = st.selectbox("Hisse Seç", bist_hisseler_bt, key="bt_hisse")
-            bt_col1, bt_col2 = st.columns(2)
-            bt_al_esik  = bt_col1.slider("AL sinyali RSI eşiği (≤)", 20, 50, 40, key="bt_al")
-            bt_sat_esik = bt_col2.slider("SAT sinyali RSI eşiği (≥)", 55, 80, 65, key="bt_sat")
-
-            @st.cache_data(ttl=600)
-            def calistir_backtest(symbol, al_esik, sat_esik):
-                d = fetch_stock_data(symbol)
-                if not d or d['hist'].empty or len(d['hist']) < 30:
-                    return None
-                hist = d['hist'].copy()
-                close = hist['Close']
-                # RSI hesapla
-                delta = close.diff()
-                gain  = delta.where(delta > 0, 0).rolling(14).mean()
-                loss  = (-delta.where(delta < 0, 0)).rolling(14).mean()
-                rsi   = 100 - (100 / (1 + gain / loss))
-                # Sinyaller
-                hist['RSI']    = rsi
-                hist['Sinyal'] = 0
-                hist.loc[rsi <= al_esik,  'Sinyal'] =  1   # AL
-                hist.loc[rsi >= sat_esik, 'Sinyal'] = -1   # SAT
-                # Pozisyon simülasyonu
-                pozisyon = 0
-                islemler = []
-                for i in range(1, len(hist)):
-                    tarih  = hist.index[i]
-                    fiyat  = float(hist['Close'].iloc[i])
-                    sinyal = int(hist['Sinyal'].iloc[i])
-                    if sinyal == 1 and pozisyon == 0:
-                        pozisyon = fiyat
-                        islemler.append({'tarih': str(tarih)[:10], 'tip': 'AL', 'fiyat': fiyat, 'kz': None})
-                    elif sinyal == -1 and pozisyon > 0:
-                        kz_pct = (fiyat - pozisyon) / pozisyon * 100
-                        islemler.append({'tarih': str(tarih)[:10], 'tip': 'SAT', 'fiyat': fiyat, 'kz': round(kz_pct, 2)})
-                        pozisyon = 0
-                return islemler
-
-            with st.spinner("Backtest çalışıyor..."):
-                bt_islemler = calistir_backtest(bt_hisse, bt_al_esik, bt_sat_esik)
-
-            if bt_islemler:
-                satislar   = [x for x in bt_islemler if x['tip'] == 'SAT' and x['kz'] is not None]
-                karli      = [x for x in satislar if x['kz'] > 0]
-                zarli      = [x for x in satislar if x['kz'] <= 0]
-                ort_kz     = sum(x['kz'] for x in satislar) / len(satislar) if satislar else 0
-                basari_ort = len(karli) / len(satislar) * 100 if satislar else 0
-
-                bm1, bm2, bm3, bm4 = st.columns(4)
-                bm1.metric("Toplam İşlem",  len(satislar))
-                bm2.metric("Karlı İşlem",   f"{len(karli)} (%{basari_ort:.0f})")
-                bm3.metric("Zararlı İşlem", len(zarli))
-                bm4.metric("Ort. K/Z",      f"%{ort_kz:+.2f}")
-
-                # İşlem tablosu
-                bt_tbl = (
-                    "<table class='kral-table'><thead><tr>"
-                    "<th>TARİH</th><th>İŞLEM</th><th>FİYAT</th><th>K/Z %</th>"
-                    "</tr></thead><tbody>"
-                )
-                for _ix in bt_islemler:
-                    _tc = "#00e676" if _ix['tip'] == 'AL' else "#ff1744"
-                    _kz_str = f"%{_ix['kz']:+.2f}" if _ix['kz'] is not None else "—"
-                    _kz_c   = "#00e676" if (_ix['kz'] or 0) > 0 else "#ff1744"
-                    bt_tbl += (
-                        f"<tr><td style='font-size:11px;'>{_ix['tarih']}</td>"
-                        f"<td style='color:{_tc};font-weight:700;'>{_ix['tip']}</td>"
-                        f"<td>{tr_format4(_ix['fiyat'])} ₺</td>"
-                        f"<td style='color:{_kz_c};font-weight:bold;'>{_kz_str}</td></tr>"
-                    )
-                bt_tbl += "</tbody></table>"
-                st.markdown(bt_tbl, unsafe_allow_html=True)
-                st.caption("⚠️ Backtest geçmiş performansı gösterir, gelecekteki getiriyi garanti etmez.")
-            else:
-                st.info("Seçilen periyotta yeterli sinyal oluşmadı veya veri yetersiz.")
-
-    # ── B) REEL GETİRİ ──────────────────────────────────────────────────────────
-    elif sim_sekme == "📉 Reel Getiri":
-        st.markdown(f"<h4 style='color:{acc};'>📉 Enflasyon Düzeltmeli (Reel) Getiri</h4>",
-                    unsafe_allow_html=True)
-
-        rg_enf = st.slider(
-            "Yıllık enflasyon varsayımı (%)",
-            min_value=5, max_value=120, value=60, step=5, key="rg_enflasyon"
-        )
-        st.caption(f"Türkiye TÜFE (güncel): yaklaşık {rg_enf}% — dilersen ayarla")
-
-        df_rg = pd.DataFrame([x for x in full_data if x['Piyasa'] == 'Türk Borsası' and x['Maliyet'] > 0])
-        if df_rg.empty:
-            st.info("Türk Borsası hissesi bulunamadı.")
-        else:
-            # Portföy ortalama tutma süresi tahmini: işlem günlüğünden veya varsayılan 365 gün
-            gunler_varsayilan = 365
-            rg_tbl = (
-                "<table class='kral-table'><thead><tr>"
-                "<th>HİSSE</th><th>NOMINAL K/Z%</th><th>REEL K/Z%</th>"
-                "<th>ENFLASYON MALİYETİ</th><th>REEL K/Z (₺)</th>"
-                "</tr></thead><tbody>"
-            )
-            toplam_nominal = 0; toplam_reel = 0
-            for _, r in df_rg.iterrows():
-                try:
-                    nominal_kz_pct = ((r['Güncel'] - r['Maliyet']) / r['Maliyet'] * 100) if r['Maliyet'] > 0 else 0
-                    # Reel getiri: Fisher denklemi — (1+nominal)/(1+enflasyon) - 1
-                    nominal_oran = nominal_kz_pct / 100
-                    enfl_oran    = rg_enf / 100
-                    reel_oran    = ((1 + nominal_oran) / (1 + enfl_oran) - 1) * 100
-                    enfl_maliyeti = r['Maliyet'] * enfl_oran * r['Adet']
-                    reel_kz_tl    = r['K/Z'] - enfl_maliyeti
-                    toplam_nominal += r['K/Z']
-                    toplam_reel    += reel_kz_tl
-                    nom_c  = "#00e676" if nominal_kz_pct >= 0 else "#ff1744"
-                    reel_c = "#00e676" if reel_oran >= 0 else "#ff1744"
-                    reel_kz_c = "#00e676" if reel_kz_tl >= 0 else "#ff1744"
-                    rg_tbl += (
-                        f"<tr><td><b>{r['Hisse']}</b></td>"
-                        f"<td style='color:{nom_c};'>%{nominal_kz_pct:+.2f}</td>"
-                        f"<td style='color:{reel_c};font-weight:700;'>%{reel_oran:+.2f}</td>"
-                        f"<td style='color:#ff7043;'>{tr_format(enfl_maliyeti)} ₺</td>"
-                        f"<td style='color:{reel_kz_c};font-weight:700;'>{tr_format(reel_kz_tl)} ₺</td>"
-                        f"</tr>"
-                    )
-                except Exception:
-                    continue
-            rg_tbl += "</tbody></table>"
-            st.markdown(rg_tbl, unsafe_allow_html=True)
-
-            rg_c1, rg_c2 = st.columns(2)
-            rg_c1.metric("Toplam Nominal K/Z", f"{tr_format(toplam_nominal)} ₺",
-                         delta="Enflasyon düzeltilmemiş")
-            rg_c2.metric("Toplam Reel K/Z",    f"{tr_format(toplam_reel)} ₺",
-                         delta=f"@%{rg_enf} enflasyon")
-            st.caption("Fisher denklemi: Reel Getiri = (1+Nominal) / (1+Enflasyon) − 1")
-
-    # ── C) SENARYO SİMÜLASYONU ──────────────────────────────────────────────────
-    elif sim_sekme == "🎯 Senaryo":
-        st.markdown(f"<h4 style='color:{acc};'>🎯 Portföy Senaryo Simülasyonu</h4>",
-                    unsafe_allow_html=True)
-        st.markdown(
-            f"<small style='color:{acc}88;'>Belirli hisseler belirli oranda değişirse portföy ne olur?</small>",
-            unsafe_allow_html=True
-        )
-
-        df_sen = pd.DataFrame([x for x in full_data if x['Piyasa'] == 'Türk Borsası'])
-        if df_sen.empty:
-            st.info("Türk Borsası hissesi bulunamadı.")
-        else:
-            sen_hisseler = df_sen['Hisse'].tolist()
-            mevcut_toplam = df_sen['Değer'].sum()
-
-            st.markdown(f"**Mevcut portföy değeri: {tr_format(mevcut_toplam)} ₺**")
-            st.markdown("Hisse bazlı değişim yüzdesi gir:")
-
-            sen_degisimler = {}
-            _cols_per_row = 3
-            _rows = [sen_hisseler[i:i+_cols_per_row] for i in range(0, len(sen_hisseler), _cols_per_row)]
-            for _row_hisseler in _rows:
-                _scols = st.columns(len(_row_hisseler))
-                for _ci, _h in enumerate(_row_hisseler):
-                    _mevcut_deger = float(df_sen[df_sen['Hisse'] == _h]['Değer'].iloc[0])
-                    sen_degisimler[_h] = _scols[_ci].number_input(
-                        f"{_h} (%)",
-                        value=0.0, min_value=-99.0, max_value=500.0,
-                        step=1.0, format="%.1f",
-                        key=f"sen_{_h}"
-                    )
-
-            # Genel piyasa şok senaryosu
-            st.markdown("**veya tüm portföye tek bir şok uygula:**")
-            _sc1, _sc2 = st.columns([3, 1])
-            _sok_pct = _sc1.slider("Genel piyasa şoku (%)", -50, 100, 0, key="sen_sok")
-            if _sc2.button("Uygula", key="sen_sok_btn"):
-                for _h in sen_degisimler:
-                    sen_degisimler[_h] = float(_sok_pct)
-
-            # Sonuç hesapla
-            yeni_toplam = 0
-            sen_tbl = (
-                "<table class='kral-table'><thead><tr>"
-                "<th>HİSSE</th><th>MEVCUT DEĞER</th><th>DEĞİŞİM</th><th>YENİ DEĞER</th><th>FARK</th>"
-                "</tr></thead><tbody>"
-            )
-            for _, r in df_sen.iterrows():
-                _h   = r['Hisse']
-                _deg = sen_degisimler.get(_h, 0.0)
-                _yeni = r['Değer'] * (1 + _deg / 100)
-                _fark = _yeni - r['Değer']
-                _fc   = "#00e676" if _fark >= 0 else "#ff1744"
-                _dc   = "#00e676" if _deg >= 0 else "#ff1744"
-                yeni_toplam += _yeni
-                sen_tbl += (
-                    f"<tr><td><b>{_h}</b></td>"
-                    f"<td>{tr_format(r['Değer'])} ₺</td>"
-                    f"<td style='color:{_dc};font-weight:700;'>%{_deg:+.1f}</td>"
-                    f"<td>{tr_format(_yeni)} ₺</td>"
-                    f"<td style='color:{_fc};font-weight:700;'>{tr_format(_fark)} ₺</td>"
-                    f"</tr>"
-                )
-            sen_tbl += "</tbody></table>"
-            st.markdown(sen_tbl, unsafe_allow_html=True)
-
-            _toplam_fark = yeni_toplam - mevcut_toplam
-            _tf_c = "#00e676" if _toplam_fark >= 0 else "#ff1744"
-            sm1, sm2, sm3 = st.columns(3)
-            sm1.metric("Mevcut Toplam",    f"{tr_format(mevcut_toplam)} ₺")
-            sm2.metric("Senaryo Toplamı",  f"{tr_format(yeni_toplam)} ₺")
-            sm3.metric("Fark",             f"{tr_format(_toplam_fark)} ₺",
-                       delta=f"%{(_toplam_fark/mevcut_toplam*100):+.2f}" if mevcut_toplam > 0 else "—")
-
-    # ── D) VERGİ HESABI ─────────────────────────────────────────────────────────
-    elif sim_sekme == "🧾 Vergi Hesabı":
-        st.markdown(f"<h4 style='color:{acc};'>🧾 Vergi & Net Getiri Hesabı</h4>",
-                    unsafe_allow_html=True)
-        st.markdown(
-            f"<small style='color:{acc}88;'>BIST hisse senedi K/Z vergisi · Temettü stopajı · 2025 oranları</small>",
-            unsafe_allow_html=True
-        )
-
-        vg_col1, vg_col2 = st.columns(2)
-        vg_stopaj_hisse   = vg_col1.number_input("Hisse K/Z stopaj oranı (%)", value=0.0,
-                                                   min_value=0.0, max_value=100.0, step=0.5,
-                                                   key="vg_stopaj_hisse",
-                                                   help="Türkiye'de BIST hisse senedi K/Z 2024 itibarıyla 0% (muafiyet)")
-        vg_stopaj_temettu = vg_col2.number_input("Temettü stopaj oranı (%)", value=10.0,
-                                                   min_value=0.0, max_value=100.0, step=0.5,
-                                                   key="vg_stopaj_temettu",
-                                                   help="Türkiye'de gerçek kişiler için %10 stopaj")
-
-        df_vg = pd.DataFrame([x for x in full_data if x['K/Z'] != 0 or x['NetTemettu'] > 0])
-        if df_vg.empty:
-            st.info("Hesaplanacak varlık bulunamadı.")
-        else:
-            vg_tbl = (
-                "<table class='kral-table'><thead><tr>"
-                "<th>HİSSE</th><th>K/Z (₺)</th><th>K/Z VERGİSİ</th>"
-                "<th>TEMETTÜ (NET)</th><th>TEMETTU VERGİSİ</th>"
-                "<th>NET ELE GEÇEN</th>"
-                "</tr></thead><tbody>"
-            )
-            _toplam_kz = 0; _toplam_kz_vergi = 0
-            _toplam_tem = 0; _toplam_tem_vergi = 0
-            for _, r in df_vg.iterrows():
-                try:
-                    _kz          = r.get('K/Z', 0)
-                    _net_tem     = r.get('NetTemettu', 0)
-                    _kz_vergi    = max(0, _kz) * vg_stopaj_hisse / 100
-                    _brut_tem    = _net_tem / 0.90 if _net_tem > 0 else 0
-                    _tem_vergi   = _brut_tem * vg_stopaj_temettu / 100
-                    _net_ele     = _kz - _kz_vergi + _net_tem
-                    _toplam_kz      += _kz
-                    _toplam_kz_vergi += _kz_vergi
-                    _toplam_tem     += _net_tem
-                    _toplam_tem_vergi += _tem_vergi
-                    _kz_c = "#00e676" if _kz >= 0 else "#ff1744"
-                    _ne_c = "#00e676" if _net_ele >= 0 else "#ff1744"
-                    vg_tbl += (
-                        f"<tr><td><b>{r.get('Hisse','?')}</b></td>"
-                        f"<td style='color:{_kz_c};'>{tr_format(_kz)} ₺</td>"
-                        f"<td style='color:#ff7043;'>{tr_format(_kz_vergi)} ₺</td>"
-                        f"<td style='color:#00e676;'>{tr_format(_net_tem)} ₺</td>"
-                        f"<td style='color:#ff7043;'>{tr_format(_tem_vergi)} ₺</td>"
-                        f"<td style='color:{_ne_c};font-weight:700;'>{tr_format(_net_ele)} ₺</td>"
-                        f"</tr>"
-                    )
-                except Exception:
-                    continue
-            vg_tbl += "</tbody></table>"
-            st.markdown(vg_tbl, unsafe_allow_html=True)
-
-            vm1, vm2, vm3 = st.columns(3)
-            _toplam_vergi = _toplam_kz_vergi + _toplam_tem_vergi
-            _toplam_net   = _toplam_kz - _toplam_kz_vergi + _toplam_tem
-            vm1.metric("Toplam K/Z",         f"{tr_format(_toplam_kz)} ₺")
-            vm2.metric("Toplam Vergi Yükü",  f"{tr_format(_toplam_vergi)} ₺")
-            vm3.metric("Net Ele Geçen",       f"{tr_format(_toplam_net)} ₺")
-
-            st.info(
-                "ℹ️ **Bilgi:** Türkiye'de gerçek kişilerin BIST hisse senedi alım-satım kazancı "
-                "2024 itibarıyla gelir vergisinden muaftır (stopaj %0). "
-                "Temettü gelirleri üzerinden %10 stopaj uygulanmaktadır. "
-                "Stopaj oranları kanun değişikliğiyle güncellenebilir — lütfen mali müşavirinize danışın."
-            )
 
 # ==========================================
 # DIŞA AKTAR TABU
