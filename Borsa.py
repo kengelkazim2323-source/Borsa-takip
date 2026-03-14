@@ -146,28 +146,100 @@ def fetch_temel_veri(symbol):
         return None
 
 
-@st.cache_data(ttl=1800)
+@st.cache_data(ttl=900)
 def fetch_haberler(hisse_listesi):
-    """Portföydeki hisseler için yfinance news API'sinden son haberleri çeker."""
-    haberler = []
-    for symbol in hisse_listesi[:8]:   # max 8 hisse, yük azaltmak için
-        code = symbol.replace(".IS", "")
+    """
+    Çoklu RSS kaynağından Türkçe borsa haberleri çeker.
+    Kaynak önceliği:
+      1. Google News RSS — hisse kodu bazlı Türkçe arama
+      2. Bloomberg HT RSS — genel piyasa
+      3. Dünya Gazetesi Ekonomi RSS
+      4. Reuters TR RSS
+    yfinance'a bağımlılık sıfır.
+    """
+    import xml.etree.ElementTree as ET
+    import urllib.parse
+    from email.utils import parsedate_to_datetime
+
+    def _zaman(pub_str):
+        if not pub_str:
+            return 0
         try:
-            tk   = yf.Ticker(symbol)
-            news = tk.news or []
-            for item in news[:3]:      # hisse başına en fazla 3 haber
-                haberler.append({
-                    'hisse':   code,
-                    'baslik':  item.get('title', ''),
-                    'url':     item.get('link', ''),
-                    'kaynak':  item.get('publisher', ''),
-                    'zaman':   item.get('providerPublishTime', 0),
-                })
+            return int(parsedate_to_datetime(pub_str).timestamp())
+        except Exception:
+            pass
+        try:
+            from datetime import datetime
+            return int(datetime.fromisoformat(pub_str.replace("Z", "+00:00")).timestamp())
+        except Exception:
+            return 0
+
+    def _rss_cek(url, kaynak_adi, hisse_kodu="GENEL", max_items=5):
+        try:
+            req = urllib.request.Request(url, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                'Accept-Language': 'tr-TR,tr;q=0.9',
+            })
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                xml_bytes = resp.read(400_000)   # max 400 KB
+            root = ET.fromstring(xml_bytes)
+            sonuc = []
+            for item in root.findall('.//item')[:max_items]:
+                baslik = (item.findtext('title') or '').strip()
+                link   = (item.findtext('link')  or '').strip()
+                kaynak = item.findtext('source')  or kaynak_adi
+                zaman  = _zaman(item.findtext('pubDate') or '')
+                if baslik and link:
+                    sonuc.append({'hisse': hisse_kodu, 'baslik': baslik,
+                                  'url': link, 'kaynak': str(kaynak), 'zaman': zaman})
+            return sonuc
         except Exception as e:
-            logger.warning(f"Haber çekme hatası ({code}): {e}")
-    # Zamana göre sırala (en yeni önce)
-    haberler.sort(key=lambda x: x['zaman'], reverse=True)
-    return haberler
+            logger.debug(f"RSS hata ({kaynak_adi}): {e}")
+            return []
+
+    haberler = []
+
+    # 1. Google News — her hisse için ayrı arama
+    for symbol in list(hisse_listesi)[:6]:
+        code = symbol.replace(".IS", "")
+        q    = urllib.parse.quote(f"{code} hisse BIST borsa")
+        url  = f"https://news.google.com/rss/search?q={q}&hl=tr&gl=TR&ceid=TR:tr"
+        haberler += _rss_cek(url, "Google News", hisse_kodu=code, max_items=3)
+
+    # 2. Genel Borsa İstanbul haberleri — Google News
+    q_bist = urllib.parse.quote("Borsa İstanbul BIST hisse")
+    haberler += _rss_cek(
+        f"https://news.google.com/rss/search?q={q_bist}&hl=tr&gl=TR&ceid=TR:tr",
+        "Google News", hisse_kodu="PİYASA", max_items=5
+    )
+
+    # 3. Bloomberg HT
+    haberler += _rss_cek(
+        "https://www.bloomberght.com/rss",
+        "Bloomberg HT", hisse_kodu="PİYASA", max_items=6
+    )
+
+    # 4. Dünya Gazetesi Ekonomi
+    haberler += _rss_cek(
+        "https://www.dunya.com/rss/ekonomi.xml",
+        "Dünya Gazetesi", hisse_kodu="PİYASA", max_items=5
+    )
+
+    # 5. Reuters TR
+    haberler += _rss_cek(
+        "https://tr.reuters.com/rssFeed/businessNews",
+        "Reuters TR", hisse_kodu="PİYASA", max_items=4
+    )
+
+    # Tekrarlananları temizle, en yeni önce sırala
+    seen, temiz = set(), []
+    for h in sorted(haberler, key=lambda x: x['zaman'], reverse=True):
+        anahtar = h['url'] or h['baslik']
+        if anahtar and anahtar not in seen:
+            seen.add(anahtar)
+            temiz.append(h)
+
+    return temiz[:40]
 
 
 @st.cache_data(ttl=300)
@@ -930,7 +1002,7 @@ if tetiklenen_alarmlar:
 # ==========================================
 # 4. TABLAR VE İÇERİK
 # ==========================================
-tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_notlar, tab_islem, tab_olcek, tab_export = st.tabs([
+tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_olcek, tab_export = st.tabs([
     "🇹🇷 TÜRK BORSASI",
     "📊 YATIRIM FONLARI",
     "💰 TEMETTÜ GELİRİ",
@@ -939,8 +1011,6 @@ tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_teme
     "📈 ANALİZ",
     "📰 HABERLER",
     "🏦 TEMEL VERİLER",
-    "📝 NOTLAR",
-    "📒 İŞLEM GÜNLÜĞÜ",
     "📐 EKRAN AYARLARI",
     "📤 DIŞA AKTAR",
 ])
@@ -1622,42 +1692,48 @@ with tab_tr:
                 textinfo='label+percent',
                 textposition='outside',
                 hovertemplate='<b>%{label}</b><br>Değer: %{value:,.2f} ₺<br>Oran: %{percent}<extra></extra>',
-                marker=dict(
-                    colors=_colors,
-                    line=dict(color=t_sec['bg'], width=2)
-                ),
+                marker=dict(colors=_colors, line=dict(color=t_sec['bg'], width=2)),
                 pull=[0.02] * len(_labels),
-                domain=dict(x=[0.0, 0.72], y=[0.0, 1.0]),
             )])
             fig.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
                 font=dict(color=t_sec['text'], size=12, family=secili_font),
-                showlegend=True,
-                legend=dict(
-                    orientation='v',
-                    yanchor='middle', y=0.5,
-                    xanchor='left',   x=0.75,
-                    font=dict(size=11, color=t_sec['text']),
-                    bgcolor='rgba(0,0,0,0)',
-                    itemsizing='constant',
-                ),
-                margin=dict(t=70, b=30, l=20, r=20),
-                height=480,
+                showlegend=False,
+                margin=dict(t=60, b=20, l=60, r=60),
+                height=400,
                 title=dict(
                     text="📊 Hisse Dağılımı",
                     font=dict(size=15, color=t_sec['accent']),
-                    x=0.36, xanchor='center', y=0.97,
+                    x=0.5, xanchor='center', y=0.97,
                 ),
                 annotations=[dict(
                     text=f"<b>{tr_format(_total)}</b><br>₺ TOPLAM",
-                    x=0.36, y=0.5,
+                    x=0.5, y=0.5,
                     font=dict(size=14, color=t_sec['accent']),
                     showarrow=False, align='center',
                     xref='paper', yref='paper',
                 )]
             )
             st.plotly_chart(fig, use_container_width=True)
+
+            # Bilgi tablosu — grafiğin altında
+            _pct_list = [v / _total * 100 for v in _values]
+            _tbl_rows = "".join(
+                f"<tr>"
+                f"<td><span style='display:inline-block;width:10px;height:10px;border-radius:50%;"
+                f"background:{_colors[i]};margin-right:6px;'></span><b>{_labels[i]}</b></td>"
+                f"<td style='text-align:right;'>{tr_format(_values[i])} ₺</td>"
+                f"<td style='text-align:right;color:{_colors[i]};font-weight:700;'>%{_pct_list[i]:.1f}</td>"
+                f"</tr>"
+                for i in range(len(_labels))
+            )
+            st.markdown(
+                f"<table class='kral-table'><thead><tr>"
+                f"<th>HİSSE</th><th style='text-align:right;'>DEĞER</th><th style='text-align:right;'>ORAN</th>"
+                f"</tr></thead><tbody>{_tbl_rows}</tbody></table>",
+                unsafe_allow_html=True
+            )
     else:
         st.info("Hisse senedi bulunamadı.")
 
@@ -1704,42 +1780,48 @@ with tab_fon:
                 textinfo='label+percent',
                 textposition='outside',
                 hovertemplate='<b>%{label}</b><br>Değer: %{value:,.2f} ₺<br>Oran: %{percent}<extra></extra>',
-                marker=dict(
-                    colors=_colors_f,
-                    line=dict(color=t_sec['bg'], width=2)
-                ),
+                marker=dict(colors=_colors_f, line=dict(color=t_sec['bg'], width=2)),
                 pull=[0.02] * len(_labels_f),
-                domain=dict(x=[0.0, 0.72], y=[0.0, 1.0]),
             )])
             fig_f.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
                 font=dict(color=t_sec['text'], size=12, family=secili_font),
-                showlegend=True,
-                legend=dict(
-                    orientation='v',
-                    yanchor='middle', y=0.5,
-                    xanchor='left',   x=0.75,
-                    font=dict(size=11, color=t_sec['text']),
-                    bgcolor='rgba(0,0,0,0)',
-                    itemsizing='constant',
-                ),
-                margin=dict(t=70, b=30, l=20, r=20),
-                height=480,
+                showlegend=False,
+                margin=dict(t=60, b=20, l=60, r=60),
+                height=400,
                 title=dict(
                     text="📊 Fon Dağılımı",
                     font=dict(size=15, color=t_sec['accent']),
-                    x=0.36, xanchor='center', y=0.97,
+                    x=0.5, xanchor='center', y=0.97,
                 ),
                 annotations=[dict(
                     text=f"<b>{tr_format(_total_f)}</b><br>₺ TOPLAM",
-                    x=0.36, y=0.5,
+                    x=0.5, y=0.5,
                     font=dict(size=14, color=t_sec['accent']),
                     showarrow=False, align='center',
                     xref='paper', yref='paper',
                 )]
             )
             st.plotly_chart(fig_f, use_container_width=True)
+
+            # Bilgi tablosu — grafiğin altında
+            _pct_f = [v / _total_f * 100 for v in _values_f]
+            _tbl_f = "".join(
+                f"<tr>"
+                f"<td><span style='display:inline-block;width:10px;height:10px;border-radius:50%;"
+                f"background:{_colors_f[i]};margin-right:6px;'></span><b>{_labels_f[i]}</b></td>"
+                f"<td style='text-align:right;'>{tr_format(_values_f[i])} ₺</td>"
+                f"<td style='text-align:right;color:{_colors_f[i]};font-weight:700;'>%{_pct_f[i]:.1f}</td>"
+                f"</tr>"
+                for i in range(len(_labels_f))
+            )
+            st.markdown(
+                f"<table class='kral-table'><thead><tr>"
+                f"<th>FON</th><th style='text-align:right;'>DEĞER</th><th style='text-align:right;'>ORAN</th>"
+                f"</tr></thead><tbody>{_tbl_f}</tbody></table>",
+                unsafe_allow_html=True
+            )
     else:
         st.info("Fon bulunamadı.")
 
@@ -2236,7 +2318,7 @@ with tab_haberler:
     acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
     st.markdown(f"<h4 style='color:{acc};'>📰 Portföy Haber Akışı</h4>", unsafe_allow_html=True)
     st.markdown(
-        f"<small style='color:{acc}88;'>Portföydeki hisselere ait son haberler — yfinance üzerinden</small>",
+        f"<small style='color:{acc}88;'>Google News · Bloomberg HT · Dünya Gazetesi · Reuters TR — 15dk önbellekte</small>",
         unsafe_allow_html=True
     )
 
@@ -2249,10 +2331,13 @@ with tab_haberler:
             haberler = fetch_haberler(tuple(portfoy_hisseleri_haber))
 
         if haberler:
-            # Hisse filtresi
+            # Hisse filtresi — PİYASA ve GENEL de dahil
+            _filtre_secenekler = ["Tümü"] + sorted(set(
+                h['hisse'] for h in haberler if h['hisse'] not in ('', None)
+            ))
             haber_filtre = st.multiselect(
-                "Hisse Filtrele",
-                ["Tümü"] + [h.replace(".IS", "") for h in portfoy_hisseleri_haber],
+                "Filtrele",
+                _filtre_secenekler,
                 default=["Tümü"],
                 key="haber_filtre"
             )
@@ -2260,7 +2345,7 @@ with tab_haberler:
             if "Tümü" not in haber_filtre and haber_filtre:
                 gosterilecek = [h for h in haberler if h['hisse'] in haber_filtre]
 
-            for haber in gosterilecek[:25]:
+            for haber in gosterilecek[:30]:
                 zaman_str = ""
                 if haber['zaman']:
                     try:
@@ -2269,26 +2354,30 @@ with tab_haberler:
                     except Exception:
                         pass
 
+                _hisse_badge = haber['hisse'] or 'GENEL'
+                _badge_renk  = acc if _hisse_badge not in ('PİYASA', 'GENEL') else '#888'
                 st.markdown(
                     f"<div style='background:{box};border:1px solid {acc}22;border-radius:8px;"
                     f"padding:12px 16px;margin-bottom:8px;'>"
-                    f"<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;'>"
-                    f"  <div>"
-                    f"    <span style='background:{acc}22;color:{acc};font-size:10px;font-weight:700;"
-                    f"          padding:2px 7px;border-radius:4px;margin-right:8px;'>{haber['hisse']}</span>"
-                    f"    <a href='{haber['url']}' target='_blank' style='color:{txt};text-decoration:none;"
-                    f"       font-size:13px;font-weight:600;'>{haber['baslik']}</a>"
+                    f"<div style='display:flex;align-items:flex-start;gap:10px;'>"
+                    f"  <div style='flex:1;'>"
+                    f"    <span style='background:{_badge_renk}22;color:{_badge_renk};font-size:10px;"
+                    f"          font-weight:700;padding:2px 7px;border-radius:4px;margin-right:8px;"
+                    f"          white-space:nowrap;'>{_hisse_badge}</span>"
+                    f"    <a href='{haber['url']}' target='_blank' style='color:{txt};"
+                    f"       text-decoration:none;font-size:13px;font-weight:600;"
+                    f"       line-height:1.4;'>{haber['baslik']}</a>"
                     f"  </div>"
                     f"</div>"
-                    f"<div style='margin-top:6px;display:flex;gap:12px;'>"
-                    f"  <span style='font-size:10px;opacity:0.45;'>{haber['kaynak']}</span>"
-                    f"  <span style='font-size:10px;opacity:0.45;'>{zaman_str}</span>"
+                    f"<div style='margin-top:6px;display:flex;gap:16px;'>"
+                    f"  <span style='font-size:10px;opacity:0.45;'>📰 {haber['kaynak']}</span>"
+                    f"  <span style='font-size:10px;opacity:0.45;'>🕒 {zaman_str}</span>"
                     f"</div>"
                     f"</div>",
                     unsafe_allow_html=True
                 )
         else:
-            st.info("Haber bulunamadı. yfinance bazı semboller için haber döndürmeyebilir.")
+            st.info("Haber yüklenemedi. İnternet bağlantısını ve RSS kaynaklarını kontrol et.")
     else:
         st.info("Haber akışı için portföyde Türk Borsası hissesi bulunmalıdır.")
 
@@ -2440,270 +2529,6 @@ with tab_temel:
     else:
         st.info("Türk Borsası'nda hisse bulunamadı.")
 
-
-# ==========================================
-# NOTLAR TABU
-# ==========================================
-with tab_notlar:
-    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
-    st.markdown(f"<h4 style='color:{acc};'>📝 Hisse Notları & Hedef Fiyatlar</h4>", unsafe_allow_html=True)
-
-    portfoy_hisseleri_not = sorted(set(x['Hisse'] for x in full_data))
-
-    if portfoy_hisseleri_not:
-        not_hisse = st.selectbox("Hisse Seç", portfoy_hisseleri_not, key="not_hisse_sec")
-        mevcut    = st.session_state.notlar.get(not_hisse, {})
-        guncel_fiyat = next((x['Güncel'] for x in full_data if x['Hisse'] == not_hisse), 0.0)
-
-        with st.form(f"not_form_{not_hisse}", clear_on_submit=False):
-            nf1, nf2 = st.columns(2)
-            hedef_fiyat = nf1.number_input(
-                "Hedef Fiyat (₺)",
-                value=float(mevcut.get('hedef', 0.0)),
-                format="%.4f", min_value=0.0,
-                key=f"hedef_{not_hisse}"
-            )
-            stop_loss = nf2.number_input(
-                "Stop-Loss (₺)",
-                value=float(mevcut.get('stop', 0.0)),
-                format="%.4f", min_value=0.0,
-                key=f"stop_{not_hisse}"
-            )
-            alim_sebebi = st.text_area(
-                "Alım Gerekçesi",
-                value=mevcut.get('sebep', ''),
-                placeholder="Bu hisseyi neden aldım? Hangi beklentilerle?",
-                height=100, key=f"sebep_{not_hisse}"
-            )
-            genel_not = st.text_area(
-                "Genel Not",
-                value=mevcut.get('not', ''),
-                placeholder="Takip ettiğim gelişmeler, riskler, çıkış stratejisi...",
-                height=80, key=f"gnot_{not_hisse}"
-            )
-            if st.form_submit_button("💾 Notu Kaydet", use_container_width=True):
-                st.session_state.notlar[not_hisse] = {
-                    'Hisse': not_hisse,
-                    'hedef': hedef_fiyat,
-                    'stop':  stop_loss,
-                    'sebep': alim_sebebi,
-                    'not':   genel_not,
-                    'guncelleme': datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%d.%m.%Y %H:%M'),
-                }
-                save_json(NOTLAR_DOSYASI, list(st.session_state.notlar.values()))
-                st.success(f"✅ {not_hisse} notu kaydedildi.")
-
-        # Hedef & stop bilgi kartı
-        if hedef_fiyat > 0 or stop_loss > 0:
-            pot_kar  = ((hedef_fiyat - guncel_fiyat) / guncel_fiyat * 100) if guncel_fiyat > 0 and hedef_fiyat > 0 else None
-            pot_risk = ((guncel_fiyat - stop_loss)   / guncel_fiyat * 100) if guncel_fiyat > 0 and stop_loss > 0 else None
-            rr_oran  = round(pot_kar / pot_risk, 2) if pot_kar and pot_risk and pot_risk > 0 else None
-            st.markdown(
-                f"<div style='background:{box};border:1px solid {acc}33;border-radius:10px;"
-                f"padding:14px 16px;margin-top:8px;"
-                f"display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;'>"
-                f"<div><div style='font-size:10px;opacity:0.5;'>GÜNCEL</div>"
-                f"    <div style='color:{acc};font-weight:700;'>{tr_format(guncel_fiyat)} ₺</div></div>"
-                f"<div><div style='font-size:10px;opacity:0.5;'>HEDEF</div>"
-                f"    <div style='color:#00e676;font-weight:700;'>{tr_format(hedef_fiyat)} ₺</div>"
-                f"    {'<div style=\"font-size:10px;color:#00e676;\">+'+str(round(pot_kar,1))+'%</div>' if pot_kar else ''}"
-                f"</div>"
-                f"<div><div style='font-size:10px;opacity:0.5;'>STOP-LOSS</div>"
-                f"    <div style='color:#ff1744;font-weight:700;'>{tr_format(stop_loss)} ₺</div>"
-                f"    {'<div style=\"font-size:10px;color:#ff1744;\">-'+str(round(pot_risk,1))+'%</div>' if pot_risk else ''}"
-                f"</div>"
-                f"<div><div style='font-size:10px;opacity:0.5;'>R/R ORANI</div>"
-                f"    <div style='color:{'#00e676' if rr_oran and rr_oran >= 2 else '#ffc107'};font-weight:700;'>"
-                f"    {'1 : '+str(rr_oran) if rr_oran else '—'}</div></div>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
-
-        # Tüm notlar özeti
-        st.divider()
-        st.markdown(f"#### 📋 Tüm Hisse Notları", unsafe_allow_html=True)
-        if st.session_state.notlar:
-            for h, n in sorted(st.session_state.notlar.items()):
-                if n.get('sebep') or n.get('hedef') or n.get('not'):
-                    with st.expander(f"📌 {h}  |  Hedef: {tr_format(n.get('hedef',0))} ₺  |  Stop: {tr_format(n.get('stop',0))} ₺"):
-                        if n.get('sebep'):
-                            st.markdown(f"**Alım Gerekçesi:** {n['sebep']}")
-                        if n.get('not'):
-                            st.markdown(f"**Not:** {n['not']}")
-                        st.caption(f"Son güncelleme: {n.get('guncelleme', '—')}")
-        else:
-            st.info("Henüz not girilmemiş.")
-    else:
-        st.info("Portföyde hisse bulunmamaktadır.")
-
-
-# ==========================================
-# İŞLEM GÜNLÜĞÜ TABU
-# ==========================================
-with tab_islem:
-    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
-    st.markdown(f"<h4 style='color:{acc};'>📒 İşlem Günlüğü</h4>", unsafe_allow_html=True)
-    st.markdown(
-        f"<small style='color:{acc}88;'>Al/Sat işlemlerini kaydet — gerçekleşmiş kâr/zarar otomatik hesaplanır</small>",
-        unsafe_allow_html=True
-    )
-
-    # --- Yeni İşlem Ekle ---
-    with st.form("islem_form", clear_on_submit=True):
-        _if1, _if2, _if3, _if4, _if5 = st.columns([2, 1, 2, 2, 1])
-        _if_hisse = _if1.text_input("Hisse Kodu", placeholder="GARAN.IS")
-        _if_tip   = _if2.selectbox("İşlem", ["AL", "SAT"])
-        _if_adet  = _if3.number_input("Adet", min_value=1, step=1, value=100)
-        _if_fiyat = _if4.number_input("Fiyat (₺)", min_value=0.0001, format="%.4f", value=1.0)
-        _if5.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
-
-        _if_tarih = st.date_input(
-            "İşlem Tarihi",
-            value=datetime.now(pytz.timezone('Europe/Istanbul')).date(),
-            key="islem_tarih"
-        )
-        _if_not = st.text_input("Not (isteğe bağlı)", placeholder="Neden al/sattım?")
-
-        if st.form_submit_button("➕ İşlemi Kaydet", use_container_width=True):
-            if _if_hisse:
-                _yeni_islem = {
-                    "id":     len(st.session_state.islemler),
-                    "Hisse":  _if_hisse.upper().strip(),
-                    "Tip":    _if_tip,
-                    "Adet":   int(_if_adet),
-                    "Fiyat":  float(_if_fiyat),
-                    "Toplam": round(int(_if_adet) * float(_if_fiyat), 2),
-                    "Tarih":  str(_if_tarih),
-                    "Not":    _if_not,
-                    "Kayit":  datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%d.%m.%Y %H:%M'),
-                }
-                st.session_state.islemler.append(_yeni_islem)
-                # Tarihe göre sırala
-                st.session_state.islemler = sorted(
-                    st.session_state.islemler, key=lambda x: x.get('Tarih', ''), reverse=True
-                )
-                save_json(ISLEM_DOSYASI, st.session_state.islemler)
-                st.success(f"✅ {_if_tip} işlemi kaydedildi: {_if_hisse.upper()} × {_if_adet} @ {tr_format4(float(_if_fiyat))} ₺")
-                st.rerun()
-
-    st.divider()
-
-    if st.session_state.islemler:
-        # --- Özet İstatistikler ---
-        _islem_df = pd.DataFrame(st.session_state.islemler)
-        _al_toplam  = _islem_df[_islem_df['Tip'] == 'AL']['Toplam'].sum()
-        _sat_toplam = _islem_df[_islem_df['Tip'] == 'SAT']['Toplam'].sum()
-        _net_kz     = _sat_toplam - _al_toplam
-        _net_color  = "#00e676" if _net_kz >= 0 else "#ff1744"
-
-        _im1, _im2, _im3, _im4 = st.columns(4)
-        _im1.metric("Toplam Al",       f"{tr_format(_al_toplam)} ₺")
-        _im2.metric("Toplam Sat",      f"{tr_format(_sat_toplam)} ₺")
-        _im3.metric("Net Gerçekleşen", f"{tr_format(abs(_net_kz))} ₺",
-                    delta=("Kâr" if _net_kz >= 0 else "Zarar"))
-        _im4.metric("İşlem Sayısı",    len(_islem_df))
-
-        # --- Hisse bazlı gerçekleşen K/Z ---
-        st.markdown(f"<h5 style='color:{acc};margin-top:12px;'>Hisse Bazlı Gerçekleşen K/Z</h5>",
-                    unsafe_allow_html=True)
-
-        _hisse_kz = {}
-        for _, _row in _islem_df.iterrows():
-            _h = _row['Hisse']
-            if _h not in _hisse_kz:
-                _hisse_kz[_h] = {'al_maliyet': 0.0, 'al_adet': 0,
-                                  'sat_gelir': 0.0,  'sat_adet': 0}
-            if _row['Tip'] == 'AL':
-                _hisse_kz[_h]['al_maliyet'] += _row['Toplam']
-                _hisse_kz[_h]['al_adet']    += _row['Adet']
-            else:
-                _hisse_kz[_h]['sat_gelir'] += _row['Toplam']
-                _hisse_kz[_h]['sat_adet']  += _row['Adet']
-
-        _kz_tbl = (
-            "<table class='kral-table'><thead><tr>"
-            "<th>HİSSE</th><th>AL ADET</th><th>SAT ADET</th>"
-            "<th>AL MALİYET</th><th>SAT GELİR</th>"
-            "<th>GERÇEKLEŞEN K/Z</th><th>ORT. MALİYET</th>"
-            "</tr></thead><tbody>"
-        )
-        for _h, _v in sorted(_hisse_kz.items()):
-            _gkz       = _v['sat_gelir'] - (_v['al_maliyet'] * (_v['sat_adet'] / _v['al_adet'])
-                         if _v['al_adet'] > 0 else 0)
-            _kz_c      = "#00e676" if _gkz >= 0 else "#ff1744"
-            _ort_mal   = (_v['al_maliyet'] / _v['al_adet']) if _v['al_adet'] > 0 else 0
-            _kz_tbl += (
-                f"<tr>"
-                f"<td><b>{_h}</b></td>"
-                f"<td>{_v['al_adet']}</td>"
-                f"<td>{_v['sat_adet']}</td>"
-                f"<td>{tr_format(_v['al_maliyet'])} ₺</td>"
-                f"<td>{tr_format(_v['sat_gelir'])} ₺</td>"
-                f"<td style='color:{_kz_c};font-weight:bold;'>{tr_format(_gkz)} ₺</td>"
-                f"<td>{tr_format4(_ort_mal)} ₺</td>"
-                f"</tr>"
-            )
-        _kz_tbl += "</tbody></table>"
-        st.markdown(_kz_tbl, unsafe_allow_html=True)
-
-        st.divider()
-
-        # --- Tüm İşlemler Tablosu ---
-        st.markdown(f"<h5 style='color:{acc};'>Tüm İşlemler</h5>", unsafe_allow_html=True)
-
-        # Filtre
-        _flt1, _flt2 = st.columns([3, 1])
-        _filtre_hisse = _flt1.multiselect(
-            "Hisse Filtrele", ["Tümü"] + sorted(_islem_df['Hisse'].unique().tolist()),
-            default=["Tümü"], key="islem_filtre"
-        )
-        _filtre_tip = _flt2.selectbox("Tür", ["Tümü", "AL", "SAT"], key="islem_tip_filtre")
-
-        _gosterilecek = st.session_state.islemler
-        if "Tümü" not in _filtre_hisse and _filtre_hisse:
-            _gosterilecek = [x for x in _gosterilecek if x['Hisse'] in _filtre_hisse]
-        if _filtre_tip != "Tümü":
-            _gosterilecek = [x for x in _gosterilecek if x['Tip'] == _filtre_tip]
-
-        _islem_tbl = (
-            "<table class='kral-table'><thead><tr>"
-            "<th>TARİH</th><th>HİSSE</th><th>TİP</th>"
-            "<th>ADET</th><th>FİYAT</th><th>TOPLAM</th><th>NOT</th><th>SİL</th>"
-            "</tr></thead><tbody>"
-        )
-        for _ix in _gosterilecek:
-            _tip_color = "#00e676" if _ix['Tip'] == 'AL' else "#ff1744"
-            _islem_tbl += (
-                f"<tr>"
-                f"<td style='font-size:11px;'>{_ix.get('Tarih','')}</td>"
-                f"<td><b>{_ix['Hisse']}</b></td>"
-                f"<td style='color:{_tip_color};font-weight:700;'>{_ix['Tip']}</td>"
-                f"<td>{_ix['Adet']}</td>"
-                f"<td>{tr_format4(_ix['Fiyat'])} ₺</td>"
-                f"<td>{tr_format(_ix['Toplam'])} ₺</td>"
-                f"<td style='font-size:11px;opacity:0.6;'>{_ix.get('Not','')}</td>"
-                f"<td>—</td>"
-                f"</tr>"
-            )
-        _islem_tbl += "</tbody></table>"
-        st.markdown(_islem_tbl, unsafe_allow_html=True)
-
-        # Silme
-        st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander("🗑️ İşlem Sil"):
-            for _six, _isl in enumerate(st.session_state.islemler):
-                _sc1, _sc2 = st.columns([5, 1])
-                _sc1.markdown(
-                    f"**{_isl.get('Tarih','')}** · {_isl['Hisse']} · "
-                    f"{_isl['Tip']} · {_isl['Adet']} lot @ "
-                    f"{tr_format4(_isl['Fiyat'])} ₺"
-                )
-                if _sc2.button("❌", key=f"del_islem_{_six}"):
-                    st.session_state.islemler.pop(_six)
-                    save_json(ISLEM_DOSYASI, st.session_state.islemler)
-                    st.rerun()
-    else:
-        st.info("Henüz işlem girilmemiş. Yukarıdaki formu kullanarak al/sat işlemlerini kaydet.")
 
 # ==========================================
 # EKRAN AYARLARI TABU
