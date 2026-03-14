@@ -36,6 +36,13 @@ ALARM_DOSYASI      = _veri_yolu("alarm_kayitlari.json")
 PERFORMANS_DOSYASI = _veri_yolu("portfoy_performans.json")
 NOTLAR_DOSYASI     = _veri_yolu("hisse_notlari.json")
 ISLEM_DOSYASI      = _veri_yolu("islem_gunlugu.json")
+WATCHLIST_DOSYASI  = _veri_yolu("watchlist.json")
+HEDEF_DOSYASI      = _veri_yolu("hedefler.json")
+
+def portfoy_dosyasi(isim="Ana"):
+    """Portföy adına göre JSON dosya yolunu döner."""
+    guvenli = re.sub(r'[^a-zA-Z0-9_\-]', '_', isim)
+    return _veri_yolu(f"portfoy_{guvenli}.json")
 
 def load_json(dosya_adi):
     """
@@ -89,8 +96,26 @@ def save_json(dosya_adi, data):
         except Exception:
             pass
 
+if 'portfoy_listesi' not in st.session_state:
+    # Tüm kayıtlı portföy isimlerini bul
+    _mevcut_portfoyler = []
+    for _f in os.listdir(_VERI_DIZIN):
+        if _f.startswith('portfoy_') and _f.endswith('.json') and 'performans' not in _f:
+            _isim = _f.replace('portfoy_','').replace('.json','')
+            _mevcut_portfoyler.append(_isim)
+    if not _mevcut_portfoyler:
+        _mevcut_portfoyler = ['Ana']
+    st.session_state.portfoy_listesi = _mevcut_portfoyler
+
+if 'aktif_portfoy' not in st.session_state:
+    st.session_state.aktif_portfoy = st.session_state.portfoy_listesi[0]
+
 if 'portfoy' not in st.session_state:
-    st.session_state.portfoy = load_json(PORTFOY_DOSYASI)
+    st.session_state.portfoy = load_json(portfoy_dosyasi(st.session_state.aktif_portfoy))
+    # Eski portfoy_kayitlari.json varsa migrasyonu yap
+    if not st.session_state.portfoy and os.path.exists(PORTFOY_DOSYASI):
+        st.session_state.portfoy = load_json(PORTFOY_DOSYASI)
+
 if 'ipo_liste' not in st.session_state:
     st.session_state.ipo_liste = load_json(IPO_DOSYASI)
 if 'alarmlar' not in st.session_state:
@@ -107,11 +132,16 @@ if 'islemler' not in st.session_state:
 if 'mobil_mod' not in st.session_state:
     st.session_state.mobil_mod = False
 if 'tablo_font' not in st.session_state:
-    st.session_state.tablo_font = 13        # px
+    st.session_state.tablo_font = 13
 if 'tablo_padding' not in st.session_state:
-    st.session_state.tablo_padding = 12     # px
+    st.session_state.tablo_padding = 12
 if 'gizli_sutunlar' not in st.session_state:
-    st.session_state.gizli_sutunlar = []    # gizlenecek sütun başlıkları
+    st.session_state.gizli_sutunlar = []
+if 'watchlist' not in st.session_state:
+    st.session_state.watchlist = load_json(WATCHLIST_DOSYASI)
+if 'hedefler' not in st.session_state:
+    raw_hedef = load_json(HEDEF_DOSYASI)
+    st.session_state.hedefler = {h['id']: h for h in raw_hedef} if raw_hedef else {}
 
 @st.cache_data(ttl=3600)
 def fetch_temel_veri(symbol):
@@ -843,6 +873,7 @@ piyasa_izleme = {
     "EUR/TRY":   "EURTRY=X",
     "ONS ALTIN": "GC=F",
     "ONS GÜMÜŞ": "SI=F",
+    "BTC":       "BTC-USD",
 }
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
 for isim, sembol in piyasa_izleme.items():
@@ -1001,21 +1032,59 @@ if tetiklenen_alarmlar:
 # ==========================================
 # 4. TABLAR VE İÇERİK
 # ==========================================
-tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_takvim, tab_olcek, tab_export = st.tabs([
+tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_watch, tab_kripto, tab_haberler, tab_temel, tab_takvim, tab_ai, tab_olcek, tab_export = st.tabs([
     "🇹🇷 TÜRK BORSASI",
     "📊 YATIRIM FONLARI",
     "💰 TEMETTÜ GELİRİ",
     "🚀 HALKA ARZ TAKİP",
     "🔔 FİYAT ALARMLARI",
     "📈 ANALİZ",
+    "👁️ İZLEME LİSTESİ",
+    "₿ KRİPTO",
     "📰 HABERLER",
     "🏦 TEMEL VERİLER",
     "📅 EKONOMİK TAKVİM",
+    "🤖 AI YORUM",
     "📐 EKRAN AYARLARI",
     "📤 DIŞA AKTAR",
 ])
 
 with st.sidebar:
+    # --- PORTFÖY SEÇİCİ ---
+    _acc_ps = t_sec['accent']
+    st.markdown(
+        f"<div style='color:{_acc_ps};font-weight:700;font-size:11px;"
+        f"letter-spacing:1px;margin-bottom:6px;'>💼 AKTİF PORTFÖY</div>",
+        unsafe_allow_html=True
+    )
+    _ps_col1, _ps_col2 = st.columns([3, 1])
+    _secilen_portfoy = _ps_col1.selectbox(
+        "Portföy",
+        st.session_state.portfoy_listesi,
+        index=st.session_state.portfoy_listesi.index(st.session_state.aktif_portfoy)
+              if st.session_state.aktif_portfoy in st.session_state.portfoy_listesi else 0,
+        key="portfoy_sec",
+        label_visibility="collapsed"
+    )
+    if _secilen_portfoy != st.session_state.aktif_portfoy:
+        st.session_state.aktif_portfoy = _secilen_portfoy
+        st.session_state.portfoy = load_json(portfoy_dosyasi(_secilen_portfoy))
+        st.rerun()
+
+    with st.expander("➕ Yeni Portföy"):
+        _yeni_portfoy_adi = st.text_input("Portföy Adı", placeholder="Emeklilik", key="yeni_portfoy_adi")
+        if st.button("Oluştur", key="portfoy_olustur", use_container_width=True):
+            if _yeni_portfoy_adi and _yeni_portfoy_adi not in st.session_state.portfoy_listesi:
+                st.session_state.portfoy_listesi.append(_yeni_portfoy_adi)
+                save_json(portfoy_dosyasi(_yeni_portfoy_adi), [])
+                st.session_state.aktif_portfoy = _yeni_portfoy_adi
+                st.session_state.portfoy = []
+                st.rerun()
+            elif _yeni_portfoy_adi in st.session_state.portfoy_listesi:
+                st.error("Bu isimde portföy zaten var.")
+
+    st.divider()
+
     # --- KARANLIK MOD TOGGLE ---
     _dm_col1, _dm_col2 = st.columns([3, 1])
     _dm_col1.markdown(
@@ -2682,6 +2751,213 @@ with tab_analiz:
             st.info("Seçilen parametrelerle sinyal oluşmadı veya yeterli veri yok.")
 
 # ==========================================
+# İZLEME LİSTESİ TABU
+# ==========================================
+with tab_watch:
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>👁️ İzleme Listesi</h4>", unsafe_allow_html=True)
+    st.markdown(
+        f"<small style='color:{acc}88;'>Portföyde olmayan hisseleri takip et — anlık fiyat, sinyal ve 7G grafik</small>",
+        unsafe_allow_html=True
+    )
+
+    # Hisse ekle
+    _wl_c1, _wl_c2 = st.columns([4, 1])
+    _wl_ekle = _wl_c1.text_input("Hisse ekle", placeholder="GARAN.IS", key="wl_ekle_input",
+                                   label_visibility="collapsed")
+    if _wl_c2.button("➕ Ekle", key="wl_ekle_btn", use_container_width=True):
+        _wl_sembol = _wl_ekle.upper().strip()
+        if _wl_sembol and _wl_sembol not in [w['Hisse'] for w in st.session_state.watchlist]:
+            st.session_state.watchlist.append({'Hisse': _wl_sembol, 'eklenme': datetime.now().strftime('%Y-%m-%d')})
+            save_json(WATCHLIST_DOSYASI, st.session_state.watchlist)
+            st.rerun()
+
+    if st.session_state.watchlist:
+        # Tüm watchlist hisselerinin verilerini çek
+        _wl_hisseler = [w['Hisse'] for w in st.session_state.watchlist]
+        with st.spinner("Veriler yükleniyor..."):
+            _wl_sonuclar = []
+            for _wh in _wl_hisseler:
+                _wd = fetch_stock_data(_wh)
+                if _wd and not _wd['hist'].empty:
+                    _wc  = float(_wd['hist']['Close'].iloc[-1])
+                    _wpc = float(_wd['hist']['Close'].iloc[-2])
+                    _wdg = (_wc - _wpc) / _wpc * 100 if _wpc > 0 else 0
+                    _ws, _wr, _wm, _wb = get_signal(_wd['hist'])
+                    _wsp = [round(float(v),4) for v in _wd['hist']['Close'].iloc[-7:].tolist()]
+                    _wl_sonuclar.append({
+                        'Hisse': _wh, 'Fiyat': _wc, 'Değişim': _wdg,
+                        'Sinyal': _ws, 'RSI': _wr, 'Sparkline': _wsp
+                    })
+                else:
+                    _wl_sonuclar.append({'Hisse': _wh, 'Fiyat': 0, 'Değişim': 0,
+                                         'Sinyal': '—', 'RSI': 50, 'Sparkline': []})
+
+        # Tablo
+        _wl_tbl = (
+            "<table class='kral-table'><thead><tr>"
+            "<th>HİSSE</th><th>7G</th><th>FİYAT</th><th>DEĞİŞİM</th>"
+            "<th>SİNYAL</th><th>RSI</th><th>İŞLEM</th>"
+            "</tr></thead><tbody>"
+        )
+        for _ws in _wl_sonuclar:
+            _dg_c  = '#00e676' if _ws['Değişim'] >= 0 else '#ff1744'
+            _rsi_c = '#00e676' if _ws['RSI'] < 35 else ('#ff1744' if _ws['RSI'] > 65 else '#ffc107')
+            _spark = make_sparkline_svg(_ws['Sparkline'], renk_kz=_ws['Değişim'])
+            _wl_tbl += (
+                f"<tr><td><b>{_ws['Hisse']}</b></td>"
+                f"<td style='padding:6px 12px;'>{_spark}</td>"
+                f"<td>{tr_format4(_ws['Fiyat'])} ₺</td>"
+                f"<td style='color:{_dg_c};font-weight:700;'>{_ws['Değişim']:+.2f}%</td>"
+                f"<td>{_ws['Sinyal']}</td>"
+                f"<td style='color:{_rsi_c};font-weight:700;'>{_ws['RSI']:.1f}</td>"
+                f"<td>—</td></tr>"
+            )
+        _wl_tbl += "</tbody></table>"
+        st.markdown(_wl_tbl, unsafe_allow_html=True)
+
+        # Sil butonları
+        st.markdown("<br>", unsafe_allow_html=True)
+        _wl_del_cols = st.columns(min(len(_wl_hisseler), 6))
+        for _wi, _wh in enumerate(_wl_hisseler):
+            if _wl_del_cols[_wi % 6].button(f"❌ {_wh}", key=f"wl_del_{_wi}"):
+                st.session_state.watchlist = [w for w in st.session_state.watchlist if w['Hisse'] != _wh]
+                save_json(WATCHLIST_DOSYASI, st.session_state.watchlist)
+                st.rerun()
+    else:
+        st.info("İzleme listesi boş. Hisse kodu girerek ekle (örn: GARAN.IS, THYAO.IS)")
+
+
+# ==========================================
+# KRİPTO TABU
+# ==========================================
+with tab_kripto:
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>₿ Kripto Portföy Takibi</h4>", unsafe_allow_html=True)
+
+    # Kripto sembolleri — yfinance ile çekilen
+    _KRIPTO_LISTESI = [
+        ("Bitcoin",       "BTC-USD"),
+        ("Ethereum",      "ETH-USD"),
+        ("BNB",           "BNB-USD"),
+        ("Solana",        "SOL-USD"),
+        ("XRP",           "XRP-USD"),
+        ("Cardano",       "ADA-USD"),
+        ("Avalanche",     "AVAX-USD"),
+        ("Dogecoin",      "DOGE-USD"),
+        ("Polkadot",      "DOT-USD"),
+        ("Chainlink",     "LINK-USD"),
+        ("Polygon",       "MATIC-USD"),
+        ("Uniswap",       "UNI-USD"),
+        ("Litecoin",      "LTC-USD"),
+        ("Shiba Inu",     "SHIB-USD"),
+        ("Pepe",          "PEPE-USD"),
+    ]
+    _KRIPTO_MAP = {isim: sembol for isim, sembol in _KRIPTO_LISTESI}
+
+    # Kripto portföy session_state
+    if 'kripto_portfoy' not in st.session_state:
+        _kp_raw = load_json(_veri_yolu("kripto_portfoy.json"))
+        st.session_state.kripto_portfoy = _kp_raw if _kp_raw else []
+
+    # Kripto ekle formu
+    with st.form("kripto_ekle_form", clear_on_submit=True):
+        _kf1, _kf2, _kf3, _kf4 = st.columns([2, 2, 2, 1])
+        _k_isim   = _kf1.selectbox("Kripto", [x[0] for x in _KRIPTO_LISTESI], key="k_sec")
+        _k_adet   = _kf2.number_input("Adet", min_value=0.0001, value=0.1, format="%.4f", key="k_adet")
+        _k_mal    = _kf3.number_input("Maliyet (USD)", min_value=0.01, value=1000.0, format="%.2f", key="k_mal")
+        _kf4.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+        if st.form_submit_button("➕ Ekle", use_container_width=True):
+            _k_sembol = _KRIPTO_MAP.get(_k_isim, "BTC-USD")
+            st.session_state.kripto_portfoy.append({
+                'isim': _k_isim, 'sembol': _k_sembol,
+                'adet': float(_k_adet), 'maliyet_usd': float(_k_mal),
+                'id': len(st.session_state.kripto_portfoy)
+            })
+            save_json(_veri_yolu("kripto_portfoy.json"), st.session_state.kripto_portfoy)
+            st.rerun()
+
+    # USD/TRY kuru
+    _usd_d = fetch_stock_data("USDTRY=X")
+    _usd_kur = float(_usd_d['hist']['Close'].iloc[-1]) if _usd_d else 38.0
+
+    if st.session_state.kripto_portfoy:
+        with st.spinner("Kripto fiyatları çekiliyor..."):
+            _k_toplam_usd = 0
+            _k_toplam_kz  = 0
+            _k_tbl = (
+                "<table class='kral-table'><thead><tr>"
+                "<th>KRİPTO</th><th>ADET</th><th>MALİYET</th>"
+                "<th>GÜNCEL (USD)</th><th>K/Z (USD)</th><th>K/Z (TL)</th><th>SİL</th>"
+                "</tr></thead><tbody>"
+            )
+            for _ki, _kitem in enumerate(st.session_state.kripto_portfoy):
+                _kd = fetch_stock_data(_kitem['sembol'])
+                if _kd and not _kd['hist'].empty:
+                    _k_guncel_usd = float(_kd['hist']['Close'].iloc[-1])
+                    _k_deger_usd  = _kitem['adet'] * _k_guncel_usd
+                    _k_kz_usd     = _k_deger_usd - _kitem['maliyet_usd']
+                    _k_kz_tl      = _k_kz_usd * _usd_kur
+                    _k_toplam_usd += _k_deger_usd
+                    _k_toplam_kz  += _k_kz_usd
+                    _kz_c = '#00e676' if _k_kz_usd >= 0 else '#ff1744'
+                    _k_tbl += (
+                        f"<tr><td><b>{_kitem['isim']}</b><br>"
+                        f"<span style='font-size:10px;opacity:0.5;'>{_kitem['sembol']}</span></td>"
+                        f"<td>{_kitem['adet']:.4f}</td>"
+                        f"<td>${_kitem['maliyet_usd']:,.0f}</td>"
+                        f"<td>${_k_deger_usd:,.0f}</td>"
+                        f"<td style='color:{_kz_c};font-weight:700;'>${_k_kz_usd:,.0f}</td>"
+                        f"<td style='color:{_kz_c};font-weight:700;'>{tr_format(_k_kz_tl)} ₺</td>"
+                        f"<td>—</td></tr>"
+                    )
+            _k_tbl += "</tbody></table>"
+            st.markdown(_k_tbl, unsafe_allow_html=True)
+
+        _km1, _km2, _km3 = st.columns(3)
+        _km1.metric("Kripto Portföy (USD)", f"${_k_toplam_usd:,.0f}")
+        _km2.metric("Kripto Portföy (TL)",  f"{tr_format(_k_toplam_usd * _usd_kur)} ₺")
+        _kz_renk = "#00e676" if _k_toplam_kz >= 0 else "#ff1744"
+        _km3.metric("Toplam K/Z (USD)",     f"${_k_toplam_kz:,.0f}")
+
+        with st.expander("🗑️ Kripto Sil"):
+            for _ki, _kitem in enumerate(st.session_state.kripto_portfoy):
+                _ksc1, _ksc2 = st.columns([5,1])
+                _ksc1.write(f"{_kitem['isim']} · {_kitem['adet']} adet")
+                if _ksc2.button("❌", key=f"k_sil_{_ki}"):
+                    st.session_state.kripto_portfoy.pop(_ki)
+                    save_json(_veri_yolu("kripto_portfoy.json"), st.session_state.kripto_portfoy)
+                    st.rerun()
+    else:
+        st.info("Kripto portföy boş. Yukarıdan kripto ekle.")
+
+    # Piyasa özeti
+    st.divider()
+    st.markdown(f"<h5 style='color:{acc};'>📊 Anlık Kripto Fiyatları</h5>", unsafe_allow_html=True)
+    with st.spinner("Fiyatlar yükleniyor..."):
+        _k_piyasa_html = "<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;'>"
+        for _kn, _ks in _KRIPTO_LISTESI[:12]:
+            _kpd = fetch_stock_data(_ks)
+            if _kpd and not _kpd['hist'].empty:
+                _kp  = float(_kpd['hist']['Close'].iloc[-1])
+                _kpp = float(_kpd['hist']['Close'].iloc[-2])
+                _kpd_pct = (_kp - _kpp) / _kpp * 100 if _kpp > 0 else 0
+                _kp_c = '#00e676' if _kpd_pct >= 0 else '#ff1744'
+                _kp_tl = _kp * _usd_kur
+                _k_piyasa_html += (
+                    f"<div style='background:{box};border:1px solid {_kp_c}33;"
+                    f"border-left:3px solid {_kp_c};border-radius:8px;padding:8px 10px;'>"
+                    f"<div style='font-size:11px;font-weight:700;color:{_kp_c};'>{_kn}</div>"
+                    f"<div style='font-size:12px;font-weight:700;margin-top:3px;'>${_kp:,.2f}</div>"
+                    f"<div style='font-size:10px;opacity:0.6;'>{tr_format(_kp_tl)} ₺</div>"
+                    f"<div style='font-size:10px;color:{_kp_c};'>{_kpd_pct:+.2f}%</div>"
+                    f"</div>"
+                )
+        _k_piyasa_html += "</div>"
+        st.markdown(_k_piyasa_html, unsafe_allow_html=True)
+
+
+# ==========================================
 # HABERLER TABU
 # ==========================================
 with tab_haberler:
@@ -3063,6 +3339,179 @@ with tab_takvim:
         f"Kesin tarihler için TCMB ve TÜİK resmi sitelerini takip edin.</small>",
         unsafe_allow_html=True
     )
+
+# ==========================================
+# AI YORUM TABU
+# ==========================================
+with tab_ai:
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>🤖 AI Portföy Yorumu</h4>", unsafe_allow_html=True)
+    st.markdown(
+        f"<small style='color:{acc}88;'>Claude API — portföyünü analiz eder, özet ve öneri sunar</small>",
+        unsafe_allow_html=True
+    )
+
+    _ai_portfoy_data = [x for x in full_data if x['Piyasa'] == 'Türk Borsası']
+    if not _ai_portfoy_data:
+        st.info("AI yorumu için portföyde Türk Borsası hissesi bulunmalıdır.")
+    else:
+        # Yorum türü seçimi
+        _ai_tip = st.radio(
+            "Yorum türü",
+            ["📊 Portföy genel özeti", "⚠️ Risk analizi", "📈 Fırsat tarama", "💡 Öneriler"],
+            horizontal=True, key="ai_tip"
+        )
+
+        # Portföy özetini hazırla
+        _ai_ozet_lines = []
+        _ai_toplam = sum(x['Değer'] for x in _ai_portfoy_data)
+        for _ax in _ai_portfoy_data:
+            _pay = _ax['Değer'] / _ai_toplam * 100 if _ai_toplam > 0 else 0
+            _ai_ozet_lines.append(
+                f"- {_ax['Hisse']}: {_ax['Adet']} adet, maliyet {tr_format4(_ax['Maliyet'])} ₺, "
+                f"güncel {tr_format4(_ax['Güncel'])} ₺, K/Z {tr_format(_ax['K/Z'])} ₺ "
+                f"(%{_pay:.1f} portföy payı), RSI: {_ax['RSI']:.0f}, Sinyal: {_ax['Sinyal']}"
+            )
+        _portfoy_str = "\n".join(_ai_ozet_lines)
+
+        _ai_prompts = {
+            "📊 Portföy genel özeti": (
+                f"Türk Borsası portföyümü analiz et ve kısa bir yönetici özeti sun. "
+                f"Portföy değeri: {tr_format(_ai_toplam)} ₺. Hisseler:\n{_portfoy_str}\n\n"
+                f"Lütfen şunları belirt: 1) Genel portföy sağlığı 2) En iyi ve en kötü performans "
+                f"3) Dikkat edilmesi gereken noktalar. Türkçe, 200 kelimeyle."
+            ),
+            "⚠️ Risk analizi": (
+                f"Bu portföydeki riskleri analiz et:\n{_portfoy_str}\n\n"
+                f"RSI'lar, sinyal durumları ve konsantrasyon riskine odaklan. "
+                f"Türkçe, madde madde, 200 kelimeyle."
+            ),
+            "📈 Fırsat tarama": (
+                f"Bu portföyde ve bu hisseler arasında kısa vadeli fırsat var mı?\n{_portfoy_str}\n\n"
+                f"Aşırı satım (RSI<35) ve AL sinyali olan hisseleri öne çıkar. "
+                f"Türkçe, 200 kelimeyle. Yatırım tavsiyesi değil, teknik analiz özeti ver."
+            ),
+            "💡 Öneriler": (
+                f"Bu portföyü nasıl iyileştirebilirim?\n{_portfoy_str}\n\n"
+                f"Çeşitlendirme, risk yönetimi ve portföy dengesine göre somut öneriler sun. "
+                f"Türkçe, 200 kelimeyle. Yatırım tavsiyesi değil, genel analiz."
+            ),
+        }
+
+        if st.button("🤖 AI Yorumu Oluştur", key="ai_yorum_btn", use_container_width=True, type="primary"):
+            with st.spinner("Claude analiz ediyor..."):
+                try:
+                    import json as _json_mod
+                    _ai_payload = {
+                        "model": "claude-sonnet-4-20250514",
+                        "max_tokens": 800,
+                        "messages": [
+                            {"role": "user", "content": _ai_prompts[_ai_tip]}
+                        ]
+                    }
+                    _ai_req = urllib.request.Request(
+                        "https://api.anthropic.com/v1/messages",
+                        data=_json_mod.dumps(_ai_payload).encode(),
+                        headers={
+                            "Content-Type": "application/json",
+                            "anthropic-version": "2023-06-01",
+                            "x-api-key": os.environ.get("ANTHROPIC_API_KEY", ""),
+                        },
+                        method="POST"
+                    )
+                    with urllib.request.urlopen(_ai_req, timeout=30) as _ai_resp:
+                        _ai_data = _json_mod.loads(_ai_resp.read())
+                    _ai_metin = _ai_data['content'][0]['text']
+                    st.session_state['ai_son_yorum'] = _ai_metin
+                    st.session_state['ai_son_tip']   = _ai_tip
+                except Exception as _ai_e:
+                    if "ANTHROPIC_API_KEY" in str(_ai_e) or "401" in str(_ai_e):
+                        st.error("API anahtarı gerekli. `ANTHROPIC_API_KEY` ortam değişkenini ayarla.")
+                    else:
+                        st.error(f"AI yorumu alınamadı: {_ai_e}")
+
+        if 'ai_son_yorum' in st.session_state:
+            st.markdown(
+                f"<div style='background:{box};border:1px solid {acc}33;border-radius:12px;"
+                f"padding:18px 20px;margin-top:12px;line-height:1.7;font-size:14px;'>"
+                f"<div style='color:{acc};font-size:11px;font-weight:700;margin-bottom:10px;"
+                f"letter-spacing:1px;'>🤖 {st.session_state.get('ai_son_tip','YORUM')}</div>"
+                f"{st.session_state['ai_son_yorum'].replace(chr(10), '<br>')}"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+            st.caption("⚠️ Bu yorum yatırım tavsiyesi değildir. Yatırım kararları için uzman görüşü alın.")
+
+        # API Key kurulum rehberi
+        with st.expander("🔑 API Key Nasıl Kurulur?"):
+            st.markdown(
+                f"**Streamlit Cloud'da:**\n"
+                f"1. Uygulama ayarları → Secrets\n"
+                f"2. Şunu ekle: `ANTHROPIC_API_KEY = \"sk-ant-...\"`\n\n"
+                f"**Lokalde:**\n"
+                f"```bash\nexport ANTHROPIC_API_KEY=sk-ant-...\nstreamlit run Borsa.py\n```\n\n"
+                f"API anahtarını [console.anthropic.com](https://console.anthropic.com) adresinden al."
+            )
+
+        st.divider()
+        st.markdown(f"<h5 style='color:{acc};'>📊 Hedef Takip</h5>", unsafe_allow_html=True)
+        st.markdown(
+            f"<small style='color:{acc}88;'>Emeklilik veya birikim hedefi koy, ilerlemeyi gör</small>",
+            unsafe_allow_html=True
+        )
+
+        with st.form("hedef_form", clear_on_submit=False):
+            _hf1, _hf2, _hf3 = st.columns(3)
+            _h_isim  = _hf1.text_input("Hedef Adı", value="Emeklilik Fonu", key="h_isim")
+            _h_miktar = _hf2.number_input("Hedef (₺)", min_value=1000.0, value=1_000_000.0,
+                                            step=10000.0, format="%.0f", key="h_miktar")
+            _h_tarih = _hf3.date_input("Hedef Tarihi", key="h_tarih",
+                                        value=datetime.now().replace(year=datetime.now().year+5).date())
+            if st.form_submit_button("💾 Kaydet", use_container_width=True):
+                _h_id = f"hedef_{int(datetime.now().timestamp())}"
+                st.session_state.hedefler[_h_id] = {
+                    'id': _h_id, 'isim': _h_isim,
+                    'miktar': float(_h_miktar), 'tarih': str(_h_tarih)
+                }
+                save_json(HEDEF_DOSYASI, list(st.session_state.hedefler.values()))
+                st.rerun()
+
+        if st.session_state.hedefler:
+            _portfoy_deger = sum(x['Değer'] for x in full_data)
+            for _hid, _hedef in list(st.session_state.hedefler.items()):
+                _ilerleme = min(100, _portfoy_deger / _hedef['miktar'] * 100) if _hedef['miktar'] > 0 else 0
+                _kalan    = max(0, _hedef['miktar'] - _portfoy_deger)
+                try:
+                    _hedef_dt = datetime.strptime(_hedef['tarih'], '%Y-%m-%d')
+                    _gun_kalan = (_hedef_dt - datetime.now()).days
+                except Exception:
+                    _gun_kalan = 0
+                _il_c = '#00e676' if _ilerleme >= 75 else ('#ffc107' if _ilerleme >= 40 else acc)
+                st.markdown(
+                    f"<div style='background:{box};border:1px solid {_il_c}33;"
+                    f"border-radius:10px;padding:14px 16px;margin-bottom:10px;'>"
+                    f"<div style='display:flex;justify-content:space-between;margin-bottom:8px;'>"
+                    f"  <b style='color:{acc};'>{_hedef['isim']}</b>"
+                    f"  <span style='font-size:11px;opacity:0.6;'>"
+                    f"  {_gun_kalan} gün kaldı · {_hedef['tarih']}</span>"
+                    f"</div>"
+                    f"<div style='background:{t_sec['bg']};border-radius:6px;height:18px;"
+                    f"border:1px solid {_il_c}33;overflow:hidden;margin-bottom:8px;'>"
+                    f"  <div style='width:{_ilerleme:.1f}%;background:{_il_c};height:100%;"
+                    f"  display:flex;align-items:center;justify-content:flex-end;padding-right:8px;"
+                    f"  font-size:11px;font-weight:700;color:{t_sec['bg']};'>"
+                    f"  %{_ilerleme:.1f}</div></div>"
+                    f"<div style='display:flex;justify-content:space-between;font-size:11px;'>"
+                    f"  <span>Mevcut: <b>{tr_format(_portfoy_deger)} ₺</b></span>"
+                    f"  <span>Hedef: <b>{tr_format(_hedef['miktar'])} ₺</b></span>"
+                    f"  <span>Kalan: <b style='color:#ff7043;'>{tr_format(_kalan)} ₺</b></span>"
+                    f"</div></div>",
+                    unsafe_allow_html=True
+                )
+                if st.button(f"🗑️ {_hedef['isim']} sil", key=f"h_sil_{_hid}"):
+                    del st.session_state.hedefler[_hid]
+                    save_json(HEDEF_DOSYASI, list(st.session_state.hedefler.values()))
+                    st.rerun()
 
 # ==========================================
 # EKRAN AYARLARI TABU
