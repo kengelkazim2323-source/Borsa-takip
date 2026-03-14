@@ -21,10 +21,11 @@ logger = logging.getLogger(__name__)
 # ==========================================
 # 0. VERİ YÖNETİMİ
 # ==========================================
-PORTFOY_DOSYASI   = "portfoy_kayitlari.json"
-IPO_DOSYASI       = "halka_arz_kayitlari.json"
-ALARM_DOSYASI     = "alarm_kayitlari.json"
+PORTFOY_DOSYASI    = "portfoy_kayitlari.json"
+IPO_DOSYASI        = "halka_arz_kayitlari.json"
+ALARM_DOSYASI      = "alarm_kayitlari.json"
 PERFORMANS_DOSYASI = "portfoy_performans.json"
+NOTLAR_DOSYASI     = "hisse_notlari.json"
 
 def load_json(dosya_adi):
     if not os.path.exists(dosya_adi): return []
@@ -56,6 +57,102 @@ if 'alarmlar' not in st.session_state:
     st.session_state.alarmlar = load_json(ALARM_DOSYASI)
 if 'performans' not in st.session_state:
     st.session_state.performans = load_json(PERFORMANS_DOSYASI)
+if 'notlar' not in st.session_state:
+    raw_notlar = load_json(NOTLAR_DOSYASI)
+    st.session_state.notlar = {n['Hisse']: n for n in raw_notlar} if raw_notlar else {}
+if 'dark_mode' not in st.session_state:
+    st.session_state.dark_mode = True
+
+@st.cache_data(ttl=3600)
+def fetch_temel_veri(symbol):
+    """yfinance'tan F/K, PD/DD, Piyasa Değeri ve Borç/Özsermaye oranını çeker."""
+    code = symbol.replace(".IS", "").upper()
+    try:
+        tk   = yf.Ticker(symbol)
+        info = tk.info
+        if not info:
+            return None
+        def safe(key, fallback=None):
+            v = info.get(key)
+            return v if v is not None else fallback
+
+        pd_dd  = safe('priceToBook')
+        fk     = safe('trailingPE') or safe('forwardPE')
+        borc   = safe('totalDebt', 0)
+        ozserm = safe('totalStockholderEquity') or safe('bookValue', 0)
+        borc_ozserm = round(borc / ozserm, 2) if ozserm and ozserm > 0 else None
+        piyasa_degeri = safe('marketCap')
+        temttu_verimi = safe('dividendYield')
+
+        return {
+            'FK':           round(fk, 2)            if fk          else None,
+            'PD_DD':        round(pd_dd, 2)          if pd_dd       else None,
+            'Borc_Ozserm':  borc_ozserm,
+            'Piyasa_Degeri': piyasa_degeri,
+            'Temettu_Verimi': round(temttu_verimi * 100, 2) if temttu_verimi else None,
+        }
+    except Exception as e:
+        logger.warning(f"Temel veri hatası ({code}): {e}")
+        return None
+
+
+@st.cache_data(ttl=1800)
+def fetch_haberler(hisse_listesi):
+    """Portföydeki hisseler için yfinance news API'sinden son haberleri çeker."""
+    haberler = []
+    for symbol in hisse_listesi[:8]:   # max 8 hisse, yük azaltmak için
+        code = symbol.replace(".IS", "")
+        try:
+            tk   = yf.Ticker(symbol)
+            news = tk.news or []
+            for item in news[:3]:      # hisse başına en fazla 3 haber
+                haberler.append({
+                    'hisse':   code,
+                    'baslik':  item.get('title', ''),
+                    'url':     item.get('link', ''),
+                    'kaynak':  item.get('publisher', ''),
+                    'zaman':   item.get('providerPublishTime', 0),
+                })
+        except Exception as e:
+            logger.warning(f"Haber çekme hatası ({code}): {e}")
+    # Zamana göre sırala (en yeni önce)
+    haberler.sort(key=lambda x: x['zaman'], reverse=True)
+    return haberler
+
+
+@st.cache_data(ttl=300)
+def fetch_bist100_karsilastirma(portfoy_hisseleri):
+    """BIST100 ve portföy günlük getiri verilerini karşılaştırma için çeker."""
+    try:
+        bist = fetch_stock_data("XU100.IS")
+        if not bist:
+            return None, None
+        bist_close = bist['hist']['Close']
+
+        # Portföy ağırlıklı ortalama getirisi
+        portfoy_close = {}
+        for h in portfoy_hisseleri:
+            d = fetch_stock_data(h)
+            if d and not d['hist'].empty:
+                portfoy_close[h] = d['hist']['Close']
+
+        if not portfoy_close:
+            return bist_close, None
+
+        # Ortak tarih aralığına normalize et
+        min_len = min(len(bist_close), min(len(v) for v in portfoy_close.values()))
+        bist_norm = (bist_close.iloc[-min_len:] / bist_close.iloc[-min_len] * 100)
+
+        portfoy_df = pd.DataFrame({h: v.iloc[-min_len:].values for h, v in portfoy_close.items()})
+        portfoy_ort = portfoy_df.mean(axis=1)
+        portfoy_norm = (portfoy_ort / portfoy_ort.iloc[0] * 100)
+        portfoy_norm.index = bist_close.iloc[-min_len:].index
+
+        return bist_norm, portfoy_norm
+    except Exception as e:
+        logger.warning(f"Karşılaştırma hatası: {e}")
+        return None, None
+
 
 @st.cache_data(ttl=3600)
 def fetch_temettu_isyatirim(symbol):
@@ -754,16 +851,37 @@ if tetiklenen_alarmlar:
 # ==========================================
 # 4. TABLAR VE İÇERİK
 # ==========================================
-tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz = st.tabs([
+tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_notlar, tab_export = st.tabs([
     "🇹🇷 TÜRK BORSASI",
     "📊 YATIRIM FONLARI",
     "💰 TEMETTÜ GELİRİ",
     "🚀 HALKA ARZ TAKİP",
     "🔔 FİYAT ALARMLARI",
     "📈 ANALİZ",
+    "📰 HABERLER",
+    "🏦 TEMEL VERİLER",
+    "📝 NOTLAR",
+    "📤 DIŞA AKTAR",
 ])
 
 with st.sidebar:
+    # --- KARANLIK MOD TOGGLE ---
+    _dm_col1, _dm_col2 = st.columns([3, 1])
+    _dm_col1.markdown(
+        f"<div style='padding-top:6px;font-size:12px;color:{t_sec['text']};opacity:0.7;'>"
+        f"{'🌙 Karanlık Mod' if st.session_state.dark_mode else '☀️ Açık Mod'}</div>",
+        unsafe_allow_html=True
+    )
+    if _dm_col2.button("⇄", key="dm_toggle", help="Karanlık/Açık mod"):
+        st.session_state.dark_mode = not st.session_state.dark_mode
+        # Tema'yı otomatik ayarla
+        if st.session_state.dark_mode:
+            if st.session_state.tema_secim in ["Siyah-Beyaz (Klasik)", "Vanilya Gökyüzü"]:
+                st.session_state.tema_secim = "Galaksi (VIP)"
+        else:
+            st.session_state.tema_secim = "Siyah-Beyaz (Klasik)"
+        st.rerun()
+
     # --- PİYASA DURUMU ---
     _acik, _durum_msg = piyasa_acik_mi()
     _durum_color = "#00e676" if _acik else "#ff1744"
@@ -1697,6 +1815,419 @@ with tab_analiz:
             st.warning("Korelasyon hesaplanamadı (yeterli veri yok).")
     else:
         st.info("Korelasyon matrisi için portföyde en az 2 Türk Borsası hissesi gerekli.")
+
+# ==========================================
+# HABERLER TABU
+# ==========================================
+with tab_haberler:
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>📰 Portföy Haber Akışı</h4>", unsafe_allow_html=True)
+    st.markdown(
+        f"<small style='color:{acc}88;'>Portföydeki hisselere ait son haberler — yfinance üzerinden</small>",
+        unsafe_allow_html=True
+    )
+
+    portfoy_hisseleri_haber = sorted(set(
+        x['Hisse'] for x in full_data if x['Piyasa'] == 'Türk Borsası'
+    ))
+
+    if portfoy_hisseleri_haber:
+        with st.spinner("Haberler yükleniyor..."):
+            haberler = fetch_haberler(tuple(portfoy_hisseleri_haber))
+
+        if haberler:
+            # Hisse filtresi
+            haber_filtre = st.multiselect(
+                "Hisse Filtrele",
+                ["Tümü"] + [h.replace(".IS", "") for h in portfoy_hisseleri_haber],
+                default=["Tümü"],
+                key="haber_filtre"
+            )
+            gosterilecek = haberler
+            if "Tümü" not in haber_filtre and haber_filtre:
+                gosterilecek = [h for h in haberler if h['hisse'] in haber_filtre]
+
+            for haber in gosterilecek[:25]:
+                zaman_str = ""
+                if haber['zaman']:
+                    try:
+                        dt = datetime.fromtimestamp(haber['zaman'], tz=pytz.timezone('Europe/Istanbul'))
+                        zaman_str = dt.strftime('%d.%m.%Y %H:%M')
+                    except Exception:
+                        pass
+
+                st.markdown(
+                    f"<div style='background:{box};border:1px solid {acc}22;border-radius:8px;"
+                    f"padding:12px 16px;margin-bottom:8px;'>"
+                    f"<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;'>"
+                    f"  <div>"
+                    f"    <span style='background:{acc}22;color:{acc};font-size:10px;font-weight:700;"
+                    f"          padding:2px 7px;border-radius:4px;margin-right:8px;'>{haber['hisse']}</span>"
+                    f"    <a href='{haber['url']}' target='_blank' style='color:{txt};text-decoration:none;"
+                    f"       font-size:13px;font-weight:600;'>{haber['baslik']}</a>"
+                    f"  </div>"
+                    f"</div>"
+                    f"<div style='margin-top:6px;display:flex;gap:12px;'>"
+                    f"  <span style='font-size:10px;opacity:0.45;'>{haber['kaynak']}</span>"
+                    f"  <span style='font-size:10px;opacity:0.45;'>{zaman_str}</span>"
+                    f"</div>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+        else:
+            st.info("Haber bulunamadı. yfinance bazı semboller için haber döndürmeyebilir.")
+    else:
+        st.info("Haber akışı için portföyde Türk Borsası hissesi bulunmalıdır.")
+
+
+# ==========================================
+# TEMEL VERİLER TABU
+# ==========================================
+with tab_temel:
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>🏦 Temel Analiz Verileri</h4>", unsafe_allow_html=True)
+    st.markdown(
+        f"<small style='color:{acc}88;'>F/K, PD/DD, Borç/Özsermaye — yfinance üzerinden · Veriler yaklaşık değerdir</small>",
+        unsafe_allow_html=True
+    )
+
+    portfoy_bist_temel = [x for x in full_data if x['Piyasa'] == 'Türk Borsası']
+
+    if portfoy_bist_temel:
+        with st.spinner("Temel veriler çekiliyor..."):
+            temel_rows = []
+            for item in portfoy_bist_temel:
+                tv = fetch_temel_veri(item['Hisse'])
+                temel_rows.append({**item, 'temel': tv or {}})
+
+        # Tablo
+        tbl = (
+            "<table class='kral-table'><thead><tr>"
+            "<th>HİSSE</th><th>F/K</th><th>PD/DD</th>"
+            "<th>BORÇ/ÖZSERM.</th><th>PİYASA DEĞERİ</th>"
+            "<th>TEMETTÜ VERİMİ</th><th>GÜNCEL FİYAT</th>"
+            "</tr></thead><tbody>"
+        )
+        for r in temel_rows:
+            tv = r['temel']
+
+            def fmt_val(v, suffix=''):
+                if v is None: return "<span style='opacity:0.35;'>—</span>"
+                return f"{v}{suffix}"
+
+            def fmt_mkt(v):
+                if v is None: return "<span style='opacity:0.35;'>—</span>"
+                if v >= 1e9:  return f"{v/1e9:.1f} Mr ₺"
+                if v >= 1e6:  return f"{v/1e6:.0f} Mn ₺"
+                return f"{v:,.0f} ₺"
+
+            # Borç/Özsermaye rengi
+            bo = tv.get('Borc_Ozserm')
+            bo_color = '#00e676' if bo is not None and bo < 0.5 else ('#ffc107' if bo is not None and bo < 1.5 else '#ff1744')
+            bo_str = f"<span style='color:{bo_color};font-weight:600;'>{bo}</span>" if bo is not None else "<span style='opacity:0.35;'>—</span>"
+
+            # F/K rengi
+            fk = tv.get('FK')
+            fk_color = '#00e676' if fk is not None and fk < 15 else ('#ffc107' if fk is not None and fk < 30 else '#ff1744')
+            fk_str = f"<span style='color:{fk_color};font-weight:600;'>{fk}</span>" if fk is not None else "<span style='opacity:0.35;'>—</span>"
+
+            tbl += (
+                f"<tr>"
+                f"<td><b>{r['Hisse']}</b></td>"
+                f"<td>{fk_str}</td>"
+                f"<td>{fmt_val(tv.get('PD_DD'))}</td>"
+                f"<td>{bo_str}</td>"
+                f"<td style='font-size:11px;'>{fmt_mkt(tv.get('Piyasa_Degeri'))}</td>"
+                f"<td>{'%'+str(tv.get('Temettu_Verimi')) if tv.get('Temettu_Verimi') else '<span style=\"opacity:0.35;\">—</span>'}</td>"
+                f"<td>{tr_format(r['Güncel'])} ₺</td>"
+                f"</tr>"
+            )
+        tbl += "</tbody></table>"
+        st.markdown(tbl, unsafe_allow_html=True)
+
+        # Açıklama kartı
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='background:{box};border:1px solid {acc}22;border-radius:8px;padding:12px 16px;"
+            f"display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px;'>"
+            f"<div><b style='color:{acc};'>F/K (Fiyat/Kazanç)</b><br>"
+            f"<span style='opacity:0.6;'>&lt;15 ucuz · 15–30 makul · &gt;30 pahalı</span></div>"
+            f"<div><b style='color:{acc};'>PD/DD (Piyasa/Defter)</b><br>"
+            f"<span style='opacity:0.6;'>&lt;1 defter altı · 1–3 makul · &gt;3 prim</span></div>"
+            f"<div><b style='color:#00e676;'>Borç/Özserm. &lt;0.5</b> düşük · "
+            f"<b style='color:#ffc107;'>0.5–1.5</b> orta · "
+            f"<b style='color:#ff1744;'>&gt;1.5</b> yüksek</div>"
+            f"<div style='opacity:0.5;'>Veriler yfinance üzerinden çekilmekte olup kesin değildir.</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+
+        # BIST100 Karşılaştırma grafiği
+        st.divider()
+        st.markdown(f"<h4 style='color:{acc};'>📊 Portföy vs BIST100 (60 Gün Normalize)</h4>", unsafe_allow_html=True)
+        bist_hisseler = tuple(x['Hisse'] for x in portfoy_bist_temel)
+        with st.spinner("Karşılaştırma grafiği hazırlanıyor..."):
+            bist_norm, portfoy_norm = fetch_bist100_karsilastirma(bist_hisseler)
+
+        if bist_norm is not None:
+            kars_fig = go.Figure()
+            kars_fig.add_trace(go.Scatter(
+                x=bist_norm.index, y=bist_norm.values,
+                mode='lines', name='BIST 100',
+                line=dict(color='#ffc107', width=2, dash='dot'),
+                hovertemplate='<b>BIST100</b><br>%{x|%d.%m.%Y}<br>%{y:.1f}<extra></extra>',
+            ))
+            if portfoy_norm is not None:
+                kars_fig.add_trace(go.Scatter(
+                    x=portfoy_norm.index, y=portfoy_norm.values,
+                    mode='lines', name='Portföy Ort.',
+                    line=dict(color=acc, width=2.5),
+                    fill='tonexty', fillcolor=acc + '10',
+                    hovertemplate='<b>Portföy</b><br>%{x|%d.%m.%Y}<br>%{y:.1f}<extra></extra>',
+                ))
+            kars_fig.add_hline(y=100, line_dash='dash', line_color=txt, opacity=0.2)
+            kars_fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color=txt, size=11, family=secili_font),
+                height=360,
+                margin=dict(t=40, b=40, l=50, r=20),
+                xaxis=dict(showgrid=True, gridcolor=acc+'15', color=txt),
+                yaxis=dict(showgrid=True, gridcolor=acc+'15', color=txt,
+                           title=dict(text='Normalize (Başlangıç=100)', font=dict(size=10))),
+                legend=dict(orientation='h', x=0, y=1.08,
+                            font=dict(size=10, color=txt), bgcolor='rgba(0,0,0,0)'),
+                title=dict(text="Portföy Ortalama vs BIST100",
+                           font=dict(size=13, color=acc), x=0.5, xanchor='center'),
+            )
+            st.plotly_chart(kars_fig, use_container_width=True)
+
+            # Beta hesapla
+            if portfoy_norm is not None and len(bist_norm) > 10:
+                try:
+                    bist_ret = bist_norm.pct_change().dropna()
+                    port_ret = portfoy_norm.pct_change().dropna()
+                    min_l = min(len(bist_ret), len(port_ret))
+                    cov    = np.cov(port_ret.values[-min_l:], bist_ret.values[-min_l:])
+                    beta   = round(cov[0, 1] / cov[1, 1], 2) if cov[1, 1] != 0 else None
+                    if beta is not None:
+                        beta_color = '#00e676' if beta < 1 else ('#ffc107' if beta < 1.5 else '#ff1744')
+                        st.markdown(
+                            f"<div style='text-align:center;margin-top:4px;'>"
+                            f"<span style='font-size:12px;opacity:0.6;'>Portföy Betası: </span>"
+                            f"<span style='color:{beta_color};font-weight:700;font-size:16px;'>β = {beta}</span>"
+                            f"<span style='font-size:11px;opacity:0.45;'> "
+                            f"({'düşük risk' if beta < 1 else ('orta risk' if beta < 1.5 else 'yüksek risk')})</span>"
+                            f"</div>",
+                            unsafe_allow_html=True
+                        )
+                except Exception:
+                    pass
+        else:
+            st.info("Karşılaştırma verisi alınamadı.")
+    else:
+        st.info("Türk Borsası'nda hisse bulunamadı.")
+
+
+# ==========================================
+# NOTLAR TABU
+# ==========================================
+with tab_notlar:
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>📝 Hisse Notları & Hedef Fiyatlar</h4>", unsafe_allow_html=True)
+
+    portfoy_hisseleri_not = sorted(set(x['Hisse'] for x in full_data))
+
+    if portfoy_hisseleri_not:
+        not_hisse = st.selectbox("Hisse Seç", portfoy_hisseleri_not, key="not_hisse_sec")
+        mevcut    = st.session_state.notlar.get(not_hisse, {})
+        guncel_fiyat = next((x['Güncel'] for x in full_data if x['Hisse'] == not_hisse), 0.0)
+
+        with st.form(f"not_form_{not_hisse}", clear_on_submit=False):
+            nf1, nf2 = st.columns(2)
+            hedef_fiyat = nf1.number_input(
+                "Hedef Fiyat (₺)",
+                value=float(mevcut.get('hedef', 0.0)),
+                format="%.4f", min_value=0.0,
+                key=f"hedef_{not_hisse}"
+            )
+            stop_loss = nf2.number_input(
+                "Stop-Loss (₺)",
+                value=float(mevcut.get('stop', 0.0)),
+                format="%.4f", min_value=0.0,
+                key=f"stop_{not_hisse}"
+            )
+            alim_sebebi = st.text_area(
+                "Alım Gerekçesi",
+                value=mevcut.get('sebep', ''),
+                placeholder="Bu hisseyi neden aldım? Hangi beklentilerle?",
+                height=100, key=f"sebep_{not_hisse}"
+            )
+            genel_not = st.text_area(
+                "Genel Not",
+                value=mevcut.get('not', ''),
+                placeholder="Takip ettiğim gelişmeler, riskler, çıkış stratejisi...",
+                height=80, key=f"gnot_{not_hisse}"
+            )
+            if st.form_submit_button("💾 Notu Kaydet", use_container_width=True):
+                st.session_state.notlar[not_hisse] = {
+                    'Hisse': not_hisse,
+                    'hedef': hedef_fiyat,
+                    'stop':  stop_loss,
+                    'sebep': alim_sebebi,
+                    'not':   genel_not,
+                    'guncelleme': datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%d.%m.%Y %H:%M'),
+                }
+                save_json(NOTLAR_DOSYASI, list(st.session_state.notlar.values()))
+                st.success(f"✅ {not_hisse} notu kaydedildi.")
+
+        # Hedef & stop bilgi kartı
+        if hedef_fiyat > 0 or stop_loss > 0:
+            pot_kar  = ((hedef_fiyat - guncel_fiyat) / guncel_fiyat * 100) if guncel_fiyat > 0 and hedef_fiyat > 0 else None
+            pot_risk = ((guncel_fiyat - stop_loss)   / guncel_fiyat * 100) if guncel_fiyat > 0 and stop_loss > 0 else None
+            rr_oran  = round(pot_kar / pot_risk, 2) if pot_kar and pot_risk and pot_risk > 0 else None
+            st.markdown(
+                f"<div style='background:{box};border:1px solid {acc}33;border-radius:10px;"
+                f"padding:14px 16px;margin-top:8px;"
+                f"display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;'>"
+                f"<div><div style='font-size:10px;opacity:0.5;'>GÜNCEL</div>"
+                f"    <div style='color:{acc};font-weight:700;'>{tr_format(guncel_fiyat)} ₺</div></div>"
+                f"<div><div style='font-size:10px;opacity:0.5;'>HEDEF</div>"
+                f"    <div style='color:#00e676;font-weight:700;'>{tr_format(hedef_fiyat)} ₺</div>"
+                f"    {'<div style=\"font-size:10px;color:#00e676;\">+'+str(round(pot_kar,1))+'%</div>' if pot_kar else ''}"
+                f"</div>"
+                f"<div><div style='font-size:10px;opacity:0.5;'>STOP-LOSS</div>"
+                f"    <div style='color:#ff1744;font-weight:700;'>{tr_format(stop_loss)} ₺</div>"
+                f"    {'<div style=\"font-size:10px;color:#ff1744;\">-'+str(round(pot_risk,1))+'%</div>' if pot_risk else ''}"
+                f"</div>"
+                f"<div><div style='font-size:10px;opacity:0.5;'>R/R ORANI</div>"
+                f"    <div style='color:{'#00e676' if rr_oran and rr_oran >= 2 else '#ffc107'};font-weight:700;'>"
+                f"    {'1 : '+str(rr_oran) if rr_oran else '—'}</div></div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+
+        # Tüm notlar özeti
+        st.divider()
+        st.markdown(f"#### 📋 Tüm Hisse Notları", unsafe_allow_html=True)
+        if st.session_state.notlar:
+            for h, n in sorted(st.session_state.notlar.items()):
+                if n.get('sebep') or n.get('hedef') or n.get('not'):
+                    with st.expander(f"📌 {h}  |  Hedef: {tr_format(n.get('hedef',0))} ₺  |  Stop: {tr_format(n.get('stop',0))} ₺"):
+                        if n.get('sebep'):
+                            st.markdown(f"**Alım Gerekçesi:** {n['sebep']}")
+                        if n.get('not'):
+                            st.markdown(f"**Not:** {n['not']}")
+                        st.caption(f"Son güncelleme: {n.get('guncelleme', '—')}")
+        else:
+            st.info("Henüz not girilmemiş.")
+    else:
+        st.info("Portföyde hisse bulunmamaktadır.")
+
+
+# ==========================================
+# DIŞA AKTAR TABU
+# ==========================================
+with tab_export:
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>📤 Portföy Dışa Aktarma</h4>", unsafe_allow_html=True)
+
+    if full_data:
+        exp_df = pd.DataFrame([{
+            'Hisse':        r['Hisse'],
+            'Piyasa':       r['Piyasa'],
+            'Adet':         r['Adet'],
+            'Maliyet (₺)':  r['Maliyet'],
+            'Güncel (₺)':   r['Güncel'],
+            'K/Z (₺)':      r['K/Z'],
+            'Toplam Değer': r['Değer'],
+            'Günlük Değ.':  r['DailyDiff'],
+            'Net Temettü':  r['NetTemettu'],
+            'Sinyal':       r['Sinyal'],
+            'RSI':          r['RSI'],
+        } for r in full_data])
+
+        # Özet istatistikler
+        e1, e2, e3, e4 = st.columns(4)
+        e1.metric("Toplam Değer",    f"{tr_format(exp_df['Toplam Değer'].sum())} ₺")
+        e2.metric("Toplam K/Z",      f"{tr_format(exp_df['K/Z (₺)'].sum())} ₺")
+        e3.metric("Yıllık Temettü",  f"{tr_format(exp_df['Net Temettü'].sum())} ₺")
+        e4.metric("Pozisyon Sayısı", len(exp_df))
+
+        st.divider()
+        st.markdown("#### CSV İndir")
+
+        # CSV
+        csv_data = exp_df.to_csv(index=False, encoding='utf-8-sig', sep=';', decimal=',')
+        st.download_button(
+            label="⬇️ CSV Olarak İndir",
+            data=csv_data.encode('utf-8-sig'),
+            file_name=f"portfoy_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
+            mime='text/csv',
+            use_container_width=True,
+        )
+
+        st.markdown("#### Excel İndir")
+        # Excel (in-memory, openpyxl)
+        try:
+            import io
+            import openpyxl
+            from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                # Portföy sayfası
+                exp_df.to_excel(writer, index=False, sheet_name='Portföy')
+                ws = writer.sheets['Portföy']
+
+                # Başlık stili
+                hdr_fill = PatternFill(fill_type='solid', fgColor='1B2838')
+                hdr_font = Font(color='00D4FF', bold=True, size=11)
+                for cell in ws[1]:
+                    cell.fill      = hdr_fill
+                    cell.font      = hdr_font
+                    cell.alignment = Alignment(horizontal='center')
+
+                # Kolon genişlikleri
+                for col in ws.columns:
+                    max_w = max(len(str(c.value or '')) for c in col) + 4
+                    ws.column_dimensions[col[0].column_letter].width = min(max_w, 22)
+
+                # K/Z renklendirme
+                kz_col = [c.column_letter for c in ws[1] if c.value == 'K/Z (₺)']
+                if kz_col:
+                    for row in ws.iter_rows(min_row=2, min_col=ws[1][exp_df.columns.tolist().index('K/Z (₺)')].column, max_col=ws[1][exp_df.columns.tolist().index('K/Z (₺)')].column):
+                        for cell in row:
+                            try:
+                                v = float(cell.value or 0)
+                                cell.font = Font(color='00E676' if v >= 0 else 'FF1744', bold=True)
+                            except Exception:
+                                pass
+
+                # Performans sayfası
+                if st.session_state.performans:
+                    perf_df_exp = pd.DataFrame(st.session_state.performans)
+                    perf_df_exp.to_excel(writer, index=False, sheet_name='Performans Geçmişi')
+
+            excel_bytes = output.getvalue()
+            st.download_button(
+                label="⬇️ Excel Olarak İndir (.xlsx)",
+                data=excel_bytes,
+                file_name=f"portfoy_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                use_container_width=True,
+            )
+        except ImportError:
+            st.warning("Excel export için `openpyxl` paketi gerekli: `pip install openpyxl`")
+        except Exception as ex:
+            st.error(f"Excel oluşturma hatası: {ex}")
+
+        # Önizleme
+        st.divider()
+        st.markdown("#### Önizleme")
+        st.dataframe(exp_df, use_container_width=True, hide_index=True)
+
+    else:
+        st.info("Dışa aktarmak için portföyde varlık bulunmalıdır.")
 
 # ==========================================
 # FOOTER
