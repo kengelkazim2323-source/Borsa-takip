@@ -104,6 +104,14 @@ if 'dark_mode' not in st.session_state:
     st.session_state.dark_mode = True
 if 'islemler' not in st.session_state:
     st.session_state.islemler = load_json(ISLEM_DOSYASI)
+if 'mobil_mod' not in st.session_state:
+    st.session_state.mobil_mod = False
+if 'tablo_font' not in st.session_state:
+    st.session_state.tablo_font = 13        # px
+if 'tablo_padding' not in st.session_state:
+    st.session_state.tablo_padding = 12     # px
+if 'gizli_sutunlar' not in st.session_state:
+    st.session_state.gizli_sutunlar = []    # gizlenecek sütun başlıkları
 
 @st.cache_data(ttl=3600)
 def fetch_temel_veri(symbol):
@@ -719,9 +727,9 @@ st.markdown(f"""
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@700&display=swap');
     .stApp {{ background-color: {t_sec['bg']}; color: {t_sec['text']}; font-family: '{secili_font}', sans-serif; }}
     [data-testid="stMetric"] {{ background: {t_sec['box']}; padding: 20px !important; border-radius: 12px !important; border: 1px solid {t_sec['accent']} !important; text-align: center; }}
-    .kral-table {{ width: 100%; border-collapse: collapse; background: {t_sec['box']}22; margin-top: 10px; border: 1px solid {t_sec['accent']}33; border-radius: 10px; overflow: hidden; font-family: '{secili_font}', sans-serif; }}
-    .kral-table th {{ padding: 12px; text-align: left; background: {t_sec['accent']}22; color: {t_sec['accent']}; font-weight: 700; border-bottom: 2px solid {t_sec['accent']}44; }}
-    .kral-table td {{ padding: 12px; border-bottom: 1px solid {t_sec['accent']}11; color: {t_sec['text']}; }}
+    .kral-table {{ width: 100%; border-collapse: collapse; background: {t_sec['box']}22; margin-top: 10px; border: 1px solid {t_sec['accent']}33; border-radius: 10px; overflow-x: auto; display: block; font-family: '{secili_font}', sans-serif; }}
+    .kral-table th {{ padding: {st.session_state.tablo_padding}px; text-align: left; background: {t_sec['accent']}22; color: {t_sec['accent']}; font-weight: 700; font-size: {st.session_state.tablo_font}px; border-bottom: 2px solid {t_sec['accent']}44; white-space: nowrap; }}
+    .kral-table td {{ padding: {st.session_state.tablo_padding}px; border-bottom: 1px solid {t_sec['accent']}11; color: {t_sec['text']}; font-size: {st.session_state.tablo_font}px; white-space: nowrap; }}
     .ticker-wrapper {{ width: 100%; overflow: hidden; background: {t_sec['box']}; border-radius: 8px; margin-bottom: 30px; padding: 15px 0; border: 1px solid {t_sec['accent']}44; }}
     .ticker-content {{ display: flex; animation: ticker 25s linear infinite; white-space: nowrap; gap: 60px; }}
     @keyframes ticker {{ 0% {{ transform: translateX(100%); }} 100% {{ transform: translateX(-100%); }} }}
@@ -732,6 +740,7 @@ st.markdown(f"""
     .vy-kart {{ background: {t_sec['box']}; border: 1px solid {t_sec['accent']}33; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }}
     .vy-etiket {{ font-size: 10px; opacity: 0.5; margin-bottom: 2px; letter-spacing: 0.8px; }}
     .vy-deger {{ font-size: 13px; font-weight: 600; }}
+    {'/* MOBİL MOD */ .kral-table th, .kral-table td { padding: 6px 8px !important; font-size: 11px !important; } [data-testid="stMetric"] { padding: 10px !important; } .ticker-content { gap: 30px; }' if st.session_state.mobil_mod else ''}
     </style>
     """, unsafe_allow_html=True)
 
@@ -921,7 +930,7 @@ if tetiklenen_alarmlar:
 # ==========================================
 # 4. TABLAR VE İÇERİK
 # ==========================================
-tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_notlar, tab_islem, tab_export = st.tabs([
+tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_notlar, tab_islem, tab_olcek, tab_export = st.tabs([
     "🇹🇷 TÜRK BORSASI",
     "📊 YATIRIM FONLARI",
     "💰 TEMETTÜ GELİRİ",
@@ -932,6 +941,7 @@ tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_teme
     "🏦 TEMEL VERİLER",
     "📝 NOTLAR",
     "📒 İŞLEM GÜNLÜĞÜ",
+    "📐 EKRAN AYARLARI",
     "📤 DIŞA AKTAR",
 ])
 
@@ -1234,29 +1244,126 @@ with st.sidebar:
         st.session_state.yenileme_suresi = _sure_sec
         st.rerun()
 
-    # Telefon URL bilgisi
-    try:
-        import socket
-        _hostname = socket.gethostname()
-        _local_ip = socket.gethostbyname(_hostname)
-    except Exception:
-        _local_ip = "—"
+    # --- GELİŞMİŞ IP TESPİTİ ---
+    def _get_lan_ips():
+        """Çoklu yöntemle LAN IP adreslerini toplar, 127.x ve 0.0.0.0 filtreler."""
+        ips = []
+        # Yöntem 1: UDP trick (en güvenilir)
+        try:
+            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            _s.connect(("8.8.8.8", 80))
+            _ip = _s.getsockname()[0]
+            _s.close()
+            if _ip and not _ip.startswith("127."):
+                ips.append(_ip)
+        except Exception:
+            pass
+        # Yöntem 2: hostname -I (Linux)
+        try:
+            import subprocess as _sp
+            _r = _sp.run(["hostname", "-I"], capture_output=True, text=True, timeout=2)
+            for _ip in _r.stdout.strip().split():
+                if not _ip.startswith("127.") and _ip != "0.0.0.0" and _ip not in ips:
+                    ips.append(_ip)
+        except Exception:
+            pass
+        # Yöntem 3: ip route (Linux)
+        try:
+            import subprocess as _sp, re as _re
+            _r = _sp.run(["ip", "route", "get", "8.8.8.8"], capture_output=True, text=True, timeout=2)
+            _m = _re.search(r"src (\d+\.\d+\.\d+\.\d+)", _r.stdout)
+            if _m and _m.group(1) not in ips:
+                ips.append(_m.group(1))
+        except Exception:
+            pass
+        return ips
 
-    st.markdown(
-        f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}22;"
-        f"border-radius:8px;padding:8px 12px;margin-top:4px;'>"
-        f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
-        f"<div style='font-size:10px;color:{_acc_s};font-weight:600;'>"
-        f"Aynı Wi-Fi'ya bağlı ol,<br>tarayıcıda şunu aç:</div>"
-        f"<div style='font-size:11px;font-family:monospace;margin-top:4px;"
-        f"word-break:break-all;opacity:0.8;'>"
-        f"http://{_local_ip}:8501</div>"
-        f"<div style='font-size:9px;opacity:0.4;margin-top:4px;'>"
-        f"Aynı URL'yi telefon ve bilgisayarda aç — "
-        f"her ikisi de {st.session_state.yenileme_suresi}sn'de otomatik güncellenir.</div>"
-        f"</div>",
-        unsafe_allow_html=True
+    # Ortam tespiti: Streamlit Cloud mı, local mı?
+    _is_cloud = (
+        os.environ.get('STREAMLIT_SHARING_MODE') is not None
+        or '/mount/src/' in os.path.abspath(__file__)
+        or os.environ.get('STREAMLIT_SERVER_HEADLESS', '') == '1'
     )
+    _port = os.environ.get('STREAMLIT_SERVER_PORT', '8501')
+
+    if _is_cloud:
+        # Streamlit Cloud: tarayıcı adres çubuğundaki URL kullanılmalı
+        st.markdown(
+            f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
+            f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
+            f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
+            f"<div style='font-size:11px;color:{_acc_s};font-weight:600;margin-bottom:4px;'>"
+            f"Streamlit Cloud üzerinde çalışıyor</div>"
+            f"<div style='font-size:10px;opacity:0.7;line-height:1.5;'>"
+            f"Tarayıcının adres çubuğundaki URL'yi<br>"
+            f"telefonuna kopyala — direk açılır.</div>"
+            f"<div style='font-size:9px;opacity:0.4;margin-top:6px;'>"
+            f"Her {st.session_state.yenileme_suresi}sn'de otomatik yenilenir.</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        # Local: LAN IP bul ve göster
+        _ips = _get_lan_ips()
+
+        if _ips:
+            _ip  = _ips[0]
+            _url = f"http://{_ip}:{_port}"
+
+            st.markdown(
+                f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
+                f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
+                f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
+                f"<div style='font-size:10px;opacity:0.7;margin-bottom:6px;line-height:1.5;'>"
+                f"1. Telefonu aynı Wi-Fi'ya bağla<br>"
+                f"2. Tarayıcıda şu adresi aç:</div>"
+                f"<div style='font-size:13px;font-family:monospace;font-weight:700;"
+                f"color:{_acc_s};background:{t_sec['bg']};padding:6px 10px;"
+                f"border-radius:6px;word-break:break-all;letter-spacing:0.5px;'>"
+                f"{_url}</div>",
+                unsafe_allow_html=True
+            )
+
+            # Birden fazla IP varsa diğerlerini de göster
+            if len(_ips) > 1:
+                st.markdown(
+                    f"<div style='font-size:9px;opacity:0.45;margin-top:4px;'>"
+                    f"Diğer adresler: " + " · ".join(f"http://{ip}:{_port}" for ip in _ips[1:]) +
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+
+            st.markdown(
+                f"<div style='font-size:9px;opacity:0.4;margin-top:4px;'>"
+                f"Her {st.session_state.yenileme_suresi}sn'de otomatik yenilenir · "
+                f"Çalışmazsa `streamlit run Borsa.py --server.address=0.0.0.0` ile başlat"
+                f"</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+
+            # Kopyalama butonu
+            if st.button("📋 URL'yi Kopyala", key="url_kopyala", use_container_width=True):
+                st.code(_url, language=None)
+                st.caption("↑ Yukarıdaki URL'yi seç ve kopyala")
+        else:
+            st.markdown(
+                f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
+                f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
+                f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
+                f"<div style='font-size:10px;opacity:0.7;line-height:1.5;'>"
+                f"IP adresi otomatik bulunamadı.<br>"
+                f"Terminalde şunu çalıştır:<br>"
+                f"<span style='font-family:monospace;color:{_acc_s};'>"
+                f"streamlit run Borsa.py --server.address=0.0.0.0</span><br><br>"
+                f"Sonra telefon tarayıcısında:<br>"
+                f"<span style='font-family:monospace;color:{_acc_s};'>"
+                f"http://[BİLGİSAYAR-IP]:{_port}</span>"
+                f"</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+            st.caption("💡 Bilgisayarın IP'sini öğrenmek için: `ipconfig` (Windows) veya `ifconfig` (Mac/Linux)")
 
 
 # ==========================================
@@ -2599,6 +2706,143 @@ with tab_islem:
         st.info("Henüz işlem girilmemiş. Yukarıdaki formu kullanarak al/sat işlemlerini kaydet.")
 
 # ==========================================
+# EKRAN AYARLARI TABU
+# ==========================================
+with tab_olcek:
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>📐 Ekran & Görünüm Ayarları</h4>",
+                unsafe_allow_html=True)
+
+    # --- A) EKRAN BOYUTU CİVE ---
+    # JavaScript ile anlık ekran genişliğini ve viewport'u ölç
+    olcek_js = f"""
+    <div id="ekran-bilgi" style="background:{box};border:1px solid {acc}33;
+         border-radius:10px;padding:14px 18px;margin-bottom:12px;">
+      <div style="color:{acc};font-weight:700;font-size:11px;letter-spacing:1px;margin-bottom:10px;">
+        📱 ANLLIK EKRAN BİLGİSİ
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div>
+          <div style="font-size:10px;opacity:0.5;">EKRAN GENİŞLİĞİ</div>
+          <div id="ekran-gen" style="font-size:18px;font-weight:700;color:{acc};">—</div>
+          <div style="font-size:9px;opacity:0.4;">px (fiziksel)</div>
+        </div>
+        <div>
+          <div style="font-size:10px;opacity:0.5;">VIEWPORT GENİŞLİĞİ</div>
+          <div id="viewport-gen" style="font-size:18px;font-weight:700;color:{acc};">—</div>
+          <div style="font-size:9px;opacity:0.4;">px (tarayıcı)</div>
+        </div>
+        <div>
+          <div style="font-size:10px;opacity:0.5;">CİHAZ TÜRÜ</div>
+          <div id="cihaz-turu" style="font-size:14px;font-weight:700;color:{acc};">—</div>
+          <div style="font-size:9px;opacity:0.4;">tahmini</div>
+        </div>
+      </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid {acc}18;">
+        <div style="font-size:10px;opacity:0.5;">PIXEL RATIO</div>
+        <div id="pixel-ratio" style="font-size:12px;color:{txt};opacity:0.7;">—</div>
+      </div>
+      <div style="margin-top:6px;">
+        <div style="font-size:10px;opacity:0.5;">USER AGENT (Cihaz Bilgisi)</div>
+        <div id="user-agent" style="font-size:10px;color:{txt};opacity:0.55;word-break:break-all;line-height:1.4;">—</div>
+      </div>
+    </div>
+    <script>
+    function guncelle() {{
+        var w = screen.width, vw = window.innerWidth;
+        document.getElementById('ekran-gen').innerText = w + ' px';
+        document.getElementById('viewport-gen').innerText = vw + ' px';
+        document.getElementById('pixel-ratio').innerText = 'x' + window.devicePixelRatio.toFixed(1);
+        document.getElementById('user-agent').innerText = navigator.userAgent;
+        var tur = vw < 480 ? '📱 Telefon' : vw < 768 ? '📱 Geniş Telefon' : vw < 1024 ? '💻 Tablet' : '🖥️ Masaüstü';
+        document.getElementById('cihaz-turu').innerText = tur;
+    }}
+    guncelle();
+    window.addEventListener('resize', guncelle);
+    setInterval(guncelle, 2000);
+    </script>
+    """
+    st.components.v1.html(olcek_js, height=240)
+
+    st.divider()
+
+    # --- B) TABLO AYARLARI ---
+    st.markdown(f"<div style='color:{acc};font-weight:700;font-size:12px;letter-spacing:1px;margin-bottom:10px;'>🗂️ TABLO GÖRÜNÜM AYARLARI</div>",
+                unsafe_allow_html=True)
+
+    oa1, oa2 = st.columns(2)
+    _yeni_font = oa1.slider(
+        "Tablo yazı boyutu (px)", 9, 18,
+        value=st.session_state.tablo_font, key="oa_font"
+    )
+    _yeni_pad = oa2.slider(
+        "Tablo hücre boşluğu (px)", 4, 20,
+        value=st.session_state.tablo_padding, key="oa_pad"
+    )
+    if _yeni_font != st.session_state.tablo_font or _yeni_pad != st.session_state.tablo_padding:
+        st.session_state.tablo_font    = _yeni_font
+        st.session_state.tablo_padding = _yeni_pad
+        st.rerun()
+
+    # Önizleme satırı
+    st.markdown(
+        f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>Önizleme:</div>"
+        f"<table class='kral-table' style='width:auto;'><thead>"
+        f"<tr><th>HİSSE</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr>"
+        f"</thead><tbody>"
+        f"<tr><td><b>GARAN.IS</b></td><td>42,5000 ₺</td>"
+        f"<td style='color:#00e676;font-weight:bold;'>+1.250,00 ₺</td>"
+        f"<td><b>42.500,00 ₺</b></td></tr>"
+        f"<tr><td><b>THYAO.IS</b></td><td>198,3000 ₺</td>"
+        f"<td style='color:#ff1744;font-weight:bold;'>-800,00 ₺</td>"
+        f"<td><b>198.300,00 ₺</b></td></tr>"
+        f"</tbody></table>",
+        unsafe_allow_html=True
+    )
+
+    st.divider()
+
+    # --- C) MOBİL UYUMLULUK MODU ---
+    st.markdown(f"<div style='color:{acc};font-weight:700;font-size:12px;letter-spacing:1px;margin-bottom:10px;'>📱 MOBİL UYUMLULUK MODU</div>",
+                unsafe_allow_html=True)
+
+    _mobil_toggle = st.toggle(
+        "Mobil Modu Etkinleştir",
+        value=st.session_state.mobil_mod,
+        key="mobil_toggle",
+        help="Tablolarda daha küçük font ve padding kullanır, ticker aralığını sıkıştırır"
+    )
+    if _mobil_toggle != st.session_state.mobil_mod:
+        st.session_state.mobil_mod = _mobil_toggle
+        st.rerun()
+
+    if st.session_state.mobil_mod:
+        st.success("✅ Mobil mod aktif — tablolar telefon ekranına optimize edildi")
+    else:
+        st.info("📺 Masaüstü modu aktif")
+
+    # Mobil mod kısaca ne yapar
+    st.markdown(
+        f"<div style='background:{box};border:1px solid {acc}22;border-radius:8px;"
+        f"padding:10px 14px;margin-top:8px;font-size:11px;line-height:1.7;opacity:0.75;'>"
+        f"<b style='color:{acc};'>Mobil mod değişiklikleri:</b><br>"
+        f"• Tablo padding: 12px → 6px<br>"
+        f"• Tablo font: seçili boyut → 11px<br>"
+        f"• Ticker aralığı: 60px → 30px<br>"
+        f"• Metrik kartı padding sıkıştırılır"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+
+    st.divider()
+
+    # --- D) HIZLI RESET ---
+    if st.button("🔄 Varsayılana Sıfırla", key="olcek_reset", use_container_width=True):
+        st.session_state.tablo_font    = 13
+        st.session_state.tablo_padding = 12
+        st.session_state.mobil_mod     = False
+        st.rerun()
+
 # DIŞA AKTAR TABU
 # ==========================================
 with tab_export:
