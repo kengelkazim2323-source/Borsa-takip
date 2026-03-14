@@ -1638,10 +1638,8 @@ with tab_analiz:
                     x=hist.index,
                     open=hist['Open'], high=hist['High'],
                     low=hist['Low'],   close=hist['Close'],
-                    increasing_line_color='#00e676',
-                    decreasing_line_color='#ff1744',
-                    increasing_fillcolor='#00e67644',
-                    decreasing_fillcolor='#ff174444',
+                    increasing=dict(line=dict(color='#00e676'), fillcolor='#00e67666'),
+                    decreasing=dict(line=dict(color='#ff1744'), fillcolor='#ff174466'),
                     name=cs_hisse,
                 )])
             else:
