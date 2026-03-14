@@ -1416,8 +1416,9 @@ with tab_analiz:
             hist = cs_data['hist'].copy()
             hist.index = hist.index.tz_localize(None) if hist.index.tz is not None else hist.index
 
-            if cs_tip == "Candlestick":
-                cs_fig = go.Figure(data=[go.Candlestick(
+            if cs_tip = "Candlestick":
+                cs_fig = go.Figure(data=[go.Candlestick
+                (
                     x=hist.index,
                     open=hist['Open'], high=hist['High'],
                     low=hist['Low'],   close=hist['Close'],
