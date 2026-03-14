@@ -35,6 +35,7 @@ IPO_DOSYASI        = _veri_yolu("halka_arz_kayitlari.json")
 ALARM_DOSYASI      = _veri_yolu("alarm_kayitlari.json")
 PERFORMANS_DOSYASI = _veri_yolu("portfoy_performans.json")
 NOTLAR_DOSYASI     = _veri_yolu("hisse_notlari.json")
+ISLEM_DOSYASI      = _veri_yolu("islem_gunlugu.json")
 
 def load_json(dosya_adi):
     """
@@ -101,6 +102,8 @@ if 'notlar' not in st.session_state:
     st.session_state.notlar = {n['Hisse']: n for n in raw_notlar} if raw_notlar else {}
 if 'dark_mode' not in st.session_state:
     st.session_state.dark_mode = True
+if 'islemler' not in st.session_state:
+    st.session_state.islemler = load_json(ISLEM_DOSYASI)
 
 @st.cache_data(ttl=3600)
 def fetch_temel_veri(symbol):
@@ -378,12 +381,8 @@ def fetch_stock_data(symbol):
                 yillik_net_temettu = 0.0
                 son_tarih = "-"
 
-        # isyatirim.com.tr birincil kaynak olarak dene (daha doğru net temettü)
-        isy = fetch_temettu_isyatirim(symbol)
-        if isy:
-            yillik_net_temettu = isy['net']
-            son_tarih          = isy['tarih']
-
+        # isyatirim.com.tr birincil kaynak — fetch_single_item'da çağrılır
+        # (nested @cache_data uyarısını önlemek için burada değil)
         return {"hist": hist, "temettu": yillik_net_temettu, "tarih": son_tarih}
 
     except Exception as e:
@@ -560,6 +559,14 @@ def fetch_single_item(args):
             pc = float(d['hist']['Close'].iloc[-2])
             sinyal, rsi_val, macd_h, bb_pct = get_signal(d['hist'])
             temettu = d['temettu']; tarih = d['tarih']
+            # isyatirim.com.tr birincil temettü kaynağı (nested cache sorununu önlemek için burada)
+            try:
+                isy = fetch_temettu_isyatirim(item['Hisse'])
+                if isy:
+                    temettu = isy['net']
+                    tarih   = isy['tarih']
+            except Exception:
+                pass
         else:
             c = item['Maliyet']; pc = c
             sinyal = "⚠️ VERİ YOK"
@@ -914,7 +921,7 @@ if tetiklenen_alarmlar:
 # ==========================================
 # 4. TABLAR VE İÇERİK
 # ==========================================
-tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_notlar, tab_export = st.tabs([
+tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_temel, tab_notlar, tab_islem, tab_export = st.tabs([
     "🇹🇷 TÜRK BORSASI",
     "📊 YATIRIM FONLARI",
     "💰 TEMETTÜ GELİRİ",
@@ -924,6 +931,7 @@ tab_tr, tab_fon, tab_div, tab_ipo, tab_alarm, tab_analiz, tab_haberler, tab_teme
     "📰 HABERLER",
     "🏦 TEMEL VERİLER",
     "📝 NOTLAR",
+    "📒 İŞLEM GÜNLÜĞÜ",
     "📤 DIŞA AKTAR",
 ])
 
@@ -1063,6 +1071,59 @@ with st.sidebar:
             )
     except Exception as _e:
         st.caption("Kur verisi yükleniyor...")
+
+    st.divider()
+
+    # --- ORTALAMA MALİYET HESAPLAYICI ---
+    _acc_om = t_sec['accent']
+    st.markdown(
+        f"<div style='color:{_acc_om};font-weight:700;font-size:13px;"
+        f"letter-spacing:1px;margin-bottom:8px;'>📐 ORTALAMA MALİYET</div>",
+        unsafe_allow_html=True
+    )
+    _om_hisseler = sorted(set(x['Hisse'] for x in st.session_state.portfoy))
+    if _om_hisseler:
+        _om_hisse = st.selectbox("Hisse", _om_hisseler, key="om_hisse_sec")
+        _om_mevcut = next(
+            (x for x in st.session_state.portfoy if x['Hisse'] == _om_hisse), None
+        )
+        if _om_mevcut:
+            _om_adet     = int(_om_mevcut['Adet'])
+            _om_maliyet  = float(_om_mevcut['Maliyet'])
+            _om_c1, _om_c2 = st.columns(2)
+            _om_ek_adet  = _om_c1.number_input(
+                "Ek Adet", min_value=1, step=1, value=100, key="om_ek_adet"
+            )
+            _om_ek_fiyat = _om_c2.number_input(
+                "Alış Fiyatı (₺)", min_value=0.0001, format="%.4f",
+                value=float(next((x['Güncel'] for x in full_data if x['Hisse'] == _om_hisse),
+                                 _om_maliyet)),
+                key="om_ek_fiyat"
+            )
+            _toplam_adet   = _om_adet + _om_ek_adet
+            _yeni_maliyet  = ((_om_adet * _om_maliyet) + (_om_ek_adet * _om_ek_fiyat)) / _toplam_adet
+            _fark          = _yeni_maliyet - _om_maliyet
+            _fark_color    = "#00e676" if _fark <= 0 else "#ff1744"
+            st.markdown(
+                f"<div style='background:{t_sec['box']};border:1px solid {_acc_om}33;"
+                f"border-radius:8px;padding:10px 14px;margin-top:4px;'>"
+                f"<div style='display:grid;grid-template-columns:1fr 1fr;gap:6px;'>"
+                f"<div><div style='font-size:9px;opacity:0.45;'>MEVCUT MALİYET</div>"
+                f"    <div style='font-size:12px;font-weight:600;'>{tr_format4(_om_maliyet)} ₺</div></div>"
+                f"<div><div style='font-size:9px;opacity:0.45;'>YENİ ORTALAMA</div>"
+                f"    <div style='font-size:13px;font-weight:700;color:{_acc_om};'>"
+                f"    {tr_format4(_yeni_maliyet)} ₺</div></div>"
+                f"<div><div style='font-size:9px;opacity:0.45;'>TOPLAM ADET</div>"
+                f"    <div style='font-size:12px;font-weight:600;'>{_toplam_adet}</div></div>"
+                f"<div><div style='font-size:9px;opacity:0.45;'>MALİYET FARKI</div>"
+                f"    <div style='font-size:12px;font-weight:700;color:{_fark_color};'>"
+                f"    {'+' if _fark > 0 else ''}{tr_format4(_fark)} ₺</div></div>"
+                f"</div>"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+    else:
+        st.caption("Portföyde hisse yok.")
 
     st.divider()
 
@@ -2346,6 +2407,174 @@ with tab_notlar:
 
 
 # ==========================================
+# İŞLEM GÜNLÜĞÜ TABU
+# ==========================================
+with tab_islem:
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>📒 İşlem Günlüğü</h4>", unsafe_allow_html=True)
+    st.markdown(
+        f"<small style='color:{acc}88;'>Al/Sat işlemlerini kaydet — gerçekleşmiş kâr/zarar otomatik hesaplanır</small>",
+        unsafe_allow_html=True
+    )
+
+    # --- Yeni İşlem Ekle ---
+    with st.form("islem_form", clear_on_submit=True):
+        _if1, _if2, _if3, _if4, _if5 = st.columns([2, 1, 2, 2, 1])
+        _if_hisse = _if1.text_input("Hisse Kodu", placeholder="GARAN.IS")
+        _if_tip   = _if2.selectbox("İşlem", ["AL", "SAT"])
+        _if_adet  = _if3.number_input("Adet", min_value=1, step=1, value=100)
+        _if_fiyat = _if4.number_input("Fiyat (₺)", min_value=0.0001, format="%.4f", value=1.0)
+        _if5.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+
+        _if_tarih = st.date_input(
+            "İşlem Tarihi",
+            value=datetime.now(pytz.timezone('Europe/Istanbul')).date(),
+            key="islem_tarih"
+        )
+        _if_not = st.text_input("Not (isteğe bağlı)", placeholder="Neden al/sattım?")
+
+        if st.form_submit_button("➕ İşlemi Kaydet", use_container_width=True):
+            if _if_hisse:
+                _yeni_islem = {
+                    "id":     len(st.session_state.islemler),
+                    "Hisse":  _if_hisse.upper().strip(),
+                    "Tip":    _if_tip,
+                    "Adet":   int(_if_adet),
+                    "Fiyat":  float(_if_fiyat),
+                    "Toplam": round(int(_if_adet) * float(_if_fiyat), 2),
+                    "Tarih":  str(_if_tarih),
+                    "Not":    _if_not,
+                    "Kayit":  datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%d.%m.%Y %H:%M'),
+                }
+                st.session_state.islemler.append(_yeni_islem)
+                # Tarihe göre sırala
+                st.session_state.islemler = sorted(
+                    st.session_state.islemler, key=lambda x: x.get('Tarih', ''), reverse=True
+                )
+                save_json(ISLEM_DOSYASI, st.session_state.islemler)
+                st.success(f"✅ {_if_tip} işlemi kaydedildi: {_if_hisse.upper()} × {_if_adet} @ {tr_format4(float(_if_fiyat))} ₺")
+                st.rerun()
+
+    st.divider()
+
+    if st.session_state.islemler:
+        # --- Özet İstatistikler ---
+        _islem_df = pd.DataFrame(st.session_state.islemler)
+        _al_toplam  = _islem_df[_islem_df['Tip'] == 'AL']['Toplam'].sum()
+        _sat_toplam = _islem_df[_islem_df['Tip'] == 'SAT']['Toplam'].sum()
+        _net_kz     = _sat_toplam - _al_toplam
+        _net_color  = "#00e676" if _net_kz >= 0 else "#ff1744"
+
+        _im1, _im2, _im3, _im4 = st.columns(4)
+        _im1.metric("Toplam Al",       f"{tr_format(_al_toplam)} ₺")
+        _im2.metric("Toplam Sat",      f"{tr_format(_sat_toplam)} ₺")
+        _im3.metric("Net Gerçekleşen", f"{tr_format(abs(_net_kz))} ₺",
+                    delta=("Kâr" if _net_kz >= 0 else "Zarar"))
+        _im4.metric("İşlem Sayısı",    len(_islem_df))
+
+        # --- Hisse bazlı gerçekleşen K/Z ---
+        st.markdown(f"<h5 style='color:{acc};margin-top:12px;'>Hisse Bazlı Gerçekleşen K/Z</h5>",
+                    unsafe_allow_html=True)
+
+        _hisse_kz = {}
+        for _, _row in _islem_df.iterrows():
+            _h = _row['Hisse']
+            if _h not in _hisse_kz:
+                _hisse_kz[_h] = {'al_maliyet': 0.0, 'al_adet': 0,
+                                  'sat_gelir': 0.0,  'sat_adet': 0}
+            if _row['Tip'] == 'AL':
+                _hisse_kz[_h]['al_maliyet'] += _row['Toplam']
+                _hisse_kz[_h]['al_adet']    += _row['Adet']
+            else:
+                _hisse_kz[_h]['sat_gelir'] += _row['Toplam']
+                _hisse_kz[_h]['sat_adet']  += _row['Adet']
+
+        _kz_tbl = (
+            "<table class='kral-table'><thead><tr>"
+            "<th>HİSSE</th><th>AL ADET</th><th>SAT ADET</th>"
+            "<th>AL MALİYET</th><th>SAT GELİR</th>"
+            "<th>GERÇEKLEŞEN K/Z</th><th>ORT. MALİYET</th>"
+            "</tr></thead><tbody>"
+        )
+        for _h, _v in sorted(_hisse_kz.items()):
+            _gkz       = _v['sat_gelir'] - (_v['al_maliyet'] * (_v['sat_adet'] / _v['al_adet'])
+                         if _v['al_adet'] > 0 else 0)
+            _kz_c      = "#00e676" if _gkz >= 0 else "#ff1744"
+            _ort_mal   = (_v['al_maliyet'] / _v['al_adet']) if _v['al_adet'] > 0 else 0
+            _kz_tbl += (
+                f"<tr>"
+                f"<td><b>{_h}</b></td>"
+                f"<td>{_v['al_adet']}</td>"
+                f"<td>{_v['sat_adet']}</td>"
+                f"<td>{tr_format(_v['al_maliyet'])} ₺</td>"
+                f"<td>{tr_format(_v['sat_gelir'])} ₺</td>"
+                f"<td style='color:{_kz_c};font-weight:bold;'>{tr_format(_gkz)} ₺</td>"
+                f"<td>{tr_format4(_ort_mal)} ₺</td>"
+                f"</tr>"
+            )
+        _kz_tbl += "</tbody></table>"
+        st.markdown(_kz_tbl, unsafe_allow_html=True)
+
+        st.divider()
+
+        # --- Tüm İşlemler Tablosu ---
+        st.markdown(f"<h5 style='color:{acc};'>Tüm İşlemler</h5>", unsafe_allow_html=True)
+
+        # Filtre
+        _flt1, _flt2 = st.columns([3, 1])
+        _filtre_hisse = _flt1.multiselect(
+            "Hisse Filtrele", ["Tümü"] + sorted(_islem_df['Hisse'].unique().tolist()),
+            default=["Tümü"], key="islem_filtre"
+        )
+        _filtre_tip = _flt2.selectbox("Tür", ["Tümü", "AL", "SAT"], key="islem_tip_filtre")
+
+        _gosterilecek = st.session_state.islemler
+        if "Tümü" not in _filtre_hisse and _filtre_hisse:
+            _gosterilecek = [x for x in _gosterilecek if x['Hisse'] in _filtre_hisse]
+        if _filtre_tip != "Tümü":
+            _gosterilecek = [x for x in _gosterilecek if x['Tip'] == _filtre_tip]
+
+        _islem_tbl = (
+            "<table class='kral-table'><thead><tr>"
+            "<th>TARİH</th><th>HİSSE</th><th>TİP</th>"
+            "<th>ADET</th><th>FİYAT</th><th>TOPLAM</th><th>NOT</th><th>SİL</th>"
+            "</tr></thead><tbody>"
+        )
+        for _ix in _gosterilecek:
+            _tip_color = "#00e676" if _ix['Tip'] == 'AL' else "#ff1744"
+            _islem_tbl += (
+                f"<tr>"
+                f"<td style='font-size:11px;'>{_ix.get('Tarih','')}</td>"
+                f"<td><b>{_ix['Hisse']}</b></td>"
+                f"<td style='color:{_tip_color};font-weight:700;'>{_ix['Tip']}</td>"
+                f"<td>{_ix['Adet']}</td>"
+                f"<td>{tr_format4(_ix['Fiyat'])} ₺</td>"
+                f"<td>{tr_format(_ix['Toplam'])} ₺</td>"
+                f"<td style='font-size:11px;opacity:0.6;'>{_ix.get('Not','')}</td>"
+                f"<td>—</td>"
+                f"</tr>"
+            )
+        _islem_tbl += "</tbody></table>"
+        st.markdown(_islem_tbl, unsafe_allow_html=True)
+
+        # Silme
+        st.markdown("<br>", unsafe_allow_html=True)
+        with st.expander("🗑️ İşlem Sil"):
+            for _six, _isl in enumerate(st.session_state.islemler):
+                _sc1, _sc2 = st.columns([5, 1])
+                _sc1.markdown(
+                    f"**{_isl.get('Tarih','')}** · {_isl['Hisse']} · "
+                    f"{_isl['Tip']} · {_isl['Adet']} lot @ "
+                    f"{tr_format4(_isl['Fiyat'])} ₺"
+                )
+                if _sc2.button("❌", key=f"del_islem_{_six}"):
+                    st.session_state.islemler.pop(_six)
+                    save_json(ISLEM_DOSYASI, st.session_state.islemler)
+                    st.rerun()
+    else:
+        st.info("Henüz işlem girilmemiş. Yukarıdaki formu kullanarak al/sat işlemlerini kaydet.")
+
+# ==========================================
 # DIŞA AKTAR TABU
 # ==========================================
 with tab_export:
@@ -2428,6 +2657,9 @@ with tab_export:
                 if st.session_state.performans:
                     perf_df_exp = pd.DataFrame(st.session_state.performans)
                     perf_df_exp.to_excel(writer, index=False, sheet_name='Performans Geçmişi')
+                if st.session_state.islemler:
+                    islem_df_exp = pd.DataFrame(st.session_state.islemler)
+                    islem_df_exp.to_excel(writer, index=False, sheet_name='İşlem Günlüğü')
 
             excel_bytes = output.getvalue()
             st.download_button(
