@@ -1525,7 +1525,7 @@ with tab_analiz:
                     increasing_fillcolor='#00e67644',
                     decreasing_fillcolor='#ff174444',
                     name=cs_hisse,
-                )
+                )])
             else:
                 cs_fig = go.Figure(data=[go.Scatter(
                     x=hist.index, y=hist['Close'],
