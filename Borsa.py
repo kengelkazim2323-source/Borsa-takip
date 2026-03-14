@@ -402,6 +402,15 @@ def tr_format4(val):
         return f"{val:,.4f}".replace(",", "X").replace(".", ",").replace("X", ".")
     except: return "0,0000"
 
+def hex_rgba(hex_color, alpha=0.08):
+    """6-digit hex rengi plotly uyumlu rgba() string'e çevirir."""
+    try:
+        h = hex_color.lstrip('#')
+        r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+        return f"rgba({r},{g},{b},{alpha})"
+    except Exception:
+        return f"rgba(128,128,128,{alpha})"
+
 # ==========================================
 # GELİŞTİRİLMİŞ SİNYAL MOTORU
 # RSI + MA20 + MACD + Bollinger Bands
@@ -1636,19 +1645,25 @@ with tab_analiz:
             if cs_tip == "Candlestick":
                 cs_fig = go.Figure(data=[go.Candlestick(
                     x=hist.index,
-                    open=hist['Open'], high=hist['High'],
-                    low=hist['Low'],   close=hist['Close'],
-                    increasing=dict(line=dict(color='#00e676'), fillcolor='#00e67666'),
-                    decreasing=dict(line=dict(color='#ff1744'), fillcolor='#ff174466'),
+                    open=hist['Open'],
+                    high=hist['High'],
+                    low=hist['Low'],
+                    close=hist['Close'],
                     name=cs_hisse,
                 )])
+                # Renkleri update_traces ile ayrı ayrı ayarla (versiyon uyumlu)
+                cs_fig.update_traces(
+                    selector=dict(type='candlestick'),
+                    increasing=dict(line=dict(color='#00e676')),
+                    decreasing=dict(line=dict(color='#ff1744')),
+                )
             else:
                 cs_fig = go.Figure(data=[go.Scatter(
                     x=hist.index, y=hist['Close'],
                     mode='lines',
                     line=dict(color=acc, width=2),
                     fill='tozeroy',
-                    fillcolor=acc + '18',
+                    fillcolor=hex_rgba(acc, 0.09),
                     name=cs_hisse,
                 )])
 
@@ -1668,12 +1683,12 @@ with tab_analiz:
                 height=380,
                 margin=dict(t=40, b=40, l=40, r=20),
                 xaxis=dict(
-                    showgrid=True, gridcolor=acc + '15',
+                    showgrid=True, gridcolor=hex_rgba(acc, 0.08),
                     rangeslider=dict(visible=False),
                     color=txt,
                 ),
                 yaxis=dict(
-                    showgrid=True, gridcolor=acc + '15',
+                    showgrid=True, gridcolor=hex_rgba(acc, 0.08),
                     color=txt, side='right',
                 ),
                 legend=dict(
@@ -1710,7 +1725,7 @@ with tab_analiz:
             name='Portföy Değeri',
             line=dict(color=acc, width=2.5),
             marker=dict(size=5, color=acc),
-            fill='tozeroy', fillcolor=acc + '15',
+            fill='tozeroy', fillcolor=hex_rgba(acc, 0.08),
             hovertemplate='<b>%{x|%d.%m.%Y}</b><br>Değer: %{y:,.0f} ₺<extra></extra>',
         ))
         pf_fig.add_trace(go.Bar(
@@ -1727,8 +1742,8 @@ with tab_analiz:
             font=dict(color=txt, size=11, family=secili_font),
             height=360,
             margin=dict(t=50, b=40, l=40, r=60),
-            xaxis=dict(showgrid=True, gridcolor=acc+'15', color=txt),
-            yaxis=dict(showgrid=True, gridcolor=acc+'15', color=txt,
+            xaxis=dict(showgrid=True, gridcolor=hex_rgba(acc, 0.08), color=txt),
+            yaxis=dict(showgrid=True, gridcolor=hex_rgba(acc, 0.08), color=txt,
                        title=dict(text='Değer (₺)', font=dict(size=11))),
             yaxis2=dict(overlaying='y', side='right', showgrid=False, color=txt,
                         title=dict(text='K/Z (₺)', font=dict(size=11))),
@@ -1980,7 +1995,7 @@ with tab_temel:
                     x=portfoy_norm.index, y=portfoy_norm.values,
                     mode='lines', name='Portföy Ort.',
                     line=dict(color=acc, width=2.5),
-                    fill='tonexty', fillcolor=acc + '10',
+                    fill='tonexty', fillcolor=hex_rgba(acc, 0.06),
                     hovertemplate='<b>Portföy</b><br>%{x|%d.%m.%Y}<br>%{y:.1f}<extra></extra>',
                 ))
             kars_fig.add_hline(y=100, line_dash='dash', line_color=txt, opacity=0.2)
@@ -1989,8 +2004,8 @@ with tab_temel:
                 font=dict(color=txt, size=11, family=secili_font),
                 height=360,
                 margin=dict(t=40, b=40, l=50, r=20),
-                xaxis=dict(showgrid=True, gridcolor=acc+'15', color=txt),
-                yaxis=dict(showgrid=True, gridcolor=acc+'15', color=txt,
+                xaxis=dict(showgrid=True, gridcolor=hex_rgba(acc, 0.08), color=txt),
+                yaxis=dict(showgrid=True, gridcolor=hex_rgba(acc, 0.08), color=txt,
                            title=dict(text='Normalize (Başlangıç=100)', font=dict(size=10))),
                 legend=dict(orientation='h', x=0, y=1.08,
                             font=dict(size=10, color=txt), bgcolor='rgba(0,0,0,0)'),
