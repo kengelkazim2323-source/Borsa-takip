@@ -21,33 +21,72 @@ logger = logging.getLogger(__name__)
 # ==========================================
 # 0. VERİ YÖNETİMİ
 # ==========================================
-PORTFOY_DOSYASI    = "portfoy_kayitlari.json"
-IPO_DOSYASI        = "halka_arz_kayitlari.json"
-ALARM_DOSYASI      = "alarm_kayitlari.json"
-PERFORMANS_DOSYASI = "portfoy_performans.json"
-NOTLAR_DOSYASI     = "hisse_notlari.json"
+# Dosyaları daima bu script'in bulunduğu dizine kaydet.
+# Böylece kod güncellendiğinde veya farklı dizinden çalıştırıldığında
+# veriler kaybolmaz.
+_VERI_DIZIN = os.path.dirname(os.path.abspath(__file__))
+
+def _veri_yolu(dosya_adi):
+    """Dosya adını, script'in dizinine göre mutlak yola çevirir."""
+    return os.path.join(_VERI_DIZIN, dosya_adi)
+
+PORTFOY_DOSYASI    = _veri_yolu("portfoy_kayitlari.json")
+IPO_DOSYASI        = _veri_yolu("halka_arz_kayitlari.json")
+ALARM_DOSYASI      = _veri_yolu("alarm_kayitlari.json")
+PERFORMANS_DOSYASI = _veri_yolu("portfoy_performans.json")
+NOTLAR_DOSYASI     = _veri_yolu("hisse_notlari.json")
 
 def load_json(dosya_adi):
-    if not os.path.exists(dosya_adi): return []
-    try:
-        with open(dosya_adi, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            if not isinstance(data, list):
-                return []
-            # Performans dosyası 'tarih' key'i kullanır, portföy 'Hisse' key'i
-            if data and 'tarih' in data[0] and 'Hisse' not in data[0]:
-                return sorted(data, key=lambda x: x.get('tarih', ''))
-            return sorted(data, key=lambda x: x.get('Hisse', ''))
-    except Exception as e:
-        logger.error(f"JSON yükleme hatası ({dosya_adi}): {e}")
-        return []
+    """
+    JSON dosyasını yükler.
+    Dosya bozuksa .bak yedeğini dener.
+    Veri yoksa boş liste döner — asla exception fırlatmaz.
+    """
+    for deneme in [dosya_adi, dosya_adi + ".bak"]:
+        if not os.path.exists(deneme):
+            continue
+        try:
+            with open(deneme, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if not isinstance(data, list):
+                    continue
+                # Performans dosyası 'tarih' key'i kullanır
+                if data and 'tarih' in data[0] and 'Hisse' not in data[0]:
+                    return sorted(data, key=lambda x: x.get('tarih', ''))
+                return sorted(data, key=lambda x: x.get('Hisse', ''))
+        except Exception as e:
+            logger.error(f"JSON yükleme hatası ({deneme}): {e}")
+    return []
 
 def save_json(dosya_adi, data):
+    """
+    JSON dosyasını kaydeder.
+    Kaydetmeden önce mevcut dosyayı .bak olarak yedekler.
+    Atomic write: önce .tmp'ye yazar, sonra rename eder — yarım kayıt olmaz.
+    """
     try:
-        with open(dosya_adi, "w", encoding="utf-8") as f:
+        # Varsa mevcut dosyayı yedekle
+        if os.path.exists(dosya_adi):
+            try:
+                import shutil
+                shutil.copy2(dosya_adi, dosya_adi + ".bak")
+            except Exception as e:
+                logger.warning(f"Yedekleme başarısız ({dosya_adi}): {e}")
+
+        # Geçici dosyaya yaz → atomic rename
+        tmp = dosya_adi + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
+        os.replace(tmp, dosya_adi)   # atomic: yarım kayıt imkansız
+
     except Exception as e:
         logger.error(f"JSON kaydetme hatası ({dosya_adi}): {e}")
+        # Geçici dosya kaldıysa temizle
+        try:
+            if os.path.exists(dosya_adi + ".tmp"):
+                os.remove(dosya_adi + ".tmp")
+        except Exception:
+            pass
 
 if 'portfoy' not in st.session_state:
     st.session_state.portfoy = load_json(PORTFOY_DOSYASI)
@@ -528,6 +567,15 @@ def fetch_single_item(args):
             temettu = 0.0; tarih = "-"
 
     adet_int = int(item['Adet'])
+
+    # Son 7 günlük kapanış verisi (sparkline için)
+    spark_prices = []
+    if d and not d['hist'].empty:
+        try:
+            spark_prices = [round(float(v), 4) for v in d['hist']['Close'].iloc[-7:].tolist()]
+        except Exception:
+            spark_prices = []
+
     return {
         "id": i, "Piyasa": piyasa_durumu, "Hisse": item['Hisse'],
         "Sinyal": sinyal, "RSI": rsi_val, "MACD_H": macd_h, "BB_PCT": bb_pct,
@@ -538,7 +586,8 @@ def fetch_single_item(args):
         "Temettu": temettu,
         "NetTemettu": round(temettu * adet_int, 2),
         "DailyDiff": round((c - pc) * adet_int, 2),
-        "Tarih": tarih
+        "Tarih": tarih,
+        "Sparkline": spark_prices,
     }
 
 # ==========================================
@@ -1045,9 +1094,59 @@ with st.sidebar:
             unsafe_allow_html=True
         )
 
-# ==========================================
-# YÖNETİM FONKSİYONU — Kart Bazlı Yeni Tasarım
-# ==========================================
+    st.divider()
+
+    # --- VERİ KORUMA PANELİ ---
+    _acc_v = t_sec['accent']
+    _txt_v = t_sec['text']
+    _box_v = t_sec['box']
+
+    # Kaç hisse var ve JSON nerede?
+    _hisse_sayisi = len(st.session_state.portfoy)
+    _json_var     = os.path.exists(PORTFOY_DOSYASI)
+    _bak_var      = os.path.exists(PORTFOY_DOSYASI + ".bak")
+    _json_boyut   = round(os.path.getsize(PORTFOY_DOSYASI) / 1024, 1) if _json_var else 0
+    _durum_renk   = "#00e676" if _json_var and _hisse_sayisi > 0 else "#ff1744"
+
+    st.markdown(
+        f"<div style='background:{_box_v};border:1px solid {_acc_v}33;"
+        f"border-radius:10px;padding:10px 14px;'>"
+        f"<div style='color:{_acc_v};font-weight:700;font-size:11px;letter-spacing:1px;margin-bottom:8px;'>"
+        f"💾 VERİ KORUMA"
+        f"</div>"
+        f"<div style='display:flex;justify-content:space-between;margin-bottom:4px;'>"
+        f"<span style='font-size:10px;opacity:0.55;'>Kayıtlı hisse</span>"
+        f"<span style='color:{_durum_renk};font-size:10px;font-weight:700;'>{_hisse_sayisi} adet</span>"
+        f"</div>"
+        f"<div style='display:flex;justify-content:space-between;margin-bottom:4px;'>"
+        f"<span style='font-size:10px;opacity:0.55;'>JSON dosyası</span>"
+        f"<span style='font-size:10px;color:{_durum_renk};'>{'✅ Var · ' + str(_json_boyut) + ' KB' if _json_var else '❌ Bulunamadı'}</span>"
+        f"</div>"
+        f"<div style='display:flex;justify-content:space-between;'>"
+        f"<span style='font-size:10px;opacity:0.55;'>Yedek (.bak)</span>"
+        f"<span style='font-size:10px;color:{'#00e676' if _bak_var else '#888'};'>{'✅ Var' if _bak_var else '—'}</span>"
+        f"</div>"
+        f"<div style='font-size:9px;opacity:0.35;margin-top:6px;word-break:break-all;'>"
+        f"{os.path.dirname(PORTFOY_DOSYASI)}"
+        f"</div>"
+        f"</div>",
+        unsafe_allow_html=True
+    )
+
+    # El ile yedek al butonu
+    if st.button("📁 Şimdi Yedek Al", key="manuel_yedek", use_container_width=True):
+        try:
+            import shutil, zipfile
+            _zip_adi = os.path.join(_VERI_DIZIN,
+                f"portfoy_yedek_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip")
+            with zipfile.ZipFile(_zip_adi, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for _dosya in [PORTFOY_DOSYASI, IPO_DOSYASI, ALARM_DOSYASI,
+                               PERFORMANS_DOSYASI, NOTLAR_DOSYASI]:
+                    if os.path.exists(_dosya):
+                        zf.write(_dosya, os.path.basename(_dosya))
+            st.success(f"✅ Yedek oluşturuldu: {os.path.basename(_zip_adi)}")
+        except Exception as _ez:
+            st.error(f"Yedek alınamadı: {_ez}")
 def varlik_yonetimi_render(df_local):
     acc = t_sec['accent']
     box = t_sec['box']
@@ -1104,6 +1203,58 @@ def varlik_yonetimi_render(df_local):
                 st.rerun()
             st.markdown("<div style='margin-bottom:4px;'></div>", unsafe_allow_html=True)
 
+def make_sparkline_svg(prices, width=80, height=28, renk_kz=None):
+    """
+    Verilen fiyat listesinden inline SVG sparkline üretir.
+    renk_kz: None ise ilk-son fiyata göre otomatik renk seçer.
+    """
+    if not prices or len(prices) < 2:
+        return "<span style='opacity:0.25;font-size:10px;'>—</span>"
+
+    try:
+        mn   = min(prices)
+        mx   = max(prices)
+        span = mx - mn if mx != mn else 1.0
+        pad  = 3   # üst/alt boşluk (px)
+
+        # x koordinatları eşit aralıklı
+        xs = [round(i * (width - 1) / (len(prices) - 1), 2) for i in range(len(prices))]
+        # y koordinatları: yüksek fiyat = düşük y (SVG y ekseni ters)
+        ys = [round(pad + (1 - (p - mn) / span) * (height - 2 * pad), 2) for p in prices]
+
+        # Renk: son - ilk fiyata göre
+        if renk_kz is not None:
+            renk = "#00e676" if renk_kz >= 0 else "#ff1744"
+        else:
+            renk = "#00e676" if prices[-1] >= prices[0] else "#ff1744"
+
+        # Polylon noktaları
+        pts = " ".join(f"{x},{y}" for x, y in zip(xs, ys))
+
+        # Dolgu için alan kapatma (altına in, sola git, kapat)
+        alan_pts = (
+            f"0,{height} "      # sol alt köşe
+            + pts +
+            f" {width},{height}" # sağ alt köşe
+        )
+
+        svg = (
+            f"<svg width='{width}' height='{height}' viewBox='0 0 {width} {height}' "
+            f"xmlns='http://www.w3.org/2000/svg' style='vertical-align:middle;overflow:visible;'>"
+            # Alan dolgusu (şeffaf)
+            f"<polygon points='{alan_pts}' fill='{renk}' fill-opacity='0.12'/>"
+            # Çizgi
+            f"<polyline points='{pts}' fill='none' stroke='{renk}' "
+            f"stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/>"
+            # Son nokta
+            f"<circle cx='{xs[-1]}' cy='{ys[-1]}' r='2' fill='{renk}'/>"
+            f"</svg>"
+        )
+        return svg
+    except Exception:
+        return "<span style='opacity:0.25;font-size:10px;'>—</span>"
+
+
 @st.cache_data(ttl=600)
 def hesapla_korelasyon(hisse_listesi):
     """Son 30 gün kapanış fiyatları üzerinden korelasyon matrisi hesaplar."""
@@ -1123,14 +1274,18 @@ def hesapla_korelasyon(hisse_listesi):
 # ==========================================
 def render_kral_table(df_local, goster_indikatör=True):
     if goster_indikatör:
-        baslik = "<tr><th>VARLIK</th><th>SİNYAL</th><th>RSI</th><th>MACD-H</th><th>BB%</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr>"
+        baslik = "<tr><th>VARLIK</th><th>7G</th><th>SİNYAL</th><th>RSI</th><th>MACD-H</th><th>BB%</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr>"
     else:
-        baslik = "<tr><th>VARLIK</th><th>SİNYAL</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr>"
+        baslik = "<tr><th>VARLIK</th><th>7G</th><th>SİNYAL</th><th>ADET</th><th>MALİYET</th><th>GÜNCEL</th><th>K/Z</th><th>TOPLAM</th></tr>"
 
     table_html = f"<table class='kral-table'><thead>{baslik}</thead><tbody>"
 
     for _, r in df_local.iterrows():
         kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
+
+        # Sparkline SVG
+        spark_prices = r.get('Sparkline', [])
+        spark_svg    = make_sparkline_svg(spark_prices, renk_kz=r['K/Z'])
 
         if goster_indikatör:
             # RSI rengi
@@ -1147,7 +1302,7 @@ def render_kral_table(df_local, goster_indikatör=True):
             # Bollinger % bar
             bb_pct   = max(0, min(100, r['BB_PCT']))
             bb_color = "#00e676" if bb_pct < 30 else ("#ff1744" if bb_pct > 70 else "#ffc107")
-            bb_bg = t_sec['box']
+            bb_bg    = t_sec['box']
 
             extra = (
                 f"<td style='color:{rsi_color};font-weight:bold;'>{rsi:.1f}</td>"
@@ -1162,6 +1317,7 @@ def render_kral_table(df_local, goster_indikatör=True):
             table_html += (
                 f"<tr>"
                 f"<td><b>{r['Hisse']}</b></td>"
+                f"<td style='padding:8px 12px;'>{spark_svg}</td>"
                 f"<td>{r['Sinyal']}</td>"
                 f"{extra}"
                 f"<td>{tr_format4(r['Maliyet'])} ₺</td>"
@@ -1173,7 +1329,9 @@ def render_kral_table(df_local, goster_indikatör=True):
         else:
             table_html += (
                 f"<tr>"
-                f"<td><b>{r['Hisse']}</b></td><td>{r['Sinyal']}</td>"
+                f"<td><b>{r['Hisse']}</b></td>"
+                f"<td style='padding:8px 12px;'>{spark_svg}</td>"
+                f"<td>{r['Sinyal']}</td>"
                 f"<td>{r['Adet']}</td>"
                 f"<td>{tr_format4(r['Maliyet'])} ₺</td>"
                 f"<td>{tr_format(r['Güncel'])} ₺</td>"
