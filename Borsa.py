@@ -1263,11 +1263,11 @@ with st.sidebar:
     box = t_sec['box']
     txt = t_sec['text']
     with st.expander("🛠️ VARLIK YÖNETİMİ"):
-        for _, r in df_local.iterrows():
+        for _, r in df_local.iterrows(): (
             kz_color = "#00e676" if r['K/Z'] >= 0 else "#ff1744"
             kz_pct   = ((r['Güncel'] - r['Maliyet']) / r['Maliyet'] * 100) if r['Maliyet'] > 0 else 0.0
             sinyal_str = str(r.get('Sinyal', '—'))
-
+)
             # Bilgi kartı
             st.markdown(
                 f"<div class='vy-kart'>"
