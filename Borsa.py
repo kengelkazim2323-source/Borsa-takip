@@ -3324,7 +3324,7 @@ with tab_olcek:
 
     # Ayarlar sekmesine ekle
 st.markdown("### ⭐ Pro'ya Geç")
-st.markdown("Tüm özelliklere eriş — ₺299/ay")
+st.markdown("Tüm özelliklere eriş — ₺59/ay")
 if st.button("💳 Şimdi Abone Ol"):
     st.markdown("[Ödeme Sayfası](https://buy.stripe.com/https://buy.stripe.com/test_4gM14ncFraxpeJZ7tK0sU00)", unsafe_allow_html=True)
 
