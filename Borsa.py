@@ -867,61 +867,6 @@ st.components.v1.html(clock_html, height=80)
 
 st.markdown(f"<h2 style='text-align:center; color:{t_sec['accent']};'>🚀 Borsa Takip</h2>", unsafe_allow_html=True)
 
-# --- GLOBAL ARAMA ---
-_acc_gs = t_sec['accent']; _txt_gs = t_sec['text']; _box_gs = t_sec['box']
-_arama_q = st.text_input(
-    "Hisse Ara",
-    placeholder="🔍  GARAN, THYAO, AKBNK... (portföyde ve BIST'te arar)",
-    label_visibility="collapsed",
-    key="global_arama"
-)
-if _arama_q and len(_arama_q) >= 2:
-    _q = _arama_q.upper().strip()
-    # Portföydeki eşleşmeler
-    _port_esles = [x for x in full_data if _q in x['Hisse']]
-    # BIST_FULL'dan eşleşmeler
-    _bist_esles = [s for s in BIST_FULL if _q in s.replace(".IS","")][:8]
-    if _port_esles:
-        st.markdown(
-            f"<div style='background:{_box_gs};border:1px solid {_acc_gs}33;"
-            f"border-radius:8px;padding:10px 14px;margin-bottom:8px;'>"
-            f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>PORTFÖYDE</div>"
-            f"<div style='display:flex;flex-wrap:wrap;gap:8px;'>",
-            unsafe_allow_html=True
-        )
-        _kart_html = ""
-        for _px in _port_esles:
-            _kz_c = "#00e676" if _px['K/Z'] >= 0 else "#ff1744"
-            _kart_html += (
-                f"<div style='background:{_acc_gs}11;border:1px solid {_acc_gs}33;"
-                f"border-radius:6px;padding:6px 10px;min-width:120px;'>"
-                f"<div style='font-size:12px;font-weight:700;color:{_acc_gs};'>{_px['Hisse']}</div>"
-                f"<div style='font-size:11px;'>{tr_format4(_px['Güncel'])} ₺</div>"
-                f"<div style='font-size:10px;color:{_kz_c};'>{tr_format(_px['K/Z'])} ₺ K/Z</div>"
-                f"</div>"
-            )
-        st.markdown(
-            f"<div style='background:{_box_gs};border:1px solid {_acc_gs}33;"
-            f"border-radius:8px;padding:10px 14px;margin-bottom:6px;'>"
-            f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>📂 PORTFÖYDE</div>"
-            f"<div style='display:flex;flex-wrap:wrap;gap:8px;'>{_kart_html}</div></div>",
-            unsafe_allow_html=True
-        )
-    if _bist_esles:
-        _bist_html = "".join(
-            f"<span style='background:{_box_gs};border:1px solid {_acc_gs}22;"
-            f"border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer;'>"
-            f"{s.replace('.IS','')}</span>"
-            for s in _bist_esles
-        )
-        st.markdown(
-            f"<div style='background:{_box_gs};border:1px solid {_acc_gs}22;"
-            f"border-radius:8px;padding:8px 12px;margin-bottom:6px;'>"
-            f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>📋 BİST'TE</div>"
-            f"<div style='display:flex;flex-wrap:wrap;gap:6px;'>{_bist_html}</div></div>",
-            unsafe_allow_html=True
-        )
-
 # --- ONBOARDING (portföy boşsa) ---
 if not st.session_state.portfoy:
     st.markdown(
@@ -1077,6 +1022,61 @@ if st.session_state.portfoy:
 
 # Günlük performans snapshot kaydet
 kaydet_performans_snapshot(full_data)
+
+# --- GLOBAL ARAMA (full_data hazır olduktan sonra) ---
+_acc_gs = t_sec['accent']; _box_gs = t_sec['box']
+_arama_q = st.text_input(
+    "Hisse Ara",
+    placeholder="🔍  GARAN, THYAO, AKBNK... — portföyde ve BIST'te arar",
+    label_visibility="collapsed",
+    key="global_arama"
+)
+if _arama_q and len(_arama_q) >= 2:
+    _q = _arama_q.upper().strip()
+    _port_esles = [x for x in full_data if _q in x.get('Hisse', '')]
+    _bist_esles = [s for s in BIST_FULL if _q in s.replace(".IS", "")][:8]
+
+    if _port_esles:
+        _kart_html = ""
+        for _px in _port_esles:
+            try:
+                _kz_c = "#00e676" if float(_px.get('K/Z', 0)) >= 0 else "#ff1744"
+                _kart_html += (
+                    f"<div style='background:{_acc_gs}11;border:1px solid {_acc_gs}33;"
+                    f"border-radius:6px;padding:6px 10px;min-width:120px;'>"
+                    f"<div style='font-size:12px;font-weight:700;color:{_acc_gs};'>{_px['Hisse']}</div>"
+                    f"<div style='font-size:11px;'>{tr_format4(float(_px.get('Güncel',0)))} ₺</div>"
+                    f"<div style='font-size:10px;color:{_kz_c};'>{tr_format(float(_px.get('K/Z',0)))} ₺ K/Z</div>"
+                    f"</div>"
+                )
+            except Exception:
+                pass
+        if _kart_html:
+            st.markdown(
+                f"<div style='background:{_box_gs};border:1px solid {_acc_gs}33;"
+                f"border-radius:8px;padding:10px 14px;margin-bottom:6px;'>"
+                f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>📂 PORTFÖYDE</div>"
+                f"<div style='display:flex;flex-wrap:wrap;gap:8px;'>{_kart_html}</div></div>",
+                unsafe_allow_html=True
+            )
+
+    if _bist_esles:
+        _bist_html = "".join(
+            f"<span style='background:{_box_gs};border:1px solid {_acc_gs}22;"
+            f"border-radius:4px;padding:3px 8px;font-size:11px;'>"
+            f"{s.replace('.IS','')}</span>"
+            for s in _bist_esles
+        )
+        st.markdown(
+            f"<div style='background:{_box_gs};border:1px solid {_acc_gs}22;"
+            f"border-radius:8px;padding:8px 12px;margin-bottom:6px;'>"
+            f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>📋 BİST'TE</div>"
+            f"<div style='display:flex;flex-wrap:wrap;gap:6px;'>{_bist_html}</div></div>",
+            unsafe_allow_html=True
+        )
+
+    if not _port_esles and not _bist_esles:
+        st.info(f"'{_arama_q}' için sonuç bulunamadı.")
 
 # ==========================================
 # ALARM KONTROLÜ — sayfa yüklenince otomatik çalışır
@@ -1998,17 +1998,33 @@ with tab_analiz:
     st.markdown(f"<h4 style='color:{acc};'>🕯️ Hisse Fiyat Grafiği & Çizim Araçları</h4>", unsafe_allow_html=True)
     portfoy_hisseler_a = sorted(set(x['Hisse'] for x in full_data if x['Piyasa'] == 'Türk Borsası'))
     if portfoy_hisseler_a:
-        _ca1, _ca2, _ca3 = st.columns([3, 1, 2])
+        _ca1, _ca2, _ca3, _ca4 = st.columns([3, 1, 2, 2])
         cs_hisse = _ca1.selectbox("Hisse Seç", portfoy_hisseler_a, key="cs_hisse")
         cs_tip   = _ca2.selectbox("Grafik Tipi", ["Candlestick", "Çizgi"], key="cs_tip")
 
         # Gösterge seçimi
         _gosterge_secim = _ca3.multiselect(
             "Göstergeler",
-            ["MA20", "MA50", "Bollinger Bands", "Destek/Direnç", "Fibonacci"],
-            default=["MA20"],
+            ["MA20", "MA50", "Bollinger Bands", "Destek/Direnç", "Fibonacci", "Trendline"],
+            default=["MA20", "Destek/Direnç"],
             key="cs_gostergeler"
         )
+
+        # Zaman dilimi seçimi
+        _zaman_secenekleri = {
+            "1 Saat":   ("1h",  "7d"),
+            "4 Saat":   ("1h",  "30d"),
+            "1 Gün":    ("1d",  "60d"),
+            "1 Hafta":  ("1wk", "365d"),
+            "1 Ay":     ("1mo", "1825d"),
+        }
+        _zaman_sec = _ca4.selectbox(
+            "Zaman Dilimi",
+            list(_zaman_secenekleri.keys()),
+            index=2,   # Varsayılan: 1 Gün
+            key="cs_zaman"
+        )
+        _interval, _period = _zaman_secenekleri[_zaman_sec]
 
         # Manuel seviye ekleme
         with st.expander("➕ Manuel Destek/Direnç Seviyesi Ekle"):
@@ -2038,9 +2054,27 @@ with tab_analiz:
                         ]
                         st.rerun()
 
-        cs_data = fetch_stock_data(cs_hisse)
-        if cs_data and not cs_data['hist'].empty:
-            hist = cs_data['hist'].copy()
+        # Seçilen zaman dilimine göre veri çek
+        @st.cache_data(ttl=180)
+        def _fetch_grafik(symbol, interval, period):
+            try:
+                tk = yf.Ticker(symbol)
+                hist = tk.history(period=period, interval=interval)
+                if hist.empty:
+                    return None
+                return hist
+            except Exception as e:
+                logger.warning(f"Grafik veri hatası ({symbol} {interval}/{period}): {e}")
+                return None
+
+        _grafik_hist = _fetch_grafik(cs_hisse, _interval, _period)
+        # 1d için mevcut fetch_stock_data kullan (MACD hesabı için 60 gün lazım)
+        if _interval == "1d":
+            cs_data = fetch_stock_data(cs_hisse)
+            _grafik_hist = cs_data['hist'].copy() if cs_data else _grafik_hist
+
+        if _grafik_hist is not None and not _grafik_hist.empty:
+            hist = _grafik_hist.copy()
             hist.index = hist.index.tz_localize(None) if hist.index.tz is not None else hist.index
 
             if cs_tip == "Candlestick":
@@ -2084,6 +2118,40 @@ with tab_analiz:
                     line=dict(color='#60a5fa', width=1.2, dash='dash'),
                     name='MA50', opacity=0.85,
                 ))
+
+            # Trendline (lineer regresyon ile otomatik)
+            if "Trendline" in _gosterge_secim and len(hist) >= 5:
+                try:
+                    _tr_x   = np.arange(len(hist))
+                    _tr_y   = hist['Close'].values.astype(float)
+                    # Tüm veri üzerinde lineer regresyon
+                    _tr_koef = np.polyfit(_tr_x, _tr_y, 1)
+                    _tr_line = np.polyval(_tr_koef, _tr_x)
+                    _tr_yon  = "yukarı" if _tr_koef[0] > 0 else "aşağı"
+                    _tr_renk = '#00e676' if _tr_koef[0] > 0 else '#ff1744'
+                    cs_fig.add_trace(go.Scatter(
+                        x=hist.index, y=_tr_line,
+                        mode='lines', name=f'Trend ({_tr_yon})',
+                        line=dict(color=_tr_renk, width=1.5, dash='longdash'),
+                        opacity=0.75,
+                        hovertemplate='Trend: %{y:.4f}<extra></extra>',
+                    ))
+                    # Son 1/3 verisi için kısa vadeli trend
+                    _tr_son = max(5, len(hist) // 3)
+                    _tr_x2  = np.arange(_tr_son)
+                    _tr_y2  = hist['Close'].values[-_tr_son:].astype(float)
+                    _tr_k2  = np.polyfit(_tr_x2, _tr_y2, 1)
+                    _tr_l2  = np.polyval(_tr_k2, _tr_x2)
+                    _tr_r2  = '#00bcd4'
+                    cs_fig.add_trace(go.Scatter(
+                        x=hist.index[-_tr_son:], y=_tr_l2,
+                        mode='lines', name='Kısa Vadeli Trend',
+                        line=dict(color=_tr_r2, width=1.2, dash='dot'),
+                        opacity=0.7,
+                        hovertemplate='K.V. Trend: %{y:.4f}<extra></extra>',
+                    ))
+                except Exception as _tre:
+                    logger.warning(f"Trendline hatası: {_tre}")
 
             # Bollinger Bands
             if "Bollinger Bands" in _gosterge_secim:
@@ -2179,14 +2247,15 @@ with tab_analiz:
                     bgcolor='rgba(0,0,0,0)',
                 ),
                 title=dict(
-                    text=f"{cs_hisse} — Son 60 Gün",
+                    text=f"{cs_hisse} — {_zaman_sec}",
                     font=dict(size=13, color=acc),
                     x=0.5, xanchor='center',
                 ),
             )
             st.plotly_chart(cs_fig, use_container_width=True)
+            st.caption(f"📊 {cs_hisse} · {_zaman_sec} · {len(hist)} mum · yfinance")
         else:
-            st.warning(f"{cs_hisse} için veri alınamadı.")
+            st.warning(f"{cs_hisse} için veri alınamadı. yfinance bazı intraday verilerini (1h/4h) desteklemeyebilir.")
     else:
         st.info("Türk Borsası'nda hisse bulunamadı.")
 
