@@ -1108,10 +1108,11 @@ if tetiklenen_alarmlar:
 # ==========================================
 # 4. TABLAR VE İÇERİK
 # ==========================================
-tab_tr, tab_fon, tab_div, tab_analiz, tab_haberler, tab_temel, tab_takvim, tab_olcek = st.tabs([
+tab_tr, tab_fon, tab_div, tab_ipo, tab_analiz, tab_haberler, tab_temel, tab_takvim, tab_olcek = st.tabs([
     "🇹🇷 TÜRK BORSASI",
     "📊 YATIRIM FONLARI",
     "💰 TEMETTÜ GELİRİ",
+    "🚀 HALKA ARZ",
     "📈 ANALİZ",
     "📰 HABERLER",
     "🏦 TEMEL VERİLER",
@@ -1120,40 +1121,6 @@ tab_tr, tab_fon, tab_div, tab_analiz, tab_haberler, tab_temel, tab_takvim, tab_o
 ])
 
 with st.sidebar:
-    # --- PORTFÖY SEÇİCİ ---
-    _acc_ps = t_sec['accent']
-    st.markdown(
-        f"<div style='color:{_acc_ps};font-weight:700;font-size:11px;"
-        f"letter-spacing:1px;margin-bottom:6px;'>💼 AKTİF PORTFÖY</div>",
-        unsafe_allow_html=True
-    )
-    _ps_col1, _ps_col2 = st.columns([3, 1])
-    _secilen_portfoy = _ps_col1.selectbox(
-        "Portföy",
-        st.session_state.portfoy_listesi,
-        index=st.session_state.portfoy_listesi.index(st.session_state.aktif_portfoy)
-              if st.session_state.aktif_portfoy in st.session_state.portfoy_listesi else 0,
-        key="portfoy_sec",
-        label_visibility="collapsed"
-    )
-    if _secilen_portfoy != st.session_state.aktif_portfoy:
-        st.session_state.aktif_portfoy = _secilen_portfoy
-        st.session_state.portfoy = load_json(portfoy_dosyasi(_secilen_portfoy))
-        st.rerun()
-
-    with st.expander("➕ Yeni Portföy"):
-        _yeni_portfoy_adi = st.text_input("Portföy Adı", placeholder="Emeklilik", key="yeni_portfoy_adi")
-        if st.button("Oluştur", key="portfoy_olustur", use_container_width=True):
-            if _yeni_portfoy_adi and _yeni_portfoy_adi not in st.session_state.portfoy_listesi:
-                st.session_state.portfoy_listesi.append(_yeni_portfoy_adi)
-                save_json(portfoy_dosyasi(_yeni_portfoy_adi), [])
-                st.session_state.aktif_portfoy = _yeni_portfoy_adi
-                st.session_state.portfoy = []
-                st.rerun()
-            elif _yeni_portfoy_adi in st.session_state.portfoy_listesi:
-                st.error("Bu isimde portföy zaten var.")
-
-    st.divider()
 
     # --- KARANLIK MOD TOGGLE ---
     _dm_col1, _dm_col2 = st.columns([3, 1])
@@ -1291,138 +1258,6 @@ with st.sidebar:
     except Exception as _e:
         st.caption("Kur verisi yükleniyor...")
 
-    st.divider()
-
-    # --- ORTALAMA MALİYET HESAPLAYICI ---
-    _acc_om = t_sec['accent']
-    st.markdown(
-        f"<div style='color:{_acc_om};font-weight:700;font-size:13px;"
-        f"letter-spacing:1px;margin-bottom:8px;'>📐 ORTALAMA MALİYET</div>",
-        unsafe_allow_html=True
-    )
-    _om_hisseler = sorted(set(x['Hisse'] for x in st.session_state.portfoy))
-    if _om_hisseler:
-        _om_hisse = st.selectbox("Hisse", _om_hisseler, key="om_hisse_sec")
-        _om_mevcut = next(
-            (x for x in st.session_state.portfoy if x['Hisse'] == _om_hisse), None
-        )
-        if _om_mevcut:
-            _om_adet     = int(_om_mevcut['Adet'])
-            _om_maliyet  = float(_om_mevcut['Maliyet'])
-            _om_c1, _om_c2 = st.columns(2)
-            _om_ek_adet  = _om_c1.number_input(
-                "Ek Adet", min_value=1, step=1, value=100, key="om_ek_adet"
-            )
-            _om_ek_fiyat = _om_c2.number_input(
-                "Alış Fiyatı (₺)", min_value=0.0001, format="%.4f",
-                value=float(next((x['Güncel'] for x in full_data if x['Hisse'] == _om_hisse),
-                                 _om_maliyet)),
-                key="om_ek_fiyat"
-            )
-            _toplam_adet   = _om_adet + _om_ek_adet
-            _yeni_maliyet  = ((_om_adet * _om_maliyet) + (_om_ek_adet * _om_ek_fiyat)) / _toplam_adet
-            _fark          = _yeni_maliyet - _om_maliyet
-            _fark_color    = "#00e676" if _fark <= 0 else "#ff1744"
-            st.markdown(
-                f"<div style='background:{t_sec['box']};border:1px solid {_acc_om}33;"
-                f"border-radius:8px;padding:10px 14px;margin-top:4px;'>"
-                f"<div style='display:grid;grid-template-columns:1fr 1fr;gap:6px;'>"
-                f"<div><div style='font-size:9px;opacity:0.45;'>MEVCUT MALİYET</div>"
-                f"    <div style='font-size:12px;font-weight:600;'>{tr_format4(_om_maliyet)} ₺</div></div>"
-                f"<div><div style='font-size:9px;opacity:0.45;'>YENİ ORTALAMA</div>"
-                f"    <div style='font-size:13px;font-weight:700;color:{_acc_om};'>"
-                f"    {tr_format4(_yeni_maliyet)} ₺</div></div>"
-                f"<div><div style='font-size:9px;opacity:0.45;'>TOPLAM ADET</div>"
-                f"    <div style='font-size:12px;font-weight:600;'>{_toplam_adet}</div></div>"
-                f"<div><div style='font-size:9px;opacity:0.45;'>MALİYET FARKI</div>"
-                f"    <div style='font-size:12px;font-weight:700;color:{_fark_color};'>"
-                f"    {'+' if _fark > 0 else ''}{tr_format4(_fark)} ₺</div></div>"
-                f"</div>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
-    else:
-        st.caption("Portföyde hisse yok.")
-
-    st.divider()
-
-    # --- KAR AL / ZARAR KES HESAPLAYICI ---
-    st.markdown(f"<div style='color:{t_sec['accent']};font-weight:700;font-size:13px;letter-spacing:1px;margin-bottom:8px;'>🎯 KAR AL / ZARAR KES</div>", unsafe_allow_html=True)
-    _portfoy_hisseler_kz = sorted(set(x['Hisse'] for x in full_data))
-    if _portfoy_hisseler_kz:
-        _kz_hisse = st.selectbox("Hisse", _portfoy_hisseler_kz, key="kz_hisse")
-        _kz_guncel = next((x['Güncel'] for x in full_data if x['Hisse'] == _kz_hisse), 0.0)
-    else:
-        _kz_hisse  = None
-        _kz_guncel = 0.0
-
-    _kz_fiyat  = st.number_input("Güncel Fiyat (₺)", value=float(_kz_guncel), format="%.4f", key="kz_fiyat")
-    _kz_c1, _kz_c2 = st.columns(2)
-    _kar_pct   = _kz_c1.number_input("Kar Al %", value=10.0, min_value=0.1, step=0.5, key="kar_pct")
-    _zarar_pct = _kz_c2.number_input("Zarar Kes %", value=5.0, min_value=0.1, step=0.5, key="zarar_pct")
-
-    if _kz_fiyat > 0:
-        _kar_fiyat   = _kz_fiyat * (1 + _kar_pct / 100)
-        _zarar_fiyat = _kz_fiyat * (1 - _zarar_pct / 100)
-        st.markdown(
-            f"<div style='background:{t_sec['box']};border:1px solid {t_sec['accent']}33;"
-            f"border-radius:8px;padding:10px 14px;margin-top:4px;'>"
-            f"<div style='display:flex;justify-content:space-between;margin-bottom:6px;'>"
-            f"  <span style='font-size:11px;opacity:0.55;'>Kar Al Hedefi</span>"
-            f"  <span style='color:#00e676;font-weight:700;'>{tr_format4(_kar_fiyat)} ₺</span>"
-            f"</div>"
-            f"<div style='display:flex;justify-content:space-between;'>"
-            f"  <span style='font-size:11px;opacity:0.55;'>Zarar Kes Seviyesi</span>"
-            f"  <span style='color:#ff1744;font-weight:700;'>{tr_format4(_zarar_fiyat)} ₺</span>"
-            f"</div>"
-            f"</div>",
-            unsafe_allow_html=True
-        )
-
-    st.divider()
-
-    # --- POZİSYON BÜYÜKLÜĞÜ HESAPLAYICI ---
-    _acc_pb = t_sec['accent']
-    st.markdown(
-        f"<div style='color:{_acc_pb};font-weight:700;font-size:13px;"
-        f"letter-spacing:1px;margin-bottom:8px;'>⚖️ POZİSYON BÜYÜKLÜĞÜ</div>",
-        unsafe_allow_html=True
-    )
-    _pb_portfoy = sum(x.get('Değer', 0) for x in full_data)
-    _pb_portfoy_input = st.number_input(
-        "Portföy Değeri (₺)", value=float(max(_pb_portfoy, 1000.0)),
-        min_value=100.0, step=1000.0, format="%.0f", key="pb_portfoy"
-    )
-    _pb_risk_pct = st.slider("Risk Oranı (%)", 0.5, 5.0, 2.0, step=0.5, key="pb_risk")
-    _pb_c1, _pb_c2 = st.columns(2)
-    _pb_fiyat = _pb_c1.number_input("Alış Fiyatı (₺)", min_value=0.01, value=10.0, format="%.4f", key="pb_fiyat")
-    _pb_stop  = _pb_c2.number_input("Stop-Loss (₺)",   min_value=0.01, value=9.5,  format="%.4f", key="pb_stop")
-
-    if _pb_fiyat > _pb_stop > 0:
-        _pb_risk_tl  = _pb_portfoy_input * _pb_risk_pct / 100
-        _pb_hisse_rk = _pb_fiyat - _pb_stop
-        _pb_lot      = max(1, int(_pb_risk_tl / _pb_hisse_rk))
-        _pb_maliyet  = _pb_lot * _pb_fiyat
-        _pb_pay_pct  = _pb_maliyet / _pb_portfoy_input * 100 if _pb_portfoy_input > 0 else 0
-        st.markdown(
-            f"<div style='background:{t_sec['box']};border:1px solid {_acc_pb}33;"
-            f"border-radius:8px;padding:10px 14px;margin-top:4px;'>"
-            f"<div style='display:grid;grid-template-columns:1fr 1fr;gap:6px;'>"
-            f"<div><div style='font-size:9px;opacity:0.45;'>MAX KAYIP</div>"
-            f"    <div style='color:#ff1744;font-size:12px;font-weight:700;'>{tr_format(_pb_risk_tl)} ₺</div></div>"
-            f"<div><div style='font-size:9px;opacity:0.45;'>ÖNERİLEN LOT</div>"
-            f"    <div style='color:{_acc_pb};font-size:14px;font-weight:700;'>{_pb_lot:,} lot</div></div>"
-            f"<div><div style='font-size:9px;opacity:0.45;'>TOPLAM MALİYET</div>"
-            f"    <div style='font-size:12px;font-weight:600;'>{tr_format(_pb_maliyet)} ₺</div></div>"
-            f"<div><div style='font-size:9px;opacity:0.45;'>PORTFÖY PAYI</div>"
-            f"    <div style='font-size:12px;font-weight:600;'>%{_pb_pay_pct:.1f}</div></div>"
-            f"</div></div>",
-            unsafe_allow_html=True
-        )
-    else:
-        st.caption("Alış fiyatı stop-loss'tan yüksek olmalı.")
-
-    st.divider()
 
     # --- VERİ KORUMA PANELİ ---
     _acc_v = t_sec['accent']
@@ -1478,238 +1313,88 @@ with st.sidebar:
 
     st.divider()
 
-    # --- YENİLEME & TELEFON SYNC ---
-    _acc_s = t_sec['accent']
+    # --- OTOMATİK YENİLEME ---
+    _acc_yr = t_sec['accent']
     st.markdown(
-        f"<div style='color:{_acc_s};font-weight:700;font-size:11px;"
-        f"letter-spacing:1px;margin-bottom:6px;'>🔄 YENİLEME & SYNC</div>",
+        f"<div style='color:{_acc_yr};font-weight:700;font-size:11px;"
+        f"letter-spacing:1px;margin-bottom:6px;'>🔄 OTOMATİK YENİLEME</div>",
         unsafe_allow_html=True
     )
     _sure_sec = st.select_slider(
-        "Otomatik yenileme",
+        "Yenileme",
         options=[15, 30, 60, 120, 300],
-        value=st.session_state.yenileme_suresi,
+        value=st.session_state.get('yenileme_suresi', 60),
         format_func=lambda x: f"{x}sn" if x < 60 else f"{x//60}dk",
-        key="yenileme_slider"
+        key="yenileme_slider",
+        label_visibility="collapsed"
     )
-    if _sure_sec != st.session_state.yenileme_suresi:
+    if _sure_sec != st.session_state.get('yenileme_suresi', 60):
         st.session_state.yenileme_suresi = _sure_sec
         st.rerun()
+    st.caption(f"Her {_sure_sec}sn'de otomatik yenileniyor")
 
-    # --- GELİŞMİŞ IP TESPİTİ ---
-    def _get_lan_ips():
-        """Çoklu yöntemle LAN IP adreslerini toplar, 127.x ve 0.0.0.0 filtreler."""
-        ips = []
-        # Yöntem 1: UDP trick (en güvenilir)
-        try:
-            _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            _s.connect(("8.8.8.8", 80))
-            _ip = _s.getsockname()[0]
-            _s.close()
-            if _ip and not _ip.startswith("127."):
-                ips.append(_ip)
-        except Exception:
-            pass
-        # Yöntem 2: hostname -I (Linux)
-        try:
-            import subprocess as _sp
-            _r = _sp.run(["hostname", "-I"], capture_output=True, text=True, timeout=2)
-            for _ip in _r.stdout.strip().split():
-                if not _ip.startswith("127.") and _ip != "0.0.0.0" and _ip not in ips:
-                    ips.append(_ip)
-        except Exception:
-            pass
-        # Yöntem 3: ip route (Linux)
-        try:
-            import subprocess as _sp, re as _re
-            _r = _sp.run(["ip", "route", "get", "8.8.8.8"], capture_output=True, text=True, timeout=2)
-            _m = _re.search(r"src (\d+\.\d+\.\d+\.\d+)", _r.stdout)
-            if _m and _m.group(1) not in ips:
-                ips.append(_m.group(1))
-        except Exception:
-            pass
-        return ips
+    st.divider()
 
-    # Ortam tespiti: Streamlit Cloud mı, local mı?
-    _is_cloud = (
-        os.environ.get('STREAMLIT_SHARING_MODE') is not None
-        or '/mount/src/' in os.path.abspath(__file__)
-        or os.environ.get('STREAMLIT_SERVER_HEADLESS', '') == '1'
+    # --- GİRİŞ / KULLANICI SİSTEMİ ---
+    _acc_us = t_sec['accent']
+    st.markdown(
+        f"<div style='color:{_acc_us};font-weight:700;font-size:11px;"
+        f"letter-spacing:1px;margin-bottom:6px;'>👤 KULLANICI</div>",
+        unsafe_allow_html=True
     )
-    _port = os.environ.get('STREAMLIT_SERVER_PORT', '8501')
 
-    if _is_cloud:
-        # Streamlit Cloud: tarayıcı adres çubuğundaki URL kullanılmalı
-        st.markdown(
-            f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
-            f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
-            f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
-            f"<div style='font-size:11px;color:{_acc_s};font-weight:600;margin-bottom:4px;'>"
-            f"Streamlit Cloud üzerinde çalışıyor</div>"
-            f"<div style='font-size:10px;opacity:0.7;line-height:1.5;'>"
-            f"Tarayıcının adres çubuğundaki URL'yi<br>"
-            f"telefonuna kopyala — direk açılır.</div>"
-            f"<div style='font-size:9px;opacity:0.4;margin-top:6px;'>"
-            f"Her {st.session_state.yenileme_suresi}sn'de otomatik yenilenir.</div>"
-            f"</div>",
+    # Basit PIN tabanlı kullanıcı sistemi (veritabanı gerektirmez)
+    if 'kullanici_giris' not in st.session_state:
+        st.session_state.kullanici_giris = False
+    if 'kullanici_adi' not in st.session_state:
+        st.session_state.kullanici_adi = ""
+
+    # Kullanıcı listesi JSON'dan oku
+    _KULLANICI_DOSYASI = _veri_yolu("kullanicilar.json")
+
+    def _kullanicilar_yukle():
+        if not os.path.exists(_KULLANICI_DOSYASI):
+            # İlk açılışta default admin kullanıcısı oluştur
+            import hashlib
+            _varsayilan = [{"kullanici": "admin", "pin_hash": hashlib.sha256("1234".encode()).hexdigest(), "rol": "admin"}]
+            save_json(_KULLANICI_DOSYASI, _varsayilan)
+            return _varsayilan
+        try:
+            with open(_KULLANICI_DOSYASI, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return []
+
+    def _pin_dogrula(kullanici, pin):
+        import hashlib
+        _kl = _kullanicilar_yukle()
+        _ph = hashlib.sha256(pin.encode()).hexdigest()
+        return any(k['kullanici'] == kullanici and k['pin_hash'] == _ph for k in _kl)
+
+    if not st.session_state.kullanici_giris:
+        with st.form("giris_form", clear_on_submit=True):
+            _giris_kul = st.text_input("Kullanıcı adı", placeholder="admin", key="giris_kul")
+            _giris_pin = st.text_input("PIN", type="password", placeholder="••••", key="giris_pin",
+                                        help="Varsayılan: admin / 1234")
+            if st.form_submit_button("🔓 Giriş Yap", use_container_width=True):
+                if _pin_dogrula(_giris_kul.strip(), _giris_pin.strip()):
+                    st.session_state.kullanici_giris = True
+                    st.session_state.kullanici_adi   = _giris_kul.strip()
+                    st.rerun()
+                else:
+                    st.error("Kullanıcı adı veya PIN hatalı.")
+        st.caption("İlk giriş: kullanıcı **admin**, PIN **1234** · Ayarlar sekmesinden değiştir")
+    else:
+        _us1, _us2 = st.columns([3, 1])
+        _us1.markdown(
+            f"<div style='font-size:11px;color:{_acc_us};'>"
+            f"👤 <b>{st.session_state.kullanici_adi}</b> giriş yaptı</div>",
             unsafe_allow_html=True
         )
-    else:
-        # Local: LAN IP bul ve göster
-        _ips = _get_lan_ips()
-
-        if _ips:
-            _ip  = _ips[0]
-            _url = f"http://{_ip}:{_port}"
-
-            st.markdown(
-                f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
-                f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
-                f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
-                f"<div style='font-size:10px;opacity:0.7;margin-bottom:6px;line-height:1.5;'>"
-                f"1. Telefonu aynı Wi-Fi'ya bağla<br>"
-                f"2. Tarayıcıda şu adresi aç:</div>"
-                f"<div style='font-size:13px;font-family:monospace;font-weight:700;"
-                f"color:{_acc_s};background:{t_sec['bg']};padding:6px 10px;"
-                f"border-radius:6px;word-break:break-all;letter-spacing:0.5px;'>"
-                f"{_url}</div>",
-                unsafe_allow_html=True
-            )
-
-            # Birden fazla IP varsa diğerlerini de göster
-            if len(_ips) > 1:
-                st.markdown(
-                    f"<div style='font-size:9px;opacity:0.45;margin-top:4px;'>"
-                    f"Diğer adresler: " + " · ".join(f"http://{ip}:{_port}" for ip in _ips[1:]) +
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-
-            st.markdown(
-                f"<div style='font-size:9px;opacity:0.4;margin-top:4px;'>"
-                f"Her {st.session_state.yenileme_suresi}sn'de otomatik yenilenir · "
-                f"Çalışmazsa `streamlit run Borsa.py --server.address=0.0.0.0` ile başlat"
-                f"</div>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
-
-            # Kopyalama butonu
-            if st.button("📋 URL'yi Kopyala", key="url_kopyala", use_container_width=True):
-                st.code(_url, language=None)
-                st.caption("↑ Yukarıdaki URL'yi seç ve kopyala")
-        else:
-            st.markdown(
-                f"<div style='background:{t_sec['box']};border:1px solid {_acc_s}33;"
-                f"border-radius:8px;padding:10px 12px;margin-top:4px;'>"
-                f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>📱 TELEFONDA AÇMAK İÇİN</div>"
-                f"<div style='font-size:10px;opacity:0.7;line-height:1.5;'>"
-                f"IP adresi otomatik bulunamadı.<br>"
-                f"Terminalde şunu çalıştır:<br>"
-                f"<span style='font-family:monospace;color:{_acc_s};'>"
-                f"streamlit run Borsa.py --server.address=0.0.0.0</span><br><br>"
-                f"Sonra telefon tarayıcısında:<br>"
-                f"<span style='font-family:monospace;color:{_acc_s};'>"
-                f"http://[BİLGİSAYAR-IP]:{_port}</span>"
-                f"</div>"
-                f"</div>",
-                unsafe_allow_html=True
-            )
-            st.caption("💡 Bilgisayarın IP'sini öğrenmek için: `ipconfig` (Windows) veya `ifconfig` (Mac/Linux)")
-
-    st.divider()
-
-    # --- HALKA ARZ TAKİP (sidebar compact) ---
-    _acc_ipo = t_sec['accent']
-    st.markdown(
-        f"<div style='color:{_acc_ipo};font-weight:700;font-size:11px;"
-        f"letter-spacing:1px;margin-bottom:6px;'>🚀 HALKA ARZ TAKİP</div>",
-        unsafe_allow_html=True
-    )
-    with st.expander("➕ Yeni Halka Arz Ekle"):
-        with st.form("ipo_sidebar_form", clear_on_submit=True):
-            _ipo_isim  = st.text_input("Şirket Kodu", placeholder="BINHO", key="ipo_s_isim")
-            _ic1, _ic2 = st.columns(2)
-            _ipo_fiyat = _ic1.number_input("HA Fiyatı (₺)", min_value=0.0, format="%.4f", key="ipo_s_fiyat")
-            _ipo_adet  = _ic2.number_input("Lot", min_value=0, step=1, key="ipo_s_adet")
-            if st.form_submit_button("➕ Ekle", use_container_width=True):
-                if _ipo_isim:
-                    st.session_state.ipo_liste.append({
-                        "Isim": _ipo_isim.upper().strip(),
-                        "Fiyat": float(_ipo_fiyat),
-                        "Adet": int(_ipo_adet)
-                    })
-                    save_json(IPO_DOSYASI, st.session_state.ipo_liste)
-                    st.rerun()
-
-    if st.session_state.ipo_liste:
-        for _ii, _ipo in enumerate(st.session_state.ipo_liste):
-            _ipo_mal = _ipo['Adet'] * _ipo['Fiyat']
-            _ip1, _ip2 = st.columns([4, 1])
-            _ip1.markdown(
-                f"<div style='font-size:12px;font-weight:600;color:{_acc_ipo};'>{_ipo['Isim']}</div>"
-                f"<div style='font-size:10px;opacity:0.55;'>{tr_format(_ipo['Fiyat'])} ₺ · {_ipo['Adet']} lot · {tr_format(_ipo_mal)} ₺</div>",
-                unsafe_allow_html=True
-            )
-            if _ip2.button("❌", key=f"ipo_sil_s_{_ii}"):
-                st.session_state.ipo_liste.pop(_ii)
-                save_json(IPO_DOSYASI, st.session_state.ipo_liste)
-                st.rerun()
-
-    st.divider()
-
-    # --- FİYAT ALARMLARI (sidebar compact) ---
-    _acc_al = t_sec['accent']
-    st.markdown(
-        f"<div style='color:{_acc_al};font-weight:700;font-size:11px;"
-        f"letter-spacing:1px;margin-bottom:6px;'>🔔 FİYAT ALARMLARI</div>",
-        unsafe_allow_html=True
-    )
-    # Tetiklenen alarmları göster
-    _tetiklenen = []
-    for _al in st.session_state.alarmlar:
-        _al_h  = _al.get("Hisse","")
-        _al_ht = float(_al.get("Hedef",0))
-        _al_gn = next((x['Güncel'] for x in full_data if x['Hisse'] == _al_h), None)
-        if _al_gn is not None:
-            _al_yon = _al.get("Yon", "yukari")
-            if (_al_yon == "yukari" and _al_gn >= _al_ht) or \
-               (_al_yon == "asagi"  and _al_gn <= _al_ht):
-                _tetiklenen.append(f"🔔 {_al_h}: {tr_format4(_al_gn)} ₺ → Hedef {tr_format4(_al_ht)} ₺")
-
-    for _tm in _tetiklenen:
-        st.warning(_tm)
-
-    with st.expander("➕ Yeni Alarm"):
-        _al_hisseler_sb = sorted(set(x['Hisse'] for x in full_data if x['Piyasa'] == 'Türk Borsası'))
-        if _al_hisseler_sb:
-            _al_sec = st.selectbox("Hisse", _al_hisseler_sb, key="al_sec_sb")
-            _al_gun = next((x['Güncel'] for x in full_data if x['Hisse'] == _al_sec), 0.0)
-            _al1, _al2 = st.columns(2)
-            _al_hedef = _al1.number_input("Hedef Fiyat (₺)", min_value=0.0001,
-                                            value=float(_al_gun), format="%.4f", key="al_hedef_sb")
-            _al_yon_sb = _al2.selectbox("Yön", ["↑ Yukarı Geçince", "↓ Aşağı Geçince"], key="al_yon_sb")
-            if st.button("🔔 Alarm Kur", key="al_ekle_sb", use_container_width=True):
-                st.session_state.alarmlar.append({
-                    "Hisse": _al_sec,
-                    "Hedef": float(_al_hedef),
-                    "Yon":   "yukari" if "Yukarı" in _al_yon_sb else "asagi"
-                })
-                save_json(ALARM_DOSYASI, st.session_state.alarmlar)
-                st.success(f"✅ {_al_sec} alarmı kuruldu.")
-
-    if st.session_state.alarmlar:
-        for _ali, _alarm in enumerate(st.session_state.alarmlar):
-            _alc1, _alc2 = st.columns([4, 1])
-            _al_yon_str = "↑" if _alarm.get("Yon","yukari") == "yukari" else "↓"
-            _alc1.markdown(
-                f"<div style='font-size:11px;'>{_alarm['Hisse']} {_al_yon_str} {tr_format4(float(_alarm['Hedef']))} ₺</div>",
-                unsafe_allow_html=True
-            )
-            if _alc2.button("❌", key=f"al_sil_{_ali}"):
-                st.session_state.alarmlar.pop(_ali)
-                save_json(ALARM_DOSYASI, st.session_state.alarmlar)
-                st.rerun()
+        if _us2.button("🚪", key="cikis_btn", help="Çıkış Yap"):
+            st.session_state.kullanici_giris = False
+            st.session_state.kullanici_adi   = ""
+            st.rerun()
 
 
 # ==========================================
@@ -2198,19 +1883,160 @@ with tab_div:
     else:
         st.warning("Temettü verisi bulunamadı.")
 
+# ==========================================
+# HALKA ARZ TABU
+# ==========================================
+with tab_ipo:
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>🚀 Halka Arz Takip</h4>", unsafe_allow_html=True)
+
+    with st.form("ipo_form", clear_on_submit=True):
+        ic1, ic2, ic3 = st.columns(3)
+        ipo_isim  = ic1.text_input("Şirket Kodu", placeholder="BINHO")
+        ipo_fiyat = ic2.number_input("Halka Arz Fiyatı (₺)", min_value=0.0, format="%.4f")
+        ipo_adet  = ic3.number_input("Lot Sayısı", min_value=0, step=1)
+        if st.form_submit_button("➕ Listeye Ekle", use_container_width=True):
+            if ipo_isim:
+                st.session_state.ipo_liste.append({
+                    "Isim": ipo_isim.upper().strip(),
+                    "Fiyat": float(ipo_fiyat),
+                    "Adet": int(ipo_adet)
+                })
+                save_json(IPO_DOSYASI, st.session_state.ipo_liste)
+                st.rerun()
+
+    if st.session_state.ipo_liste:
+        for idx, ipo in enumerate(st.session_state.ipo_liste):
+            maliyet = ipo['Adet'] * ipo['Fiyat']
+            baslik  = f"📈 {ipo['Isim']}  |  {tr_format4(ipo['Fiyat'])} ₺  |  {ipo['Adet']} Lot  |  {tr_format(maliyet)} ₺"
+            with st.expander(baslik):
+                ri1, ri2, ri3, ri4 = st.columns([2, 2, 2, 1])
+                ri1.markdown(
+                    f"<div style='padding:8px 0;'>"
+                    f"<div style='font-size:10px;opacity:0.55;'>HALKA ARZ FİYATI</div>"
+                    f"<div style='font-weight:700;font-size:14px;color:{acc};'>{tr_format4(ipo['Fiyat'])} ₺</div>"
+                    f"</div>", unsafe_allow_html=True
+                )
+                ri2.markdown(
+                    f"<div style='padding:8px 0;'>"
+                    f"<div style='font-size:10px;opacity:0.55;'>LOT SAYISI</div>"
+                    f"<div style='font-weight:700;font-size:14px;'>{ipo['Adet']} Lot</div>"
+                    f"</div>", unsafe_allow_html=True
+                )
+                ri3.markdown(
+                    f"<div style='padding:8px 0;'>"
+                    f"<div style='font-size:10px;opacity:0.55;'>TOPLAM MALİYET</div>"
+                    f"<div style='font-weight:700;font-size:14px;'>{tr_format(maliyet)} ₺</div>"
+                    f"</div>", unsafe_allow_html=True
+                )
+                ri4.markdown("<div style='padding-top:18px;'></div>", unsafe_allow_html=True)
+                if ri4.button("❌ Sil", key=f"del_ipo_{idx}", use_container_width=True):
+                    st.session_state.ipo_liste.pop(idx)
+                    save_json(IPO_DOSYASI, st.session_state.ipo_liste)
+                    st.rerun()
+
+                st.divider()
+
+                # Tavan simülasyon tablosu
+                tavan_html = (
+                    "<table class='kral-table' style='text-align:center;'>"
+                    "<thead><tr>"
+                    "<th style='text-align:center;'>GÜN</th>"
+                    "<th style='text-align:center;'>FİYAT</th>"
+                    "<th style='text-align:center;'>TOPLAM KAR</th>"
+                    "<th style='text-align:center;'>GETIRI %</th>"
+                    "</tr></thead><tbody>"
+                )
+                p = ipo['Fiyat']
+                for g in range(1, 11):
+                    p  *= 1.10
+                    kar = (p * ipo['Adet']) - maliyet
+                    getiri_pct = (kar / maliyet * 100) if maliyet > 0 else 0
+                    tavan_html += (
+                        f"<tr><td><b>{g}. Tavan</b></td>"
+                        f"<td>{tr_format4(p)} ₺</td>"
+                        f"<td style='color:#00e676;font-weight:bold;'>+{tr_format(kar)} ₺</td>"
+                        f"<td style='color:#00e676;'>+{getiri_pct:.1f}%</td></tr>"
+                    )
+                tavan_html += "</tbody></table>"
+                st.markdown(tavan_html, unsafe_allow_html=True)
+
+                # Portföye Aktar
+                st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
+                pa1, pa2, pa3 = st.columns([2, 2, 1])
+                aktar_hisse = pa1.text_input(
+                    "BIST Kodu (.IS ekli)", value=ipo['Isim'] + ".IS",
+                    key=f"aktar_kod_{idx}", placeholder="Örn: BINHO.IS"
+                )
+                aktar_maliyet = pa2.number_input(
+                    "Alış Maliyeti (₺)", value=float(ipo['Fiyat']),
+                    format="%.4f", key=f"aktar_maliyet_{idx}"
+                )
+                pa3.markdown("<div style='margin-top:28px;'></div>", unsafe_allow_html=True)
+                if pa3.button("📥 Portföye", key=f"aktar_btn_{idx}", use_container_width=True):
+                    if aktar_hisse:
+                        st.session_state.portfoy.append({
+                            "Piyasa": "Türk Borsası",
+                            "Hisse":  aktar_hisse.upper(),
+                            "Adet":   int(ipo['Adet']),
+                            "Maliyet": float(aktar_maliyet)
+                        })
+                        st.session_state.portfoy = sorted(st.session_state.portfoy, key=lambda x: x['Hisse'])
+                        save_json(portfoy_dosyasi(st.session_state.aktif_portfoy), st.session_state.portfoy)
+                        st.success(f"✅ {aktar_hisse.upper()} portföye eklendi!")
+                        st.rerun()
+    else:
+        st.info("Henüz halka arz takip listesi boş. Yukarıdan ekleyebilirsin.")
+
 with tab_analiz:
     acc = t_sec['accent']
     txt = t_sec['text']
     box = t_sec['box']
     bg  = t_sec['bg']
 
-    # ---------- A) HİSSE FİYAT GRAFİĞİ (Candlestick) ----------
-    st.markdown(f"<h4 style='color:{acc};'>🕯️ Hisse Fiyat Grafiği (60 Gün)</h4>", unsafe_allow_html=True)
+    # ---------- A) HİSSE FİYAT GRAFİĞİ + ÇİZİM ARAÇLARI ----------
+    st.markdown(f"<h4 style='color:{acc};'>🕯️ Hisse Fiyat Grafiği & Çizim Araçları</h4>", unsafe_allow_html=True)
     portfoy_hisseler_a = sorted(set(x['Hisse'] for x in full_data if x['Piyasa'] == 'Türk Borsası'))
     if portfoy_hisseler_a:
-        cs1, cs2 = st.columns([3, 1])
-        cs_hisse = cs1.selectbox("Hisse Seç", portfoy_hisseler_a, key="cs_hisse")
-        cs_tip   = cs2.selectbox("Grafik Tipi", ["Candlestick", "Çizgi"], key="cs_tip")
+        _ca1, _ca2, _ca3 = st.columns([3, 1, 2])
+        cs_hisse = _ca1.selectbox("Hisse Seç", portfoy_hisseler_a, key="cs_hisse")
+        cs_tip   = _ca2.selectbox("Grafik Tipi", ["Candlestick", "Çizgi"], key="cs_tip")
+
+        # Gösterge seçimi
+        _gosterge_secim = _ca3.multiselect(
+            "Göstergeler",
+            ["MA20", "MA50", "Bollinger Bands", "Destek/Direnç", "Fibonacci"],
+            default=["MA20"],
+            key="cs_gostergeler"
+        )
+
+        # Manuel seviye ekleme
+        with st.expander("➕ Manuel Destek/Direnç Seviyesi Ekle"):
+            _sv1, _sv2, _sv3 = st.columns([2, 2, 1])
+            _seviye_fiyat = _sv1.number_input("Fiyat (₺)", min_value=0.01, format="%.4f", key="cs_sev_fiyat")
+            _seviye_tip   = _sv2.selectbox("Tür", ["Destek 🟢", "Direnç 🔴", "Hedef 🔵"], key="cs_sev_tip")
+            if _sv3.button("Ekle", key="cs_sev_ekle", use_container_width=True):
+                if 'cs_seviyeler' not in st.session_state:
+                    st.session_state.cs_seviyeler = []
+                st.session_state.cs_seviyeler.append({
+                    'fiyat': float(_seviye_fiyat),
+                    'tip': _seviye_tip,
+                    'hisse': cs_hisse
+                })
+                st.rerun()
+
+            # Mevcut seviyeleri göster ve sil
+            if 'cs_seviyeler' in st.session_state:
+                _hisse_seviyeleri = [s for s in st.session_state.cs_seviyeler if s['hisse'] == cs_hisse]
+                for _si, _sev in enumerate(_hisse_seviyeleri):
+                    _ssl1, _ssl2 = st.columns([5, 1])
+                    _ssl1.markdown(f"**{_sev['tip']}** — {tr_format4(_sev['fiyat'])} ₺")
+                    if _ssl2.button("❌", key=f"sev_sil_{_si}"):
+                        st.session_state.cs_seviyeler = [
+                            s for s in st.session_state.cs_seviyeler
+                            if not (s['hisse'] == cs_hisse and s['fiyat'] == _sev['fiyat'])
+                        ]
+                        st.rerun()
 
         cs_data = fetch_stock_data(cs_hisse)
         if cs_data and not cs_data['hist'].empty:
@@ -2226,7 +2052,6 @@ with tab_analiz:
                     close=hist['Close'],
                     name=cs_hisse,
                 )])
-                # Renkleri update_traces ile ayrı ayrı ayarla (versiyon uyumlu)
                 cs_fig.update_traces(
                     selector=dict(type='candlestick'),
                     increasing=dict(line=dict(color='#00e676')),
@@ -2242,21 +2067,103 @@ with tab_analiz:
                     name=cs_hisse,
                 )])
 
-            # MA20 üzerine ekle
-            ma20 = hist['Close'].rolling(20).mean()
-            cs_fig.add_trace(go.Scatter(
-                x=hist.index, y=ma20,
-                mode='lines',
-                line=dict(color='#ffc107', width=1.2, dash='dot'),
-                name='MA20', opacity=0.8,
-            ))
+            # MA20
+            if "MA20" in _gosterge_secim:
+                ma20 = hist['Close'].rolling(20).mean()
+                cs_fig.add_trace(go.Scatter(
+                    x=hist.index, y=ma20, mode='lines',
+                    line=dict(color='#ffc107', width=1.2, dash='dot'),
+                    name='MA20', opacity=0.85,
+                ))
+
+            # MA50
+            if "MA50" in _gosterge_secim:
+                ma50 = hist['Close'].rolling(50).mean()
+                cs_fig.add_trace(go.Scatter(
+                    x=hist.index, y=ma50, mode='lines',
+                    line=dict(color='#60a5fa', width=1.2, dash='dash'),
+                    name='MA50', opacity=0.85,
+                ))
+
+            # Bollinger Bands
+            if "Bollinger Bands" in _gosterge_secim:
+                _bb_mid = hist['Close'].rolling(20).mean()
+                _bb_std = hist['Close'].rolling(20).std()
+                _bb_ust = _bb_mid + 2 * _bb_std
+                _bb_alt = _bb_mid - 2 * _bb_std
+                cs_fig.add_trace(go.Scatter(
+                    x=hist.index, y=_bb_ust, mode='lines',
+                    line=dict(color='#a78bfa', width=0.8, dash='dot'),
+                    name='BB Üst', opacity=0.7,
+                ))
+                cs_fig.add_trace(go.Scatter(
+                    x=hist.index, y=_bb_alt, mode='lines',
+                    line=dict(color='#a78bfa', width=0.8, dash='dot'),
+                    fill='tonexty', fillcolor=hex_rgba('#a78bfa', 0.05),
+                    name='BB Alt', opacity=0.7,
+                ))
+
+            # Otomatik Destek/Direnç (son 60 günün yüksek/düşük seviyeleri)
+            if "Destek/Direnç" in _gosterge_secim:
+                _son_yuksek = float(hist['High'].max())
+                _son_dusuk  = float(hist['Low'].min())
+                _son_kapanis = float(hist['Close'].iloc[-1])
+                # Pivot hesapla
+                _pivot = (_son_yuksek + _son_dusuk + _son_kapanis) / 3
+                _r1 = 2 * _pivot - _son_dusuk
+                _s1 = 2 * _pivot - _son_yuksek
+                for _lvl, _lbl, _lc in [
+                    (_son_yuksek, f"60G Yüksek: {tr_format4(_son_yuksek)}", '#ff1744'),
+                    (_son_dusuk,  f"60G Düşük: {tr_format4(_son_dusuk)}",  '#00e676'),
+                    (_pivot,       f"Pivot: {tr_format4(_pivot)}",           '#ffc107'),
+                    (_r1,          f"R1: {tr_format4(_r1)}",                 '#ff7043'),
+                    (_s1,          f"S1: {tr_format4(_s1)}",                 '#66bb6a'),
+                ]:
+                    cs_fig.add_hline(
+                        y=_lvl, line_dash="dash", line_color=_lc,
+                        line_width=0.8, opacity=0.7,
+                        annotation_text=_lbl,
+                        annotation_position="right",
+                        annotation_font_size=9,
+                        annotation_font_color=_lc,
+                    )
+
+            # Fibonacci Retracement
+            if "Fibonacci" in _gosterge_secim:
+                _fib_yuk = float(hist['High'].max())
+                _fib_dus = float(hist['Low'].min())
+                _fib_aralik = _fib_yuk - _fib_dus
+                for _oran, _fib_renk in [(0.236,'#ffd700'),(0.382,'#ffaa00'),
+                                          (0.5,'#ff8800'),(0.618,'#ff5500'),(0.786,'#ff2200')]:
+                    _fib_lvl = _fib_yuk - _oran * _fib_aralik
+                    cs_fig.add_hline(
+                        y=_fib_lvl, line_dash="dot", line_color=_fib_renk,
+                        line_width=0.7, opacity=0.6,
+                        annotation_text=f"Fib {_oran:.3f}: {tr_format4(_fib_lvl)}",
+                        annotation_position="right",
+                        annotation_font_size=9,
+                        annotation_font_color=_fib_renk,
+                    )
+
+            # Manuel seviyeler
+            if 'cs_seviyeler' in st.session_state:
+                for _ms in [s for s in st.session_state.cs_seviyeler if s['hisse'] == cs_hisse]:
+                    _ms_renk = '#00e676' if 'Destek' in _ms['tip'] else ('#ff1744' if 'Direnç' in _ms['tip'] else '#60a5fa')
+                    cs_fig.add_hline(
+                        y=_ms['fiyat'], line_dash="solid", line_color=_ms_renk,
+                        line_width=1.5, opacity=0.9,
+                        annotation_text=f"{_ms['tip'].split()[0]}: {tr_format4(_ms['fiyat'])} ₺",
+                        annotation_position="right",
+                        annotation_font_size=10,
+                        annotation_font_color=_ms_renk,
+                    )
 
             cs_fig.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
                 font=dict(color=txt, size=11, family=secili_font),
-                height=380,
-                margin=dict(t=40, b=40, l=40, r=20),
+                height=460,
+                margin=dict(t=40, b=40, l=40, r=120),
                 xaxis=dict(
                     showgrid=True, gridcolor=hex_rgba(acc, 0.08),
                     rangeslider=dict(visible=False),
@@ -3383,7 +3290,89 @@ with tab_olcek:
         st.session_state.mobil_mod     = False
         st.rerun()
 
-# FOOTER
+    st.divider()
+
+    # --- KULLANICI YÖNETİMİ ---
+    acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+    st.markdown(f"<h4 style='color:{acc};'>👤 Kullanıcı Yönetimi</h4>", unsafe_allow_html=True)
+
+    _KULLANICI_DOSYASI2 = _veri_yolu("kullanicilar.json")
+
+    def _kullanicilar_oku2():
+        if not os.path.exists(_KULLANICI_DOSYASI2):
+            return []
+        try:
+            with open(_KULLANICI_DOSYASI2, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return []
+
+    _kl_listesi = _kullanicilar_oku2()
+
+    # Mevcut kullanıcıları listele
+    if _kl_listesi:
+        st.markdown("**Kayıtlı kullanıcılar:**")
+        for _klu in _kl_listesi:
+            _klu_c1, _klu_c2 = st.columns([4, 1])
+            _klu_c1.markdown(
+                f"<div style='font-size:12px;'>👤 <b>{_klu['kullanici']}</b> "
+                f"<span style='opacity:0.5;font-size:10px;'>({_klu.get('rol','kullanici')})</span></div>",
+                unsafe_allow_html=True
+            )
+            if _klu['kullanici'] != 'admin' and _klu_c2.button("❌", key=f"klu_sil_{_klu['kullanici']}"):
+                _kl_listesi = [k for k in _kl_listesi if k['kullanici'] != _klu['kullanici']]
+                save_json(_KULLANICI_DOSYASI2, _kl_listesi)
+                st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # PIN Değiştir
+    with st.expander("🔑 PIN Değiştir"):
+        with st.form("pin_degistir_form", clear_on_submit=True):
+            _pd_kul  = st.text_input("Kullanıcı Adı", key="pd_kul")
+            _pd_eski = st.text_input("Mevcut PIN", type="password", key="pd_eski")
+            _pd_yeni = st.text_input("Yeni PIN (min 4 karakter)", type="password", key="pd_yeni")
+            _pd_yeni2= st.text_input("Yeni PIN (tekrar)", type="password", key="pd_yeni2")
+            if st.form_submit_button("🔑 PIN Güncelle", use_container_width=True):
+                import hashlib as _hl
+                _kll = _kullanicilar_oku2()
+                _eski_hash = _hl.sha256(_pd_eski.encode()).hexdigest()
+                _kullanici_bul = next((k for k in _kll if k['kullanici'] == _pd_kul and k['pin_hash'] == _eski_hash), None)
+                if not _kullanici_bul:
+                    st.error("Kullanıcı adı veya mevcut PIN hatalı.")
+                elif len(_pd_yeni) < 4:
+                    st.error("Yeni PIN en az 4 karakter olmalı.")
+                elif _pd_yeni != _pd_yeni2:
+                    st.error("Yeni PIN'ler eşleşmiyor.")
+                else:
+                    _kullanici_bul['pin_hash'] = _hl.sha256(_pd_yeni.encode()).hexdigest()
+                    save_json(_KULLANICI_DOSYASI2, _kll)
+                    st.success("✅ PIN güncellendi!")
+
+    # Yeni kullanıcı ekle
+    with st.expander("➕ Yeni Kullanıcı Ekle"):
+        with st.form("yeni_kullanici_form", clear_on_submit=True):
+            _nk_adi = st.text_input("Kullanıcı Adı", key="nk_adi")
+            _nk_pin = st.text_input("PIN", type="password", key="nk_pin")
+            _nk_rol = st.selectbox("Rol", ["kullanici", "admin"], key="nk_rol")
+            if st.form_submit_button("➕ Ekle", use_container_width=True):
+                import hashlib as _hl2
+                _kll2 = _kullanicilar_oku2()
+                if any(k['kullanici'] == _nk_adi for k in _kll2):
+                    st.error("Bu kullanıcı adı zaten alınmış.")
+                elif len(_nk_pin) < 4:
+                    st.error("PIN en az 4 karakter olmalı.")
+                else:
+                    _kll2.append({
+                        "kullanici": _nk_adi.strip(),
+                        "pin_hash": _hl2.sha256(_nk_pin.encode()).hexdigest(),
+                        "rol": _nk_rol
+                    })
+                    save_json(_KULLANICI_DOSYASI2, _kll2)
+                    st.success(f"✅ {_nk_adi} kullanıcısı eklendi!")
+                    st.rerun()
+
+
 # ==========================================
 st.markdown("---")
 st.caption(
