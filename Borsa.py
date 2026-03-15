@@ -1971,34 +1971,6 @@ with tab_analiz:
         )
         _interval, _period = _zaman_secenekleri[_zaman_sec]
 
-        # Manuel seviye ekleme
-        with st.expander("➕ Manuel Destek/Direnç Seviyesi Ekle"):
-            _sv1, _sv2, _sv3 = st.columns([2, 2, 1])
-            _seviye_fiyat = _sv1.number_input("Fiyat (₺)", min_value=0.01, format="%.4f", key="cs_sev_fiyat")
-            _seviye_tip   = _sv2.selectbox("Tür", ["Destek 🟢", "Direnç 🔴", "Hedef 🔵"], key="cs_sev_tip")
-            if _sv3.button("Ekle", key="cs_sev_ekle", use_container_width=True):
-                if 'cs_seviyeler' not in st.session_state:
-                    st.session_state.cs_seviyeler = []
-                st.session_state.cs_seviyeler.append({
-                    'fiyat': float(_seviye_fiyat),
-                    'tip': _seviye_tip,
-                    'hisse': cs_hisse
-                })
-                st.rerun()
-
-            # Mevcut seviyeleri göster ve sil
-            if 'cs_seviyeler' in st.session_state:
-                _hisse_seviyeleri = [s for s in st.session_state.cs_seviyeler if s['hisse'] == cs_hisse]
-                for _si, _sev in enumerate(_hisse_seviyeleri):
-                    _ssl1, _ssl2 = st.columns([5, 1])
-                    _ssl1.markdown(f"**{_sev['tip']}** — {tr_format4(_sev['fiyat'])} ₺")
-                    if _ssl2.button("❌", key=f"sev_sil_{_si}"):
-                        st.session_state.cs_seviyeler = [
-                            s for s in st.session_state.cs_seviyeler
-                            if not (s['hisse'] == cs_hisse and s['fiyat'] == _sev['fiyat'])
-                        ]
-                        st.rerun()
-
         # Seçilen zaman dilimine göre veri çek
         @st.cache_data(ttl=180)
         def _fetch_grafik(symbol, interval, period):
@@ -2156,19 +2128,6 @@ with tab_analiz:
                         annotation_position="right",
                         annotation_font_size=9,
                         annotation_font_color=_fib_renk,
-                    )
-
-            # Manuel seviyeler
-            if 'cs_seviyeler' in st.session_state:
-                for _ms in [s for s in st.session_state.cs_seviyeler if s['hisse'] == cs_hisse]:
-                    _ms_renk = '#00e676' if 'Destek' in _ms['tip'] else ('#ff1744' if 'Direnç' in _ms['tip'] else '#60a5fa')
-                    cs_fig.add_hline(
-                        y=_ms['fiyat'], line_dash="solid", line_color=_ms_renk,
-                        line_width=1.5, opacity=0.9,
-                        annotation_text=f"{_ms['tip'].split()[0]}: {tr_format4(_ms['fiyat'])} ₺",
-                        annotation_position="right",
-                        annotation_font_size=10,
-                        annotation_font_color=_ms_renk,
                     )
 
             cs_fig.update_layout(
