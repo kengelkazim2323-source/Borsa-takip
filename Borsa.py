@@ -1023,61 +1023,6 @@ if st.session_state.portfoy:
 # Günlük performans snapshot kaydet
 kaydet_performans_snapshot(full_data)
 
-# --- GLOBAL ARAMA (full_data hazır olduktan sonra) ---
-_acc_gs = t_sec['accent']; _box_gs = t_sec['box']
-_arama_q = st.text_input(
-    "Hisse Ara",
-    placeholder="🔍  GARAN, THYAO, AKBNK... — portföyde ve BIST'te arar",
-    label_visibility="collapsed",
-    key="global_arama"
-)
-if _arama_q and len(_arama_q) >= 2:
-    _q = _arama_q.upper().strip()
-    _port_esles = [x for x in full_data if _q in x.get('Hisse', '')]
-    _bist_esles = [s for s in BIST_FULL if _q in s.replace(".IS", "")][:8]
-
-    if _port_esles:
-        _kart_html = ""
-        for _px in _port_esles:
-            try:
-                _kz_c = "#00e676" if float(_px.get('K/Z', 0)) >= 0 else "#ff1744"
-                _kart_html += (
-                    f"<div style='background:{_acc_gs}11;border:1px solid {_acc_gs}33;"
-                    f"border-radius:6px;padding:6px 10px;min-width:120px;'>"
-                    f"<div style='font-size:12px;font-weight:700;color:{_acc_gs};'>{_px['Hisse']}</div>"
-                    f"<div style='font-size:11px;'>{tr_format4(float(_px.get('Güncel',0)))} ₺</div>"
-                    f"<div style='font-size:10px;color:{_kz_c};'>{tr_format(float(_px.get('K/Z',0)))} ₺ K/Z</div>"
-                    f"</div>"
-                )
-            except Exception:
-                pass
-        if _kart_html:
-            st.markdown(
-                f"<div style='background:{_box_gs};border:1px solid {_acc_gs}33;"
-                f"border-radius:8px;padding:10px 14px;margin-bottom:6px;'>"
-                f"<div style='font-size:10px;opacity:0.5;margin-bottom:6px;'>📂 PORTFÖYDE</div>"
-                f"<div style='display:flex;flex-wrap:wrap;gap:8px;'>{_kart_html}</div></div>",
-                unsafe_allow_html=True
-            )
-
-    if _bist_esles:
-        _bist_html = "".join(
-            f"<span style='background:{_box_gs};border:1px solid {_acc_gs}22;"
-            f"border-radius:4px;padding:3px 8px;font-size:11px;'>"
-            f"{s.replace('.IS','')}</span>"
-            for s in _bist_esles
-        )
-        st.markdown(
-            f"<div style='background:{_box_gs};border:1px solid {_acc_gs}22;"
-            f"border-radius:8px;padding:8px 12px;margin-bottom:6px;'>"
-            f"<div style='font-size:10px;opacity:0.5;margin-bottom:4px;'>📋 BİST'TE</div>"
-            f"<div style='display:flex;flex-wrap:wrap;gap:6px;'>{_bist_html}</div></div>",
-            unsafe_allow_html=True
-        )
-
-    if not _port_esles and not _bist_esles:
-        st.info(f"'{_arama_q}' için sonuç bulunamadı.")
-
 # ==========================================
 # ALARM KONTROLÜ — sayfa yüklenince otomatik çalışır
 # ==========================================
