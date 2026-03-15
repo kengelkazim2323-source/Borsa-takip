@@ -3322,6 +3322,12 @@ with tab_olcek:
                     save_json(_KULLANICI_DOSYASI2, _kll)
                     st.success("✅ PIN güncellendi!")
 
+    # Ayarlar sekmesine ekle
+st.markdown("### ⭐ Pro'ya Geç")
+st.markdown("Tüm özelliklere eriş — ₺299/ay")
+if st.button("💳 Şimdi Abone Ol"):
+    st.markdown("[Ödeme Sayfası](https://buy.stripe.com/https://buy.stripe.com/test_4gM14ncFraxpeJZ7tK0sU00)", unsafe_allow_html=True)
+
     # Yeni kullanıcı ekle
     with st.expander("➕ Yeni Kullanıcı Ekle"):
         with st.form("yeni_kullanici_form", clear_on_submit=True):
