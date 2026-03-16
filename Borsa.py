@@ -3288,7 +3288,7 @@ with tab_olcek:
                 f"display:block;text-align:center;background:{acc};"
                 f"color:#000;font-weight:700;font-size:15px;padding:14px;"
                 f"border-radius:10px;text-decoration:none;margin-bottom:8px;'>"
-                f"💳 Pro'ya Geç — ₺299/ay</a>",
+                f"💳 Pro'ya Geç — ₺59/ay</a>",
                 unsafe_allow_html=True
             )
         else:
