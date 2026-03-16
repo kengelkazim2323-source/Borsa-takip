@@ -3203,7 +3203,7 @@ with tab_olcek:
     _p2.markdown(
         f"<div style='background:{acc}18;border:2px solid {acc};border-radius:12px;padding:20px;'>"
         f"<div style='font-size:13px;font-weight:700;color:{acc};margin-bottom:8px;'>⭐ Pro</div>"
-        f"<div style='font-size:26px;font-weight:700;color:{acc};margin-bottom:12px;'>₺299<span style='font-size:13px;opacity:0.6;'>/ay</span></div>"
+        f"<div style='font-size:26px;font-weight:700;color:{acc};margin-bottom:12px;'>₺59<span style='font-size:13px;opacity:0.6;'>/ay</span></div>"
         f"<div style='font-size:12px;line-height:1.8;'>"
         f"✅ Sınırsız portföy<br>✅ Sınırsız hisse<br>✅ Tüm göstergeler<br>✅ AI portföy yorumu<br>✅ Telegram alarm<br>✅ Öncelikli destek"
         f"</div></div>",
