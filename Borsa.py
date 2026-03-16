@@ -894,7 +894,6 @@ piyasa_izleme = {
     "EUR/TRY":   "EURTRY=X",
     "ONS ALTIN": "GC=F",
     "ONS GÜMÜŞ": "SI=F",
-    "BTC":       "BTC-USD",
 }
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
 for isim, sembol in piyasa_izleme.items():
@@ -1376,7 +1375,7 @@ with st.sidebar:
             f"✅ AI portföy yorumu<br>"
             f"✅ Gelişmiş teknik analiz<br>"
             f"✅ Telegram alarmları<br>"
-            f"<b>₺299 / ay</b></div>"
+            f"<b>₺59 / ay</b></div>"
             f"</div>",
             unsafe_allow_html=True
         )
@@ -3218,7 +3217,7 @@ with tab_olcek:
         f"<a href='{STRIPE_LINK}' target='_blank'>"
         f"<button style='width:100%;background:{acc};color:#000;border:none;"
         f"border-radius:10px;padding:14px;font-size:15px;font-weight:700;"
-        f"cursor:pointer;letter-spacing:0.5px;'>💳 Pro'ya Geç — ₺299/ay</button>"
+        f"cursor:pointer;letter-spacing:0.5px;'>💳 Pro'ya Geç — ₺59/ay</button>"
         f"</a>",
         unsafe_allow_html=True
     )
@@ -3275,7 +3274,7 @@ with tab_olcek:
             f"<div style='font-size:12px;opacity:0.7;line-height:1.8;'>"
             f"✅ Sınırsız portföy<br>✅ Sınırsız hisse<br>✅ Tüm göstergeler<br>✅ AI yorum<br>✅ Telegram bot"
             f"</div>"
-            f"<div style='margin-top:10px;font-size:13px;font-weight:700;color:{acc};'>₺299 / ay</div>"
+            f"<div style='margin-top:10px;font-size:13px;font-weight:700;color:{acc};'>₺59 / ay</div>"
             f"</div>",
             unsafe_allow_html=True
         )
