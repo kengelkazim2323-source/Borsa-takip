@@ -894,6 +894,7 @@ piyasa_izleme = {
     "EUR/TRY":   "EURTRY=X",
     "ONS ALTIN": "GC=F",
     "ONS GÜMÜŞ": "SI=F",
+    "BTC":       "BTC-USD",
 }
 ticker_content = '<div class="ticker-wrapper"><div class="ticker-content">'
 for isim, sembol in piyasa_izleme.items():
@@ -1375,7 +1376,7 @@ with st.sidebar:
             f"✅ AI portföy yorumu<br>"
             f"✅ Gelişmiş teknik analiz<br>"
             f"✅ Telegram alarmları<br>"
-            f"<b>₺59 / ay</b></div>"
+            f"<b>₺299 / ay</b></div>"
             f"</div>",
             unsafe_allow_html=True
         )
@@ -3203,7 +3204,7 @@ with tab_olcek:
     _p2.markdown(
         f"<div style='background:{acc}18;border:2px solid {acc};border-radius:12px;padding:20px;'>"
         f"<div style='font-size:13px;font-weight:700;color:{acc};margin-bottom:8px;'>⭐ Pro</div>"
-        f"<div style='font-size:26px;font-weight:700;color:{acc};margin-bottom:12px;'>₺59<span style='font-size:13px;opacity:0.6;'>/ay</span></div>"
+        f"<div style='font-size:26px;font-weight:700;color:{acc};margin-bottom:12px;'>₺299<span style='font-size:13px;opacity:0.6;'>/ay</span></div>"
         f"<div style='font-size:12px;line-height:1.8;'>"
         f"✅ Sınırsız portföy<br>✅ Sınırsız hisse<br>✅ Tüm göstergeler<br>✅ AI portföy yorumu<br>✅ Telegram alarm<br>✅ Öncelikli destek"
         f"</div></div>",
@@ -3217,7 +3218,7 @@ with tab_olcek:
         f"<a href='{STRIPE_LINK}' target='_blank'>"
         f"<button style='width:100%;background:{acc};color:#000;border:none;"
         f"border-radius:10px;padding:14px;font-size:15px;font-weight:700;"
-        f"cursor:pointer;letter-spacing:0.5px;'>💳 Pro'ya Geç — ₺59/ay</button>"
+        f"cursor:pointer;letter-spacing:0.5px;'>💳 Pro'ya Geç — ₺299/ay</button>"
         f"</a>",
         unsafe_allow_html=True
     )
@@ -3274,7 +3275,7 @@ with tab_olcek:
             f"<div style='font-size:12px;opacity:0.7;line-height:1.8;'>"
             f"✅ Sınırsız portföy<br>✅ Sınırsız hisse<br>✅ Tüm göstergeler<br>✅ AI yorum<br>✅ Telegram bot"
             f"</div>"
-            f"<div style='margin-top:10px;font-size:13px;font-weight:700;color:{acc};'>₺59 / ay</div>"
+            f"<div style='margin-top:10px;font-size:13px;font-weight:700;color:{acc};'>₺299 / ay</div>"
             f"</div>",
             unsafe_allow_html=True
         )
@@ -3287,7 +3288,7 @@ with tab_olcek:
                 f"display:block;text-align:center;background:{acc};"
                 f"color:#000;font-weight:700;font-size:15px;padding:14px;"
                 f"border-radius:10px;text-decoration:none;margin-bottom:8px;'>"
-                f"💳 Pro'ya Geç — ₺59/ay</a>",
+                f"💳 Pro'ya Geç — ₺299/ay</a>",
                 unsafe_allow_html=True
             )
         else:
