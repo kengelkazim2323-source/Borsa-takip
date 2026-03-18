@@ -1341,6 +1341,52 @@ with st.sidebar:
             st.session_state.kullanici_adi   = ""
             st.rerun()
 
+    st.divider()
+
+    # --- ABONELİK PANELİ ---
+    _STRIPE_LINK = "https://buy.stripe.com/test_4gM14ncFraxpeJZ7tK0sU00"  # ← buraya gerçek linki koy
+
+    # Kullanıcının abonelik durumunu kontrol et (kullanicilar.json'dan)
+    _abone_mi = False
+    if st.session_state.get('kullanici_giris'):
+        try:
+            _kl_abone = _kullanicilar_yukle()
+            _bulunan = next((k for k in _kl_abone if k['kullanici'] == st.session_state.kullanici_adi), None)
+            _abone_mi = _bulunan and _bulunan.get('abonelik') == 'pro'
+        except Exception:
+            _abone_mi = False
+
+    if _abone_mi:
+        st.markdown(
+            f"<div style='background:{t_sec['box']};border:1px solid #00e67644;"
+            f"border-radius:10px;padding:10px 14px;text-align:center;'>"
+            f"<div style='color:#00e676;font-weight:700;font-size:12px;'>⭐ PRO ÜYE</div>"
+            f"<div style='font-size:10px;opacity:0.6;margin-top:3px;'>Tüm özellikler aktif</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            f"<div style='background:{t_sec['box']};border:1px solid {t_sec['accent']}33;"
+            f"border-radius:10px;padding:12px 14px;'>"
+            f"<div style='color:{t_sec['accent']};font-weight:700;font-size:12px;margin-bottom:6px;'>"
+            f"⭐ BORSA TAKİP PRO</div>"
+            f"<div style='font-size:11px;opacity:0.7;margin-bottom:8px;line-height:1.6;'>"
+            f"✅ Sınırsız hisse takibi<br>"
+            f"✅ AI portföy yorumu<br>"
+            f"✅ Gelişmiş teknik analiz<br>"
+            f"✅ Telegram alarmları<br>"
+            f"<b>₺299 / ay</b></div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+        st.link_button(
+            "💳 Şimdi Abone Ol",
+            _STRIPE_LINK,
+            use_container_width=True,
+            type="primary",
+        )
+
 
 # ==========================================
 # YÖNETİM FONKSİYONU — Kart Bazlı Yeni Tasarım
@@ -3130,6 +3176,133 @@ with tab_takvim:
 # ==========================================
 with tab_olcek:
     acc = t_sec['accent']; txt = t_sec['text']; box = t_sec['box']
+
+    # ==========================================
+    # ABONELİK PANELİ
+    # ==========================================
+    STRIPE_LINK = "https://buy.stripe.com/test_4gM14ncFraxpeJZ7tK0sU00"
+
+    # Mevcut kullanıcının planını kontrol et
+    _aktif_kullanici = st.session_state.get("kullanici_adi", "")
+    _giris_yapildi   = st.session_state.get("kullanici_giris", False)
+
+    st.markdown(f"<h4 style='color:{acc};'>⭐ Abonelik</h4>", unsafe_allow_html=True)
+
+    # Plan kartları
+    _p1, _p2 = st.columns(2)
+
+    _p1.markdown(
+        f"<div style='background:{box};border:1px solid {acc}33;border-radius:12px;padding:20px;'>"
+        f"<div style='font-size:13px;font-weight:700;color:{txt};margin-bottom:8px;'>🆓 Ücretsiz</div>"
+        f"<div style='font-size:26px;font-weight:700;color:{acc};margin-bottom:12px;'>₺0</div>"
+        f"<div style='font-size:12px;opacity:0.7;line-height:1.8;'>"
+        f"✅ 1 portföy<br>✅ 10 hisse<br>✅ Temel grafik<br>❌ AI yorum<br>❌ Telegram alarm<br>❌ Tüm göstergeler"
+        f"</div></div>",
+        unsafe_allow_html=True
+    )
+
+    _p2.markdown(
+        f"<div style='background:{acc}18;border:2px solid {acc};border-radius:12px;padding:20px;'>"
+        f"<div style='font-size:13px;font-weight:700;color:{acc};margin-bottom:8px;'>⭐ Pro</div>"
+        f"<div style='font-size:26px;font-weight:700;color:{acc};margin-bottom:12px;'>₺299<span style='font-size:13px;opacity:0.6;'>/ay</span></div>"
+        f"<div style='font-size:12px;line-height:1.8;'>"
+        f"✅ Sınırsız portföy<br>✅ Sınırsız hisse<br>✅ Tüm göstergeler<br>✅ AI portföy yorumu<br>✅ Telegram alarm<br>✅ Öncelikli destek"
+        f"</div></div>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Abone ol butonu
+    st.markdown(
+        f"<a href='{STRIPE_LINK}' target='_blank'>"
+        f"<button style='width:100%;background:{acc};color:#000;border:none;"
+        f"border-radius:10px;padding:14px;font-size:15px;font-weight:700;"
+        f"cursor:pointer;letter-spacing:0.5px;'>💳 Pro'ya Geç — ₺299/ay</button>"
+        f"</a>",
+        unsafe_allow_html=True
+    )
+    st.caption("Güvenli ödeme · Stripe · İstediğinde iptal edebilirsin")
+
+    st.divider()
+
+    # Test modu uyarısı — canlıya geçince kaldır
+    st.info("⚠️ Şu an TEST modunda — gerçek para çekilmez. Canlıya geçmek için Stripe'tan gerçek linki al.")
+
+    st.divider()
+
+    # --- ABONELİK PANELI ---
+    st.markdown(f"<h4 style='color:{acc};'>⭐ Abonelik</h4>", unsafe_allow_html=True)
+
+    _STRIPE_LINK = os.environ.get("STRIPE_PAYMENT_LINK", "")
+
+    _plan_renk = {"free": "#888", "starter": "#ffc107", "pro": "#00e676"}
+    _aktif_plan = st.session_state.get("abonelik_plan", "free")
+
+    st.markdown(
+        f"<div style='background:{box};border:1px solid {_plan_renk[_aktif_plan]}55;"
+        f"border-radius:12px;padding:16px 20px;margin-bottom:16px;'>"
+        f"<div style='display:flex;justify-content:space-between;align-items:center;'>"
+        f"<div>"
+        f"  <div style='font-size:11px;opacity:0.5;margin-bottom:4px;'>AKTİF PLAN</div>"
+        f"  <div style='font-size:18px;font-weight:700;color:{_plan_renk[_aktif_plan]};'>"
+        f"  {'🆓 Ücretsiz' if _aktif_plan=='free' else ('⭐ Starter' if _aktif_plan=='starter' else '🚀 Pro')}"
+        f"  </div>"
+        f"</div>"
+        f"<div style='text-align:right;font-size:12px;opacity:0.6;'>"
+        f"{'Sınırsız kullanım için Pro\'ya geç' if _aktif_plan=='free' else 'Aktif abonelik'}"
+        f"</div></div></div>",
+        unsafe_allow_html=True
+    )
+
+    if _aktif_plan == "free":
+        _ab1, _ab2 = st.columns(2)
+
+        _ab1.markdown(
+            f"<div style='background:{box};border:1px solid {acc}22;border-radius:10px;padding:14px;'>"
+            f"<div style='font-size:15px;font-weight:700;color:{acc};margin-bottom:8px;'>🆓 Ücretsiz</div>"
+            f"<div style='font-size:12px;opacity:0.7;line-height:1.8;'>"
+            f"✅ 1 portföy<br>✅ 10 hisse<br>✅ Temel grafik<br>❌ AI yorum<br>❌ Sınırsız alarm"
+            f"</div>"
+            f"<div style='margin-top:10px;font-size:13px;font-weight:700;'>₺0 / ay</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+
+        _ab2.markdown(
+            f"<div style='background:{acc}11;border:2px solid {acc}66;border-radius:10px;padding:14px;'>"
+            f"<div style='font-size:15px;font-weight:700;color:{acc};margin-bottom:8px;'>🚀 Pro</div>"
+            f"<div style='font-size:12px;opacity:0.7;line-height:1.8;'>"
+            f"✅ Sınırsız portföy<br>✅ Sınırsız hisse<br>✅ Tüm göstergeler<br>✅ AI yorum<br>✅ Telegram bot"
+            f"</div>"
+            f"<div style='margin-top:10px;font-size:13px;font-weight:700;color:{acc};'>₺299 / ay</div>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        if _STRIPE_LINK:
+            st.markdown(
+                f"<a href='{_STRIPE_LINK}' target='_blank' style='"
+                f"display:block;text-align:center;background:{acc};"
+                f"color:#000;font-weight:700;font-size:15px;padding:14px;"
+                f"border-radius:10px;text-decoration:none;margin-bottom:8px;'>"
+                f"💳 Pro'ya Geç — ₺299/ay</a>",
+                unsafe_allow_html=True
+            )
+        else:
+            st.info("💡 Stripe ödeme linki henüz ayarlanmamış. `STRIPE_PAYMENT_LINK` secret'ını ekle.")
+
+        st.caption("Ödeme yaptıktan sonra kullanıcı adınla birlikte bize ulaş — hesabın Pro'ya yükseltilir.")
+
+    else:
+        st.success("✅ Pro aboneliğin aktif. Tüm özellikler açık.")
+        if st.button("Aboneliği Yönet", key="abonelik_yonet"):
+            st.markdown(f"[Stripe'ta Yönet](https://billing.stripe.com)", unsafe_allow_html=True)
+
+    st.divider()
+
     st.markdown(f"<h4 style='color:{acc};'>📐 Ekran & Görünüm Ayarları</h4>",
                 unsafe_allow_html=True)
 
