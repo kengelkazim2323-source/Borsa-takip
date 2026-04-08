@@ -3524,3 +3524,12 @@ st.caption(
     f"🕒 Son Güncelleme: {datetime.now(pytz.timezone('Europe/Istanbul')).strftime('%H:%M:%S')}  |  "
     f"Sinyal: RSI + MA20 + MACD + Bollinger Bands  |  * Son 1 yılda temettü dağıtımı yapılmamış hisseler"
 )
+
+
+
+
+
+
+
+
+
